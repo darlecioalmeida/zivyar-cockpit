@@ -1,0 +1,82 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Nova Stack</span>
+    <h2>Montar Ferramenta × Cérebro</h2>
+    <p>
+      Combine o runtime com um modelo disponível para preparar futuras atribuições de agentes.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/stacks">Voltar</a>
+  </div>
+</section>
+
+<section class="grid workspace-form-layout">
+  <article class="panel form-panel">
+    <h3>Dados da stack</h3>
+
+    if (error_message) {
+      <div class="alert danger">
+        { error_message }
+      </div>
+    }
+
+    if (model_count == 0) {
+      <div class="alert danger">
+        Cadastre ao menos um modelo ativo em Providers antes de criar uma stack.
+      </div>
+    }
+
+    <form class="cockpit-form" method="post" action="/stacks">
+      <label>
+        <span>Nome da stack</span>
+        <input type="text" name="name" value="{ form.name }" placeholder="Ex.: OpenCode + GPT-5.5" required />
+      </label>
+
+      <label>
+        <span>Ferramenta</span>
+        <select name="runtime_tool">
+          <option value="OpenCode">OpenCode</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Modelo</span>
+        <select name="provider_model_id" required>
+          <option value="">Selecione um modelo</option>
+          for (models) |model| {
+            <option value="{ model.id }">{ model.provider_name } · { model.model_name } ({ model.model_identifier })</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Status</span>
+        <select name="is_active">
+          <option value="true">Ativa</option>
+          <option value="false">Inativa</option>
+        </select>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="primary-button">Salvar stack</button>
+        <a href="/stacks" class="ghost-link">Cancelar</a>
+      </div>
+    </form>
+  </article>
+
+  <article class="panel guidance-panel">
+    <span class="eyebrow">Próxima etapa</span>
+    <h3>Stacks dentro dos Squads</h3>
+
+    <ol class="numbered-list">
+      <li>Agentes passam a receber stacks.</li>
+      <li>Squads atribuem stacks por papel.</li>
+      <li>Runtime OpenCode usa o modelo correto.</li>
+      <li>Benchmarks poderão recomendar stacks.</li>
+    </ol>
+  </article>
+</section>

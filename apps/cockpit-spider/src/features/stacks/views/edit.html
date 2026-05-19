@@ -1,0 +1,80 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Editar Stack</span>
+    <h2>{ stack.name }</h2>
+    <p>
+      Atualize a combinação entre ferramenta e modelo.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/stacks">Voltar</a>
+  </div>
+</section>
+
+<section class="grid workspace-form-layout">
+  <article class="panel form-panel">
+    <h3>Dados da stack</h3>
+
+    if (error_message) {
+      <div class="alert danger">
+        { error_message }
+      </div>
+    }
+
+    <form class="cockpit-form" method="post" action="/stacks/{ stack.id }/update">
+      <label>
+        <span>Nome da stack</span>
+        <input type="text" name="name" value="{ stack.name }" required />
+      </label>
+
+      <label>
+        <span>Ferramenta</span>
+        <select name="runtime_tool">
+          <option value="OpenCode">OpenCode</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Modelo</span>
+        <select name="provider_model_id" required>
+          for (models) |model| {
+            <option value="{ model.id }">{ model.provider_name } · { model.model_name } ({ model.model_identifier })</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Status</span>
+        <select name="is_active">
+          if (stack.is_active) {
+            <option value="true">Ativa</option>
+            <option value="false">Inativa</option>
+          } else {
+            <option value="false">Inativa</option>
+            <option value="true">Ativa</option>
+          }
+        </select>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="primary-button">Salvar alterações</button>
+        <a href="/stacks" class="ghost-link">Cancelar</a>
+      </div>
+    </form>
+  </article>
+
+  <article class="panel guidance-panel">
+    <span class="eyebrow">Governança</span>
+    <h3>Boas práticas de stack</h3>
+
+    <ol class="numbered-list">
+      <li>Use nomes claros e reutilizáveis.</li>
+      <li>Prefira modelos ativos.</li>
+      <li>Mantenha uma stack por perfil operacional.</li>
+      <li>Desative sem excluir quando precisar preservar histórico.</li>
+    </ol>
+  </article>
+</section>

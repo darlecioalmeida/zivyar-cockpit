@@ -1,0 +1,113 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Stacks</span>
+    <h2>Ferramenta × Cérebro</h2>
+    <p>
+      Crie combinações reutilizáveis entre o runtime operacional e os modelos cadastrados.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="primary-button" href="/stacks/new">Nova Stack</a>
+  </div>
+</section>
+
+if (notice) {
+<section class="alert success">
+  { notice }
+</section>
+}
+
+<section class="metric-grid">
+  <article class="metric-card">
+    <span>Stacks</span>
+    <strong>{ stack_count }</strong>
+    <small>Configurações cadastradas</small>
+  </article>
+
+  <article class="metric-card">
+    <span>Ativas</span>
+    <strong>{ active_count }</strong>
+    <small>Disponíveis para squads</small>
+  </article>
+
+  <article class="metric-card">
+    <span>Conceito</span>
+    <strong>OpenCode + Model</strong>
+    <small>Base dos agentes</small>
+  </article>
+</section>
+
+if (stack_count > 0) {
+<section class="grid stack-cards">
+  for (stacks) |stack| {
+    <article class="panel stack-card">
+      <div class="stack-card-head">
+        <div class="stack-avatar">S</div>
+        <div>
+          <span class="eyebrow">Stack #{ stack.id }</span>
+          <h3>{ stack.name }</h3>
+        </div>
+      </div>
+
+      <div class="stack-flow">
+        <div>
+          <span>Ferramenta</span>
+          <strong>{ stack.runtime_tool }</strong>
+        </div>
+        <div class="stack-flow-arrow">+</div>
+        <div>
+          <span>Modelo</span>
+          <strong>{ stack.model_name }</strong>
+          <small>{ stack.provider_name } · { stack.model_identifier }</small>
+        </div>
+      </div>
+
+      <div class="provider-meta">
+        <div>
+          <span>Status</span>
+          if (stack.is_active) {
+            <strong class="provider-status active">Ativa</strong>
+          } else {
+            <strong class="provider-status inactive">Inativa</strong>
+          }
+        </div>
+      </div>
+
+      <div class="workspace-card-actions">
+        <a class="ghost-mini" href="/stacks/{ stack.id }/edit">Editar</a>
+
+        <form method="post" action="/stacks/{ stack.id }/delete" class="inline-form" onsubmit="return confirm('Remover esta stack?');">
+          <button class="danger-button" type="submit">Excluir</button>
+        </form>
+      </div>
+    </article>
+  }
+</section>
+} else {
+<section class="grid workspace-layout">
+  <article class="panel empty-state-panel">
+    <div class="empty-icon">S</div>
+    <span class="eyebrow">Estado inicial</span>
+    <h3>Nenhuma stack cadastrada</h3>
+    <p>
+      Monte a primeira combinação Ferramenta × Modelo para usá-la depois em agentes e squads.
+    </p>
+    <a class="primary-button inline" href="/stacks/new">Cadastrar primeira stack</a>
+  </article>
+
+  <article class="panel architecture-panel">
+    <span class="eyebrow">Modelo operacional</span>
+    <h3>Como uma stack será usada</h3>
+
+    <ul class="feature-list">
+      <li>Runtime operacional, inicialmente OpenCode.</li>
+      <li>Modelo associado via provider.</li>
+      <li>Vinculação com agentes.</li>
+      <li>Composição final dentro dos squads.</li>
+    </ul>
+  </article>
+</section>
+}

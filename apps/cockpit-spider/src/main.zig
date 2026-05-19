@@ -44,6 +44,12 @@ pub fn main(init: std.process.Init) !void {
         .get("/providers/:id/models/:model_id/edit", providerModelEdit)
         .post("/providers/:id/models/:model_id/update", providerModelUpdate)
         .post("/providers/:id/models/:model_id/delete", providerModelDelete)
+        .get("/stacks", stacks)
+        .get("/stacks/new", stackNew)
+        .post("/stacks", stackCreate)
+        .get("/stacks/:id/edit", stackEdit)
+        .post("/stacks/:id/update", stackUpdate)
+        .post("/stacks/:id/delete", stackDelete)
         .listen(.{}) catch {};
 }
 
@@ -108,6 +114,36 @@ const ProviderModelForm = struct {
 
 const ProviderModelIdRow = struct {
     id: i32,
+};
+
+
+const StackRow = struct {
+    id: i32,
+    name: []const u8,
+    runtime_tool: []const u8,
+    provider_model_id: i32,
+    model_name: []const u8,
+    model_identifier: []const u8,
+    provider_name: []const u8,
+    is_active: bool,
+};
+
+const StackForm = struct {
+    name: []const u8,
+    runtime_tool: []const u8,
+    provider_model_id: []const u8,
+    is_active: []const u8,
+};
+
+const StackIdRow = struct {
+    id: i32,
+};
+
+const StackModelOptionRow = struct {
+    id: i32,
+    model_name: []const u8,
+    model_identifier: []const u8,
+    provider_name: []const u8,
 };
 
 fn dashboard(c: *spider.Ctx) !spider.Response {
@@ -877,3 +913,351 @@ fn providerDelete(c: *spider.Ctx) !spider.Response {
 
     return c.redirect("/providers?deleted=1");
 }
+
+fn stacks(c: *spider.Ctx) !spider.Response {
+    const rows = try db.query(
+        StackRow,
+        c.arena,
+        \\SELECT
+        \\    s.id,
+        \\    s.name,
+        \\    s.runtime_tool,
+        \\    s.provider_model_id,
+        \\    pm.model_name,
+        \\    pm.model_id AS model_identifier,
+        \\    p.name AS provider_name,
+        \\    s.is_active
+        \\FROM stacks s
+        \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
+        \\INNER JOIN providers p ON p.id = pm.provider_id
+        \\ORDER BY s.id DESC
+        ,
+        .{},
+    );
+
+    const notice =
+        if (c.query("created") != null)
+            "Stack cadastrada com sucesso."
+        else if (c.query("updated") != null)
+            "Stack atualizada com sucesso."
+        else if (c.query("deleted") != null)
+            "Stack removida com sucesso."
+        else
+            "";
+
+    return c.view("stacks/index", .{
+        .title = "Stacks",
+        .stacks = rows,
+        .stack_count = rows.len,
+        .active_count = countActiveStacks(rows),
+        .notice = notice,
+    }, .{});
+}
+
+fn countActiveStacks(rows: []const StackRow) usize {
+    var total: usize = 0;
+    for (rows) |row| {
+        if (row.is_active) total += 1;
+    }
+    return total;
+}
+
+fn stackNew(c: *spider.Ctx) !spider.Response {
+    const models = try db.query(
+        StackModelOptionRow,
+        c.arena,
+        \\SELECT
+        \\    pm.id,
+        \\    pm.model_name,
+        \\    pm.model_id AS model_identifier,
+        \\    p.name AS provider_name
+        \\FROM provider_models pm
+        \\INNER JOIN providers p ON p.id = pm.provider_id
+        \\WHERE pm.is_active = TRUE
+        \\AND p.is_active = TRUE
+        \\ORDER BY p.name ASC, pm.model_name ASC
+        ,
+        .{},
+    );
+
+    return c.view("stacks/new", .{
+        .title = "Nova Stack",
+        .models = models,
+        .model_count = models.len,
+        .error_message = "",
+        .form = .{
+            .name = "",
+            .runtime_tool = "OpenCode",
+            .provider_model_id = "",
+            .is_active = "true",
+        },
+    }, .{});
+}
+
+fn stackCreate(c: *spider.Ctx) !spider.Response {
+    const form = try c.parseForm(StackForm);
+    const provider_model_id = std.fmt.parseInt(i32, form.provider_model_id, 10) catch 0;
+    const active = std.mem.eql(u8, form.is_active, "true");
+
+    const duplicated = try db.query(
+        StackIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM stacks
+        \\WHERE name = $1
+        \\LIMIT 1
+        ,
+        .{ form.name },
+    );
+
+    const models = try db.query(
+        StackModelOptionRow,
+        c.arena,
+        \\SELECT
+        \\    pm.id,
+        \\    pm.model_name,
+        \\    pm.model_id AS model_identifier,
+        \\    p.name AS provider_name
+        \\FROM provider_models pm
+        \\INNER JOIN providers p ON p.id = pm.provider_id
+        \\WHERE pm.is_active = TRUE
+        \\AND p.is_active = TRUE
+        \\ORDER BY p.name ASC, pm.model_name ASC
+        ,
+        .{},
+    );
+
+    if (duplicated.len > 0) {
+        return c.view("stacks/new", .{
+            .title = "Nova Stack",
+            .models = models,
+            .model_count = models.len,
+            .error_message = "Já existe uma stack cadastrada com este nome.",
+            .form = form,
+        }, .{ .status = .bad_request });
+    }
+
+    if (provider_model_id <= 0) {
+        return c.view("stacks/new", .{
+            .title = "Nova Stack",
+            .models = models,
+            .model_count = models.len,
+            .error_message = "Selecione um modelo válido para esta stack.",
+            .form = form,
+        }, .{ .status = .bad_request });
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO stacks (name, runtime_tool, provider_model_id, is_active)
+        \\VALUES ($1, $2, $3, $4)
+        ,
+        .{
+            form.name,
+            form.runtime_tool,
+            provider_model_id,
+            active,
+        },
+    );
+
+    return c.redirect("/stacks?created=1");
+}
+
+fn stackEdit(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Stack não informada.", .{ .status = .bad_request });
+
+    const stack_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Stack inválida.", .{ .status = .bad_request });
+
+    const rows = try db.query(
+        StackRow,
+        c.arena,
+        \\SELECT
+        \\    s.id,
+        \\    s.name,
+        \\    s.runtime_tool,
+        \\    s.provider_model_id,
+        \\    pm.model_name,
+        \\    pm.model_id AS model_identifier,
+        \\    p.name AS provider_name,
+        \\    s.is_active
+        \\FROM stacks s
+        \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
+        \\INNER JOIN providers p ON p.id = pm.provider_id
+        \\WHERE s.id = $1
+        \\LIMIT 1
+        ,
+        .{ stack_id },
+    );
+
+    if (rows.len == 0) {
+        return c.text("Stack não encontrada.", .{ .status = .not_found });
+    }
+
+    const models = try db.query(
+        StackModelOptionRow,
+        c.arena,
+        \\SELECT
+        \\    pm.id,
+        \\    pm.model_name,
+        \\    pm.model_id AS model_identifier,
+        \\    p.name AS provider_name
+        \\FROM provider_models pm
+        \\INNER JOIN providers p ON p.id = pm.provider_id
+        \\WHERE pm.is_active = TRUE
+        \\AND p.is_active = TRUE
+        \\ORDER BY CASE WHEN pm.id = $1 THEN 0 ELSE 1 END,
+        \\         p.name ASC,
+        \\         pm.model_name ASC
+        ,
+        .{ rows[0].provider_model_id },
+    );
+
+    return c.view("stacks/edit", .{
+        .title = "Editar Stack",
+        .stack = rows[0],
+        .models = models,
+        .model_count = models.len,
+        .error_message = "",
+    }, .{});
+}
+
+fn stackUpdate(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Stack não informada.", .{ .status = .bad_request });
+
+    const stack_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Stack inválida.", .{ .status = .bad_request });
+
+    const form = try c.parseForm(StackForm);
+    const provider_model_id = std.fmt.parseInt(i32, form.provider_model_id, 10) catch 0;
+    const active = std.mem.eql(u8, form.is_active, "true");
+
+    const duplicated = try db.query(
+        StackIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM stacks
+        \\WHERE name = $1
+        \\AND id <> $2
+        \\LIMIT 1
+        ,
+        .{ form.name, stack_id },
+    );
+
+    const models = try db.query(
+        StackModelOptionRow,
+        c.arena,
+        \\SELECT
+        \\    pm.id,
+        \\    pm.model_name,
+        \\    pm.model_id AS model_identifier,
+        \\    p.name AS provider_name
+        \\FROM provider_models pm
+        \\INNER JOIN providers p ON p.id = pm.provider_id
+        \\WHERE pm.is_active = TRUE
+        \\AND p.is_active = TRUE
+        \\ORDER BY p.name ASC, pm.model_name ASC
+        ,
+        .{},
+    );
+
+    const current_rows = try db.query(
+        StackRow,
+        c.arena,
+        \\SELECT
+        \\    s.id,
+        \\    s.name,
+        \\    s.runtime_tool,
+        \\    s.provider_model_id,
+        \\    pm.model_name,
+        \\    pm.model_id AS model_identifier,
+        \\    p.name AS provider_name,
+        \\    s.is_active
+        \\FROM stacks s
+        \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
+        \\INNER JOIN providers p ON p.id = pm.provider_id
+        \\WHERE s.id = $1
+        \\LIMIT 1
+        ,
+        .{ stack_id },
+    );
+
+    if (current_rows.len == 0) {
+        return c.text("Stack não encontrada.", .{ .status = .not_found });
+    }
+
+    if (duplicated.len > 0) {
+        const stack = StackRow{
+            .id = stack_id,
+            .name = form.name,
+            .runtime_tool = form.runtime_tool,
+            .provider_model_id = provider_model_id,
+            .model_name = current_rows[0].model_name,
+            .model_identifier = current_rows[0].model_identifier,
+            .provider_name = current_rows[0].provider_name,
+            .is_active = active,
+        };
+
+        return c.view("stacks/edit", .{
+            .title = "Editar Stack",
+            .stack = stack,
+            .models = models,
+            .model_count = models.len,
+            .error_message = "Outra stack já utiliza este nome.",
+        }, .{ .status = .bad_request });
+    }
+
+    if (provider_model_id <= 0) {
+        return c.view("stacks/edit", .{
+            .title = "Editar Stack",
+            .stack = current_rows[0],
+            .models = models,
+            .model_count = models.len,
+            .error_message = "Selecione um modelo válido para esta stack.",
+        }, .{ .status = .bad_request });
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE stacks
+        \\SET name = $1,
+        \\    runtime_tool = $2,
+        \\    provider_model_id = $3,
+        \\    is_active = $4
+        \\WHERE id = $5
+        ,
+        .{
+            form.name,
+            form.runtime_tool,
+            provider_model_id,
+            active,
+            stack_id,
+        },
+    );
+
+    return c.redirect("/stacks?updated=1");
+}
+
+fn stackDelete(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Stack não informada.", .{ .status = .bad_request });
+
+    const stack_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Stack inválida.", .{ .status = .bad_request });
+
+    try db.query(
+        void,
+        c.arena,
+        \\DELETE FROM stacks
+        \\WHERE id = $1
+        ,
+        .{ stack_id },
+    );
+
+    return c.redirect("/stacks?deleted=1");
+}
+

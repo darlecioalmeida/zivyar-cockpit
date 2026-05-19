@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS stacks (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(180) NOT NULL UNIQUE,
+    runtime_tool VARCHAR(80) NOT NULL DEFAULT 'OpenCode',
+    provider_model_id INTEGER NOT NULL REFERENCES provider_models(id) ON DELETE RESTRICT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
