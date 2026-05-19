@@ -1,12 +1,11 @@
 (() => {
-  const forms = document.querySelectorAll(".runtime-action-form");
   const overlay = document.getElementById("runtime-loading-overlay");
   const title = document.getElementById("runtime-loading-title");
   const message = document.getElementById("runtime-loading-message");
   const step = document.getElementById("runtime-loading-step");
   const hint = document.getElementById("runtime-loading-hint");
 
-  if (!forms.length || !overlay || !title || !message || !step || !hint) {
+  if (!overlay || !title || !message || !step || !hint) {
     return;
   }
 
@@ -45,36 +44,46 @@
     }
   };
 
+  let activeInterval = null;
+
   function startStepAnimation(steps) {
     let index = 0;
     step.textContent = steps[index];
 
-    return window.setInterval(() => {
+    if (activeInterval) {
+      window.clearInterval(activeInterval);
+    }
+
+    activeInterval = window.setInterval(() => {
       index = (index + 1) % steps.length;
       step.textContent = steps[index];
     }, 1800);
   }
 
-  forms.forEach((form) => {
-    form.addEventListener("submit", () => {
-      const action = form.dataset.runtimeAction || "start";
-      const content = contentByAction[action] || contentByAction.start;
-      const button = form.querySelector("button[type='submit']");
+  document.addEventListener("submit", (event) => {
+    const form = event.target.closest(".runtime-action-form");
 
-      if (button) {
-        button.disabled = true;
-        button.dataset.originalText = button.textContent || "";
-        button.textContent = "Processando...";
-      }
+    if (!form) {
+      return;
+    }
 
-      title.textContent = content.title;
-      message.textContent = content.message;
-      hint.textContent = content.hint;
+    const action = form.dataset.runtimeAction || "start";
+    const content = contentByAction[action] || contentByAction.start;
+    const button = form.querySelector("button[type='submit']");
 
-      overlay.hidden = false;
-      document.body.classList.add("runtime-operation-active");
+    if (button) {
+      button.disabled = true;
+      button.dataset.originalText = button.textContent || "";
+      button.textContent = "Processando...";
+    }
 
-      startStepAnimation(content.steps);
-    });
+    title.textContent = content.title;
+    message.textContent = content.message;
+    hint.textContent = content.hint;
+
+    overlay.hidden = false;
+    document.body.classList.add("runtime-operation-active");
+
+    startStepAnimation(content.steps);
   });
 })();

@@ -31,6 +31,7 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces/:id/runtime/prepare", workspaceRuntimePrepare)
         .post("/workspaces/:id/runtime/start", workspaceRuntimeStart)
         .post("/workspaces/:id/runtime/stop", workspaceRuntimeStop)
+        .get("/workspaces/:id/runtime/live", workspaceRuntimeLiveStatus)
         .get("/workspaces/:id", workspaceShow)
         .get("/missions", missions)
         .get("/missions/new", missionNew)
@@ -1020,6 +1021,93 @@ fn workspaceUpdate(c: *spider.Ctx) !spider.Response {
     );
 
     return c.redirect("/workspaces?updated=1");
+}
+
+fn workspaceRuntimeLiveStatus(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.json(.{
+            .ok = false,
+            .message = "Workspace não informado.",
+        }, .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.json(.{
+            .ok = false,
+            .message = "Workspace inválido.",
+        }, .{ .status = .bad_request });
+
+    const runtime_rows = try loadWorkspaceRuntime(c, workspace_id);
+
+    if (runtime_rows.len == 0) {
+        return c.json(.{
+            .ok = false,
+            .message = "Runtime não encontrado.",
+        }, .{ .status = .not_found });
+    }
+
+    try reconcileWorkspaceRuntimeState(c, runtime_rows[0]);
+
+    const refreshed_rows = try loadWorkspaceRuntime(c, workspace_id);
+
+    if (refreshed_rows.len == 0) {
+        return c.json(.{
+            .ok = false,
+            .message = "Runtime não encontrado após reconciliação.",
+        }, .{ .status = .not_found });
+    }
+
+    const runtime = refreshed_rows[0];
+
+    const runtime_events = try db.query(
+        WorkspaceRuntimeEventRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    event_type,
+        \\    title,
+        \\    message
+        \\FROM workspace_runtime_events
+        \\WHERE workspace_id = $1
+        \\ORDER BY id DESC
+        \\LIMIT 8
+        ,
+        .{ workspace_id },
+    );
+
+    const runtime_logs = try db.query(
+        WorkspaceRuntimeLogRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    action,
+        \\    command_label,
+        \\    exit_code,
+        \\    succeeded,
+        \\    stdout_excerpt,
+        \\    stderr_excerpt
+        \\FROM workspace_runtime_logs
+        \\WHERE workspace_id = $1
+        \\ORDER BY id DESC
+        \\LIMIT 8
+        ,
+        .{ workspace_id },
+    );
+
+    return c.json(.{
+        .ok = true,
+        .workspace_id = workspace_id,
+        .state = runtime.state,
+        .container_name = runtime.container_name,
+        .opencode_port = runtime.opencode_port_label,
+        .server_url = runtime.server_url_label,
+        .status_message = runtime.status_message,
+        .is_prepared = runtime.is_prepared,
+        .is_running = std.mem.eql(u8, runtime.state, "running"),
+        .runtime_events = runtime_events,
+        .runtime_event_count = runtime_events.len,
+        .runtime_logs = runtime_logs,
+        .runtime_log_count = runtime_logs.len,
+    }, .{});
 }
 
 fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {

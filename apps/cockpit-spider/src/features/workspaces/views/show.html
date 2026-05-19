@@ -50,30 +50,30 @@ extends "layout"
     </div>
   </article>
 
-  <article class="panel runtime-status-panel">
+  <article class="panel runtime-status-panel" id="workspace-runtime-panel" data-workspace-id="{ workspace.id }">
     <span class="eyebrow">Runtime</span>
     <h3>Docker + OpenCode Server</h3>
 
-    <div class="runtime-state-badge">
+    <div class="runtime-state-badge" id="runtime-live-state">
       { runtime.state }
     </div>
 
-    <p>{ runtime.status_message }</p>
+    <p id="runtime-live-message">{ runtime.status_message }</p>
 
     <div class="runtime-detail-grid">
       <div>
         <span>Container</span>
-        <strong>{ runtime.container_name }</strong>
+        <strong id="runtime-live-container">{ runtime.container_name }</strong>
       </div>
 
       <div>
         <span>Porta OpenCode</span>
-        <strong>{ runtime.opencode_port_label }</strong>
+        <strong id="runtime-live-port">{ runtime.opencode_port_label }</strong>
       </div>
 
       <div>
         <span>Servidor</span>
-        <strong>{ runtime.server_url_label }</strong>
+        <strong id="runtime-live-server">{ runtime.server_url_label }</strong>
       </div>
     </div>
 
@@ -122,27 +122,29 @@ extends "layout"
       <span class="eyebrow">Runtime Manager</span>
       <h3>Histórico operacional</h3>
     </div>
-    <span class="mini-badge">{ runtime_event_count } eventos</span>
+    <span class="mini-badge" id="runtime-live-event-count">{ runtime_event_count } eventos</span>
   </div>
 
-  if (runtime_event_count > 0) {
-    <div class="runtime-event-list">
-      for (runtime_events) |event| {
-        <article class="runtime-event-card">
-          <span class="runtime-event-type">{ event.event_type }</span>
-          <div>
-            <strong>{ event.title }</strong>
-            <p>{ event.message }</p>
-          </div>
-        </article>
-      }
-    </div>
-  } else {
-    <div class="empty-inline-state">
-      <strong>Nenhum evento registrado.</strong>
-      <p>Prepare ou inicie o runtime para gerar o histórico operacional deste workspace.</p>
-    </div>
-  }
+  <div id="runtime-live-history-body">
+    if (runtime_event_count > 0) {
+      <div class="runtime-event-list">
+        for (runtime_events) |event| {
+          <article class="runtime-event-card">
+            <span class="runtime-event-type">{ event.event_type }</span>
+            <div>
+              <strong>{ event.title }</strong>
+              <p>{ event.message }</p>
+            </div>
+          </article>
+        }
+      </div>
+    } else {
+      <div class="empty-inline-state">
+        <strong>Nenhum evento registrado.</strong>
+        <p>Prepare ou inicie o runtime para gerar o histórico operacional deste workspace.</p>
+      </div>
+    }
+  </div>
 </section>
 
 <section class="panel runtime-logs-panel">
@@ -151,55 +153,57 @@ extends "layout"
       <span class="eyebrow">Runtime Debug</span>
       <h3>Logs técnicos</h3>
     </div>
-    <span class="mini-badge">{ runtime_log_count } registros</span>
+    <span class="mini-badge" id="runtime-live-log-count">{ runtime_log_count } registros</span>
   </div>
 
-  if (runtime_log_count > 0) {
-    <div class="runtime-log-list">
-      for (runtime_logs) |log| {
-        <details class="runtime-log-card">
-          <summary>
-            <div>
-              <strong>{ log.action }</strong>
-              <span>{ log.command_label }</span>
-            </div>
-
-            if (log.succeeded) {
-              <span class="runtime-log-status ok">OK</span>
-            } else {
-              <span class="runtime-log-status error">ERRO</span>
-            }
-          </summary>
-
-          <div class="runtime-log-body">
-            <div class="runtime-log-meta">
-              <span>Exit code</span>
-              <strong>{ log.exit_code }</strong>
-            </div>
-
-            if (log.stdout_excerpt) {
-              <div class="runtime-log-output">
-                <span>STDOUT</span>
-                <pre>{ log.stdout_excerpt }</pre>
+  <div id="runtime-live-logs-body">
+    if (runtime_log_count > 0) {
+      <div class="runtime-log-list">
+        for (runtime_logs) |log| {
+          <details class="runtime-log-card">
+            <summary>
+              <div>
+                <strong>{ log.action }</strong>
+                <span>{ log.command_label }</span>
               </div>
-            }
 
-            if (log.stderr_excerpt) {
-              <div class="runtime-log-output danger">
-                <span>STDERR</span>
-                <pre>{ log.stderr_excerpt }</pre>
+              if (log.succeeded) {
+                <span class="runtime-log-status ok">OK</span>
+              } else {
+                <span class="runtime-log-status error">ERRO</span>
+              }
+            </summary>
+
+            <div class="runtime-log-body">
+              <div class="runtime-log-meta">
+                <span>Exit code</span>
+                <strong>{ log.exit_code }</strong>
               </div>
-            }
-          </div>
-        </details>
-      }
-    </div>
-  } else {
-    <div class="empty-inline-state">
-      <strong>Nenhum log técnico registrado.</strong>
-      <p>Os comandos Docker executados pelo runtime aparecerão aqui.</p>
-    </div>
-  }
+
+              if (log.stdout_excerpt) {
+                <div class="runtime-log-output">
+                  <span>STDOUT</span>
+                  <pre>{ log.stdout_excerpt }</pre>
+                </div>
+              }
+
+              if (log.stderr_excerpt) {
+                <div class="runtime-log-output danger">
+                  <span>STDERR</span>
+                  <pre>{ log.stderr_excerpt }</pre>
+                </div>
+              }
+            </div>
+          </details>
+        }
+      </div>
+    } else {
+      <div class="empty-inline-state">
+        <strong>Nenhum log técnico registrado.</strong>
+        <p>Os comandos Docker executados pelo runtime aparecerão aqui.</p>
+      </div>
+    }
+  </div>
 </section>
 
 <section class="grid cockpit-preview-grid">
@@ -319,5 +323,5 @@ extends "layout"
   </div>
 </div>
 
-<script src="/js/runtime-actions.js"></script>
-
+<script src="/js/runtime-actions.js?v=20260519-1"></script>
+<script src="/js/runtime-live-status.js?v=20260519-1"></script>
