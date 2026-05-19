@@ -1,18 +1,115 @@
 extends "layout"
 
-<section class="panel page-intro">
-  <span class="eyebrow">Módulo</span>
-  <h2>Squads</h2>
-  <p>Monte times com papéis, modelos e regras de atuação.</p>
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Squads</span>
+    <h2>Times multiagente do Cockpit</h2>
+    <p>
+      Monte composições completas de papéis e agentes para uso em workspaces e missões.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="primary-button" href="/squads/new">Nova Squad</a>
+  </div>
 </section>
 
-<section class="grid two">
-  <article class="panel placeholder">
-    <h3>Próxima entrega</h3>
-    <p>Esta tela será detalhada na Sprint 1.</p>
+if (notice) {
+<section class="alert success">
+  { notice }
+</section>
+}
+
+<section class="metric-grid">
+  <article class="metric-card">
+    <span>Squads</span>
+    <strong>{ squad_count }</strong>
+    <small>Cadastradas no Cockpit</small>
   </article>
-  <article class="panel placeholder">
-    <h3>Base preparada</h3>
-    <p>Rotas e estrutura de views já fazem parte do scaffold inicial.</p>
+
+  <article class="metric-card">
+    <span>Ativas</span>
+    <strong>{ active_count }</strong>
+    <small>Disponíveis para o produto</small>
+  </article>
+
+  <article class="metric-card">
+    <span>Composição</span>
+    <strong>6 papéis</strong>
+    <small>Piloto até Executor</small>
   </article>
 </section>
+
+if (squad_count > 0) {
+<section class="grid squad-cards">
+  for (squads) |squad| {
+    <article class="panel squad-card">
+      <div class="squad-card-head">
+        <div class="squad-avatar">SQ</div>
+        <div>
+          <span class="eyebrow">Squad #{ squad.id }</span>
+          <h3>{ squad.name }</h3>
+          <small>{ squad.slug }</small>
+        </div>
+      </div>
+
+      <p class="agent-summary">{ squad.summary }</p>
+
+      <div class="squad-meta">
+        <div>
+          <span>Status</span>
+          if (squad.is_active) {
+            <strong class="provider-status active">Ativa</strong>
+          } else {
+            <strong class="provider-status inactive">Inativa</strong>
+          }
+        </div>
+
+        <div>
+          <span>Padrão</span>
+          if (squad.is_default) {
+            <strong class="provider-status active">Sim</strong>
+          } else {
+            <strong>Não</strong>
+          }
+        </div>
+      </div>
+
+      <div class="workspace-card-actions">
+        <a class="ghost-mini" href="/squads/{ squad.id }">Abrir</a>
+        <a class="ghost-mini" href="/squads/{ squad.id }/edit">Editar</a>
+
+        <form method="post" action="/squads/{ squad.id }/delete" class="inline-form" onsubmit="return confirm('Remover esta squad?');">
+          <button class="danger-button" type="submit">Excluir</button>
+        </form>
+      </div>
+    </article>
+  }
+</section>
+} else {
+<section class="grid workspace-layout">
+  <article class="panel empty-state-panel">
+    <div class="empty-icon">SQ</div>
+    <span class="eyebrow">Estado inicial</span>
+    <h3>Nenhuma squad cadastrada</h3>
+    <p>
+      Crie o primeiro time multiagente para ligar agentes, papéis e missões.
+    </p>
+    <a class="primary-button inline" href="/squads/new">Cadastrar primeira squad</a>
+  </article>
+
+  <article class="panel architecture-panel">
+    <span class="eyebrow">Composição</span>
+    <h3>Estrutura prevista</h3>
+
+    <ul class="feature-list">
+      <li>Piloto.</li>
+      <li>Planner.</li>
+      <li>Scout.</li>
+      <li>Builder.</li>
+      <li>Reviewer.</li>
+      <li>Executor.</li>
+    </ul>
+  </article>
+</section>
+}

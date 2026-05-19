@@ -1,0 +1,145 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Nova Squad</span>
+    <h2>Montar time multiagente</h2>
+    <p>
+      Defina os seis papéis centrais do Cockpit com agentes já cadastrados.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/squads">Voltar</a>
+  </div>
+</section>
+
+<section class="grid squad-form-layout">
+  <article class="panel form-panel">
+    <h3>Dados da squad</h3>
+
+    if (error_message) {
+      <div class="alert danger">
+        { error_message }
+      </div>
+    }
+
+    if (agent_count == 0) {
+      <div class="alert danger">
+        Cadastre agentes ativos antes de criar uma squad.
+      </div>
+    }
+
+    <form class="cockpit-form" method="post" action="/squads">
+      <label>
+        <span>Nome</span>
+        <input type="text" name="name" value="{ form.name }" placeholder="Ex.: Official Cockpit Squad" required />
+      </label>
+
+      <label>
+        <span>Slug</span>
+        <input type="text" name="slug" value="{ form.slug }" placeholder="official-cockpit-squad" required />
+      </label>
+
+      <label>
+        <span>Resumo</span>
+        <textarea name="summary" rows="4" placeholder="Descreva a proposta deste squad." required>{ form.summary }</textarea>
+      </label>
+
+      <label>
+        <span>Squad padrão</span>
+        <select name="is_default">
+          <option value="false">Não</option>
+          <option value="true">Sim</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Status</span>
+        <select name="is_active">
+          <option value="true">Ativa</option>
+          <option value="false">Inativa</option>
+        </select>
+      </label>
+
+      <h3 class="form-section-title">Papéis do Squad</h3>
+
+      <label>
+        <span>Piloto</span>
+        <select name="pilot_agent_id" required>
+          <option value="">Selecione um agente</option>
+          for (agents) |agent| {
+            <option value="{ agent.id }">{ agent.name } · { agent.handle } · { agent.agent_role }</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Planner</span>
+        <select name="planner_agent_id" required>
+          <option value="">Selecione um agente</option>
+          for (agents) |agent| {
+            <option value="{ agent.id }">{ agent.name } · { agent.handle } · { agent.agent_role }</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Scout</span>
+        <select name="scout_agent_id" required>
+          <option value="">Selecione um agente</option>
+          for (agents) |agent| {
+            <option value="{ agent.id }">{ agent.name } · { agent.handle } · { agent.agent_role }</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Builder</span>
+        <select name="builder_agent_id" required>
+          <option value="">Selecione um agente</option>
+          for (agents) |agent| {
+            <option value="{ agent.id }">{ agent.name } · { agent.handle } · { agent.agent_role }</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Reviewer</span>
+        <select name="reviewer_agent_id" required>
+          <option value="">Selecione um agente</option>
+          for (agents) |agent| {
+            <option value="{ agent.id }">{ agent.name } · { agent.handle } · { agent.agent_role }</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Executor</span>
+        <select name="executor_agent_id" required>
+          <option value="">Selecione um agente</option>
+          for (agents) |agent| {
+            <option value="{ agent.id }">{ agent.name } · { agent.handle } · { agent.agent_role }</option>
+          }
+        </select>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="primary-button">Salvar squad</button>
+        <a href="/squads" class="ghost-link">Cancelar</a>
+      </div>
+    </form>
+  </article>
+
+  <article class="panel guidance-panel">
+    <span class="eyebrow">Arquitetura operacional</span>
+    <h3>Como a squad será usada</h3>
+
+    <ol class="numbered-list">
+      <li>O workspace escolhe uma squad.</li>
+      <li>A missão ativa o time.</li>
+      <li>Cada papel recebe o agente associado.</li>
+      <li>O runtime materializa as sessões necessárias.</li>
+    </ol>
+  </article>
+</section>

@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS squads (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(180) NOT NULL,
+    slug VARCHAR(140) NOT NULL UNIQUE,
+    summary TEXT NOT NULL,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS squad_members (
+    id SERIAL PRIMARY KEY,
+    squad_id INTEGER NOT NULL REFERENCES squads(id) ON DELETE CASCADE,
+    role_name VARCHAR(80) NOT NULL,
+    agent_id INTEGER NOT NULL REFERENCES agents(id) ON DELETE RESTRICT,
+    display_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_squad_role UNIQUE (squad_id, role_name)
+);

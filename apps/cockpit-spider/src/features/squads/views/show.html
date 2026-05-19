@@ -1,0 +1,95 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Squad</span>
+    <h2>{ squad.name }</h2>
+    <p>{ squad.summary }</p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/squads">Voltar</a>
+    <a class="ghost-link" href="/squads/{ squad.id }/edit">Editar</a>
+  </div>
+</section>
+
+<section class="workspace-detail-grid">
+  <article class="panel workspace-summary-panel">
+    <span class="eyebrow">Identidade</span>
+    <h3>Configuração da squad</h3>
+
+    <div class="detail-meta-grid">
+      <div>
+        <span>Slug</span>
+        <strong>{ squad.slug }</strong>
+      </div>
+
+      <div>
+        <span>Status</span>
+        if (squad.is_active) {
+          <strong class="provider-status active">Ativa</strong>
+        } else {
+          <strong class="provider-status inactive">Inativa</strong>
+        }
+      </div>
+
+      <div>
+        <span>Padrão</span>
+        if (squad.is_default) {
+          <strong class="provider-status active">Sim</strong>
+        } else {
+          <strong>Não</strong>
+        }
+      </div>
+
+      <div>
+        <span>Membros</span>
+        <strong>{ member_count }</strong>
+      </div>
+    </div>
+  </article>
+
+  <article class="panel runtime-status-panel">
+    <span class="eyebrow">Uso futuro</span>
+    <h3>Squad em Workspaces e Missions</h3>
+    <p>
+      Esta composição será a base de execução multiagente dentro do Cockpit.
+    </p>
+  </article>
+</section>
+
+<section class="panel squad-members-section">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Composição</span>
+      <h3>Papéis e agentes</h3>
+    </div>
+    <span class="mini-badge">{ member_count } membros</span>
+  </div>
+
+  <section class="grid squad-member-cards">
+    for (members) |member| {
+      <article class="model-card">
+        <div class="model-card-head">
+          <div class="provider-avatar compact">A</div>
+          <div>
+            <strong>{ member.role_name }</strong>
+            <span>{ member.agent_name } · { member.agent_handle }</span>
+          </div>
+        </div>
+
+        <div class="model-meta">
+          <div>
+            <span>Papel original do agente</span>
+            <strong>{ member.agent_role }</strong>
+          </div>
+
+          <div>
+            <span>Stack padrão</span>
+            <strong>{ member.stack_name }</strong>
+          </div>
+        </div>
+      </article>
+    }
+  </section>
+</section>

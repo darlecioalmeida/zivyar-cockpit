@@ -38,6 +38,12 @@ pub fn main(init: std.process.Init) !void {
         .post("/agents/:id/update", agentUpdate)
         .post("/agents/:id/delete", agentDelete)
         .get("/squads", squads)
+        .get("/squads/new", squadNew)
+        .post("/squads", squadCreate)
+        .get("/squads/:id", squadShow)
+        .get("/squads/:id/edit", squadEdit)
+        .post("/squads/:id/update", squadUpdate)
+        .post("/squads/:id/delete", squadDelete)
         .get("/providers", providers)
         .get("/providers/new", providerNew)
         .post("/providers", providerCreate)
@@ -188,6 +194,57 @@ const AgentStackOptionRow = struct {
     name: []const u8,
     runtime_tool: []const u8,
     model_name: []const u8,
+};
+
+
+const SquadRow = struct {
+    id: i32,
+    name: []const u8,
+    slug: []const u8,
+    summary: []const u8,
+    is_default: bool,
+    is_active: bool,
+};
+
+const SquadIdRow = struct {
+    id: i32,
+};
+
+const SquadForm = struct {
+    name: []const u8,
+    slug: []const u8,
+    summary: []const u8,
+    is_default: []const u8,
+    is_active: []const u8,
+    pilot_agent_id: []const u8,
+    planner_agent_id: []const u8,
+    scout_agent_id: []const u8,
+    builder_agent_id: []const u8,
+    reviewer_agent_id: []const u8,
+    executor_agent_id: []const u8,
+};
+
+const SquadAgentOptionRow = struct {
+    id: i32,
+    name: []const u8,
+    handle: []const u8,
+    agent_role: []const u8,
+};
+
+const SquadMemberRow = struct {
+    id: i32,
+    squad_id: i32,
+    role_name: []const u8,
+    agent_id: i32,
+    display_order: i32,
+    agent_name: []const u8,
+    agent_handle: []const u8,
+    agent_role: []const u8,
+    stack_name: []const u8,
+};
+
+const SquadMemberAgentIdRow = struct {
+    agent_id: i32,
 };
 
 fn dashboard(c: *spider.Ctx) !spider.Response {
@@ -853,7 +910,41 @@ fn agentDelete(c: *spider.Ctx) !spider.Response {
 }
 
 fn squads(c: *spider.Ctx) !spider.Response {
-    return c.view("squads/index", .{ .title = "Squads" }, .{});
+    const rows = try db.query(
+        SquadRow,
+        c.arena,
+        \\SELECT id, name, slug, summary, is_default, is_active
+        \\FROM squads
+        \\ORDER BY is_default DESC, id DESC
+        ,
+        .{},
+    );
+
+    const notice =
+        if (c.query("created") != null)
+            "Squad cadastrada com sucesso."
+        else if (c.query("updated") != null)
+            "Squad atualizada com sucesso."
+        else if (c.query("deleted") != null)
+            "Squad removida com sucesso."
+        else
+            "";
+
+    return c.view("squads/index", .{
+        .title = "Squads",
+        .squads = rows,
+        .squad_count = rows.len,
+        .active_count = countActiveSquads(rows),
+        .notice = notice,
+    }, .{});
+}
+
+fn countActiveSquads(rows: []const SquadRow) usize {
+    var total: usize = 0;
+    for (rows) |row| {
+        if (row.is_active) total += 1;
+    }
+    return total;
 }
 
 fn providers(c: *spider.Ctx) !spider.Response {
@@ -1378,6 +1469,450 @@ fn providerDelete(c: *spider.Ctx) !spider.Response {
     );
 
     return c.redirect("/providers?deleted=1");
+}
+
+fn loadSquadAgents(c: *spider.Ctx) ![]SquadAgentOptionRow {
+    return db.query(
+        SquadAgentOptionRow,
+        c.arena,
+        \\SELECT id, name, handle, agent_role
+        \\FROM agents
+        \\WHERE is_active = TRUE
+        \\ORDER BY agent_role ASC, name ASC
+        ,
+        .{},
+    );
+}
+
+
+fn loadSquadAgentsExcept(c: *spider.Ctx, excluded_agent_id: i32) ![]SquadAgentOptionRow {
+    return db.query(
+        SquadAgentOptionRow,
+        c.arena,
+        \\SELECT id, name, handle, agent_role
+        \\FROM agents
+        \\WHERE is_active = TRUE
+        \\AND id <> $1
+        \\ORDER BY agent_role ASC, name ASC
+        ,
+        .{ excluded_agent_id },
+    );
+}
+
+fn squadNew(c: *spider.Ctx) !spider.Response {
+    const agents_rows = try loadSquadAgents(c);
+
+    return c.view("squads/new", .{
+        .title = "Nova Squad",
+        .agents = agents_rows,
+        .agent_count = agents_rows.len,
+        .error_message = "",
+        .form = .{
+            .name = "",
+            .slug = "",
+            .summary = "",
+            .is_default = "false",
+            .is_active = "true",
+            .pilot_agent_id = "",
+            .planner_agent_id = "",
+            .scout_agent_id = "",
+            .builder_agent_id = "",
+            .reviewer_agent_id = "",
+            .executor_agent_id = "",
+        },
+    }, .{});
+}
+
+fn squadCreate(c: *spider.Ctx) !spider.Response {
+    const form = try c.parseForm(SquadForm);
+    const agents_rows = try loadSquadAgents(c);
+
+    const duplicated = try db.query(
+        SquadIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM squads
+        \\WHERE slug = $1
+        \\LIMIT 1
+        ,
+        .{ form.slug },
+    );
+
+    if (duplicated.len > 0) {
+        return c.view("squads/new", .{
+            .title = "Nova Squad",
+            .agents = agents_rows,
+            .agent_count = agents_rows.len,
+            .error_message = "Já existe uma squad cadastrada com este slug.",
+            .form = form,
+        }, .{ .status = .bad_request });
+    }
+
+    const pilot_agent_id = std.fmt.parseInt(i32, form.pilot_agent_id, 10) catch 0;
+    const planner_agent_id = std.fmt.parseInt(i32, form.planner_agent_id, 10) catch 0;
+    const scout_agent_id = std.fmt.parseInt(i32, form.scout_agent_id, 10) catch 0;
+    const builder_agent_id = std.fmt.parseInt(i32, form.builder_agent_id, 10) catch 0;
+    const reviewer_agent_id = std.fmt.parseInt(i32, form.reviewer_agent_id, 10) catch 0;
+    const executor_agent_id = std.fmt.parseInt(i32, form.executor_agent_id, 10) catch 0;
+
+    if (
+        pilot_agent_id <= 0 or
+        planner_agent_id <= 0 or
+        scout_agent_id <= 0 or
+        builder_agent_id <= 0 or
+        reviewer_agent_id <= 0 or
+        executor_agent_id <= 0
+    ) {
+        return c.view("squads/new", .{
+            .title = "Nova Squad",
+            .agents = agents_rows,
+            .agent_count = agents_rows.len,
+            .error_message = "Selecione um agente para todos os seis papéis da squad.",
+            .form = form,
+        }, .{ .status = .bad_request });
+    }
+
+    const default_flag = std.mem.eql(u8, form.is_default, "true");
+    const active_flag = std.mem.eql(u8, form.is_active, "true");
+
+    if (default_flag) {
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE squads SET is_default = FALSE
+            ,
+            .{},
+        );
+    }
+
+    const inserted = try db.query(
+        SquadIdRow,
+        c.arena,
+        \\INSERT INTO squads (name, slug, summary, is_default, is_active)
+        \\VALUES ($1, $2, $3, $4, $5)
+        \\RETURNING id
+        ,
+        .{
+            form.name,
+            form.slug,
+            form.summary,
+            default_flag,
+            active_flag,
+        },
+    );
+
+    const squad_id = inserted[0].id;
+
+    try insertSquadMember(c, squad_id, "Piloto", pilot_agent_id, 1);
+    try insertSquadMember(c, squad_id, "Planner", planner_agent_id, 2);
+    try insertSquadMember(c, squad_id, "Scout", scout_agent_id, 3);
+    try insertSquadMember(c, squad_id, "Builder", builder_agent_id, 4);
+    try insertSquadMember(c, squad_id, "Reviewer", reviewer_agent_id, 5);
+    try insertSquadMember(c, squad_id, "Executor", executor_agent_id, 6);
+
+    return c.redirect("/squads?created=1");
+}
+
+fn insertSquadMember(
+    c: *spider.Ctx,
+    squad_id: i32,
+    role_name: []const u8,
+    agent_id: i32,
+    display_order: i32,
+) !void {
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO squad_members (squad_id, role_name, agent_id, display_order)
+        \\VALUES ($1, $2, $3, $4)
+        ,
+        .{ squad_id, role_name, agent_id, display_order },
+    );
+}
+
+fn squadShow(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Squad não informada.", .{ .status = .bad_request });
+
+    const squad_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Squad inválida.", .{ .status = .bad_request });
+
+    const squads_rows = try db.query(
+        SquadRow,
+        c.arena,
+        \\SELECT id, name, slug, summary, is_default, is_active
+        \\FROM squads
+        \\WHERE id = $1
+        \\LIMIT 1
+        ,
+        .{ squad_id },
+    );
+
+    if (squads_rows.len == 0) {
+        return c.text("Squad não encontrada.", .{ .status = .not_found });
+    }
+
+    const members = try db.query(
+        SquadMemberRow,
+        c.arena,
+        \\SELECT
+        \\    sm.id,
+        \\    sm.squad_id,
+        \\    sm.role_name,
+        \\    sm.agent_id,
+        \\    sm.display_order,
+        \\    a.name AS agent_name,
+        \\    a.handle AS agent_handle,
+        \\    a.agent_role,
+        \\    s.name AS stack_name
+        \\FROM squad_members sm
+        \\INNER JOIN agents a ON a.id = sm.agent_id
+        \\INNER JOIN stacks s ON s.id = a.default_stack_id
+        \\WHERE sm.squad_id = $1
+        \\ORDER BY sm.display_order ASC
+        ,
+        .{ squad_id },
+    );
+
+    return c.view("squads/show", .{
+        .title = squads_rows[0].name,
+        .squad = squads_rows[0],
+        .members = members,
+        .member_count = members.len,
+    }, .{});
+}
+
+fn squadEdit(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Squad não informada.", .{ .status = .bad_request });
+
+    const squad_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Squad inválida.", .{ .status = .bad_request });
+
+    const squads_rows = try db.query(
+        SquadRow,
+        c.arena,
+        \\SELECT id, name, slug, summary, is_default, is_active
+        \\FROM squads
+        \\WHERE id = $1
+        \\LIMIT 1
+        ,
+        .{ squad_id },
+    );
+
+    if (squads_rows.len == 0) {
+        return c.text("Squad não encontrada.", .{ .status = .not_found });
+    }
+
+    const members = try db.query(
+        SquadMemberRow,
+        c.arena,
+        \\SELECT
+        \\    sm.id,
+        \\    sm.squad_id,
+        \\    sm.role_name,
+        \\    sm.agent_id,
+        \\    sm.display_order,
+        \\    a.name AS agent_name,
+        \\    a.handle AS agent_handle,
+        \\    a.agent_role,
+        \\    s.name AS stack_name
+        \\FROM squad_members sm
+        \\INNER JOIN agents a ON a.id = sm.agent_id
+        \\INNER JOIN stacks s ON s.id = a.default_stack_id
+        \\WHERE sm.squad_id = $1
+        \\ORDER BY sm.display_order ASC
+        ,
+        .{ squad_id },
+    );
+
+    const pilot_agents = try loadSquadAgentsExcept(c, members[0].agent_id);
+    const planner_agents = try loadSquadAgentsExcept(c, members[1].agent_id);
+    const scout_agents = try loadSquadAgentsExcept(c, members[2].agent_id);
+    const builder_agents = try loadSquadAgentsExcept(c, members[3].agent_id);
+    const reviewer_agents = try loadSquadAgentsExcept(c, members[4].agent_id);
+    const executor_agents = try loadSquadAgentsExcept(c, members[5].agent_id);
+
+    return c.view("squads/edit", .{
+        .title = "Editar Squad",
+        .squad = squads_rows[0],
+        .members = members,
+        .pilot_agents = pilot_agents,
+        .planner_agents = planner_agents,
+        .scout_agents = scout_agents,
+        .builder_agents = builder_agents,
+        .reviewer_agents = reviewer_agents,
+        .executor_agents = executor_agents,
+        .agent_count = pilot_agents.len + 1,
+        .error_message = "",
+    }, .{});
+}
+
+fn squadUpdate(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Squad não informada.", .{ .status = .bad_request });
+
+    const squad_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Squad inválida.", .{ .status = .bad_request });
+
+    const form = try c.parseForm(SquadForm);
+    const agents_rows = try loadSquadAgents(c);
+
+    const duplicated = try db.query(
+        SquadIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM squads
+        \\WHERE slug = $1
+        \\AND id <> $2
+        \\LIMIT 1
+        ,
+        .{ form.slug, squad_id },
+    );
+
+    const squads_rows = try db.query(
+        SquadRow,
+        c.arena,
+        \\SELECT id, name, slug, summary, is_default, is_active
+        \\FROM squads
+        \\WHERE id = $1
+        \\LIMIT 1
+        ,
+        .{ squad_id },
+    );
+
+    if (squads_rows.len == 0) {
+        return c.text("Squad não encontrada.", .{ .status = .not_found });
+    }
+
+    const members = try db.query(
+        SquadMemberRow,
+        c.arena,
+        \\SELECT
+        \\    sm.id,
+        \\    sm.squad_id,
+        \\    sm.role_name,
+        \\    sm.agent_id,
+        \\    sm.display_order,
+        \\    a.name AS agent_name,
+        \\    a.handle AS agent_handle,
+        \\    a.agent_role,
+        \\    s.name AS stack_name
+        \\FROM squad_members sm
+        \\INNER JOIN agents a ON a.id = sm.agent_id
+        \\INNER JOIN stacks s ON s.id = a.default_stack_id
+        \\WHERE sm.squad_id = $1
+        \\ORDER BY sm.display_order ASC
+        ,
+        .{ squad_id },
+    );
+
+    if (duplicated.len > 0) {
+        return c.view("squads/edit", .{
+            .title = "Editar Squad",
+            .squad = squads_rows[0],
+            .members = members,
+            .agents = agents_rows,
+            .agent_count = agents_rows.len,
+            .error_message = "Outra squad já utiliza este slug.",
+        }, .{ .status = .bad_request });
+    }
+
+    const pilot_agent_id = std.fmt.parseInt(i32, form.pilot_agent_id, 10) catch 0;
+    const planner_agent_id = std.fmt.parseInt(i32, form.planner_agent_id, 10) catch 0;
+    const scout_agent_id = std.fmt.parseInt(i32, form.scout_agent_id, 10) catch 0;
+    const builder_agent_id = std.fmt.parseInt(i32, form.builder_agent_id, 10) catch 0;
+    const reviewer_agent_id = std.fmt.parseInt(i32, form.reviewer_agent_id, 10) catch 0;
+    const executor_agent_id = std.fmt.parseInt(i32, form.executor_agent_id, 10) catch 0;
+
+    if (
+        pilot_agent_id <= 0 or
+        planner_agent_id <= 0 or
+        scout_agent_id <= 0 or
+        builder_agent_id <= 0 or
+        reviewer_agent_id <= 0 or
+        executor_agent_id <= 0
+    ) {
+        return c.view("squads/edit", .{
+            .title = "Editar Squad",
+            .squad = squads_rows[0],
+            .members = members,
+            .agents = agents_rows,
+            .agent_count = agents_rows.len,
+            .error_message = "Selecione um agente para todos os seis papéis da squad.",
+        }, .{ .status = .bad_request });
+    }
+
+    const default_flag = std.mem.eql(u8, form.is_default, "true");
+    const active_flag = std.mem.eql(u8, form.is_active, "true");
+
+    if (default_flag) {
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE squads SET is_default = FALSE
+            ,
+            .{},
+        );
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE squads
+        \\SET name = $1,
+        \\    slug = $2,
+        \\    summary = $3,
+        \\    is_default = $4,
+        \\    is_active = $5
+        \\WHERE id = $6
+        ,
+        .{
+            form.name,
+            form.slug,
+            form.summary,
+            default_flag,
+            active_flag,
+            squad_id,
+        },
+    );
+
+    try db.query(
+        void,
+        c.arena,
+        \\DELETE FROM squad_members
+        \\WHERE squad_id = $1
+        ,
+        .{ squad_id },
+    );
+
+    try insertSquadMember(c, squad_id, "Piloto", pilot_agent_id, 1);
+    try insertSquadMember(c, squad_id, "Planner", planner_agent_id, 2);
+    try insertSquadMember(c, squad_id, "Scout", scout_agent_id, 3);
+    try insertSquadMember(c, squad_id, "Builder", builder_agent_id, 4);
+    try insertSquadMember(c, squad_id, "Reviewer", reviewer_agent_id, 5);
+    try insertSquadMember(c, squad_id, "Executor", executor_agent_id, 6);
+
+    return c.redirect("/squads?updated=1");
+}
+
+fn squadDelete(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Squad não informada.", .{ .status = .bad_request });
+
+    const squad_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Squad inválida.", .{ .status = .bad_request });
+
+    try db.query(
+        void,
+        c.arena,
+        \\DELETE FROM squads
+        \\WHERE id = $1
+        ,
+        .{ squad_id },
+    );
+
+    return c.redirect("/squads?deleted=1");
 }
 
 fn stacks(c: *spider.Ctx) !spider.Response {

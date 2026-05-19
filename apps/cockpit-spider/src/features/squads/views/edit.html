@@ -1,0 +1,173 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Editar Squad</span>
+    <h2>{ squad.name }</h2>
+    <p>
+      Atualize identidade, status e a composição de agentes do time.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/squads">Voltar</a>
+  </div>
+</section>
+
+<section class="grid squad-form-layout">
+  <article class="panel form-panel">
+    <h3>Dados da squad</h3>
+
+    if (error_message) {
+      <div class="alert danger">
+        { error_message }
+      </div>
+    }
+
+    <form class="cockpit-form" method="post" action="/squads/{ squad.id }/update">
+      <label>
+        <span>Nome</span>
+        <input type="text" name="name" value="{ squad.name }" required />
+      </label>
+
+      <label>
+        <span>Slug</span>
+        <input type="text" name="slug" value="{ squad.slug }" required />
+      </label>
+
+      <label>
+        <span>Resumo</span>
+        <textarea name="summary" rows="4" required>{ squad.summary }</textarea>
+      </label>
+
+      <label>
+        <span>Squad padrão</span>
+        <select name="is_default">
+          if (squad.is_default) {
+            <option value="true">Sim</option>
+            <option value="false">Não</option>
+          } else {
+            <option value="false">Não</option>
+            <option value="true">Sim</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Status</span>
+        <select name="is_active">
+          if (squad.is_active) {
+            <option value="true">Ativa</option>
+            <option value="false">Inativa</option>
+          } else {
+            <option value="false">Inativa</option>
+            <option value="true">Ativa</option>
+          }
+        </select>
+      </label>
+
+      <h3 class="form-section-title">Papéis do Squad</h3>
+
+      <label>
+        <span>Piloto</span>
+        <select name="pilot_agent_id" required>
+          for (members) |member| {
+            if (member.role_name == "Piloto") {
+              <option value="{ member.agent_id }">{ member.agent_name } · { member.agent_handle }</option>
+            }
+          }
+          for (pilot_agents) |agent| {
+            <option value="{ agent.id }">{ agent.name } · { agent.handle } · { agent.agent_role }</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Planner</span>
+        <select name="planner_agent_id" required>
+          for (members) |member| {
+            if (member.role_name == "Planner") {
+              <option value="{ member.agent_id }">{ member.agent_name } · { member.agent_handle }</option>
+            }
+          }
+          for (planner_agents) |agent| {
+            <option value="{ agent.id }">{ agent.name } · { agent.handle } · { agent.agent_role }</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Scout</span>
+        <select name="scout_agent_id" required>
+          for (members) |member| {
+            if (member.role_name == "Scout") {
+              <option value="{ member.agent_id }">{ member.agent_name } · { member.agent_handle }</option>
+            }
+          }
+          for (scout_agents) |agent| {
+            <option value="{ agent.id }">{ agent.name } · { agent.handle } · { agent.agent_role }</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Builder</span>
+        <select name="builder_agent_id" required>
+          for (members) |member| {
+            if (member.role_name == "Builder") {
+              <option value="{ member.agent_id }">{ member.agent_name } · { member.agent_handle }</option>
+            }
+          }
+          for (builder_agents) |agent| {
+            <option value="{ agent.id }">{ agent.name } · { agent.handle } · { agent.agent_role }</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Reviewer</span>
+        <select name="reviewer_agent_id" required>
+          for (members) |member| {
+            if (member.role_name == "Reviewer") {
+              <option value="{ member.agent_id }">{ member.agent_name } · { member.agent_handle }</option>
+            }
+          }
+          for (reviewer_agents) |agent| {
+            <option value="{ agent.id }">{ agent.name } · { agent.handle } · { agent.agent_role }</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Executor</span>
+        <select name="executor_agent_id" required>
+          for (members) |member| {
+            if (member.role_name == "Executor") {
+              <option value="{ member.agent_id }">{ member.agent_name } · { member.agent_handle }</option>
+            }
+          }
+          for (executor_agents) |agent| {
+            <option value="{ agent.id }">{ agent.name } · { agent.handle } · { agent.agent_role }</option>
+          }
+        </select>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="primary-button">Salvar alterações</button>
+        <a href="/squads" class="ghost-link">Cancelar</a>
+      </div>
+    </form>
+  </article>
+
+  <article class="panel guidance-panel">
+    <span class="eyebrow">Governança</span>
+    <h3>Boas práticas de Squad</h3>
+
+    <ol class="numbered-list">
+      <li>Defina uma squad padrão para acelerar novos workspaces.</li>
+      <li>Mantenha cada papel com responsabilidade clara.</li>
+      <li>Use agentes distintos quando a estratégia exigir.</li>
+      <li>Revisite a composição conforme o produto amadurecer.</li>
+    </ol>
+  </article>
+</section>
