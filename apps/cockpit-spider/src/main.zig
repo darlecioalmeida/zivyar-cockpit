@@ -538,6 +538,123 @@ fn insertRuntimeEvent(
     );
 }
 
+fn reconcileWorkspaceRuntimeState(
+    c: *spider.Ctx,
+    runtime: WorkspaceRuntimeRow,
+) !void {
+    if (!runtime.is_prepared) {
+        return;
+    }
+
+    const inspect_result = runRuntimeCommand(c, &.{
+        "docker",
+        "inspect",
+        "--format",
+        "{{.State.Running}}",
+        runtime.container_name,
+    });
+
+    if (!inspect_result.ok) {
+        if (!std.mem.eql(u8, runtime.state, "missing")) {
+            try db.query(
+                void,
+                c.arena,
+                \\UPDATE workspace_runtimes
+                \\SET state = 'missing',
+                \\    status_message = 'O container do runtime não foi encontrado no Docker.',
+                \\    updated_at = NOW()
+                \\WHERE workspace_id = $1
+                ,
+                .{ runtime.workspace_id },
+            );
+
+            try insertRuntimeEvent(
+                c,
+                runtime.workspace_id,
+                "missing",
+                "Container não encontrado",
+                "O Zivyar detectou que o container registrado para este workspace não existe mais no Docker.",
+            );
+
+            try insertRuntimeCommandLog(
+                c,
+                runtime.workspace_id,
+                "inspect-container-state",
+                "docker inspect --format {{.State.Running}} <workspace-container>",
+                inspect_result,
+            );
+        }
+
+        return;
+    }
+
+    const inspected_value = std.mem.trim(
+        u8,
+        inspect_result.stdout,
+        " \r\n\t",
+    );
+
+    const docker_state =
+        if (std.mem.eql(u8, inspected_value, "true"))
+            "running"
+        else
+            "stopped";
+
+    if (std.mem.eql(u8, runtime.state, docker_state)) {
+        return;
+    }
+
+    if (std.mem.eql(u8, docker_state, "running")) {
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE workspace_runtimes
+            \\SET state = 'running',
+            \\    status_message = 'Estado reconciliado: o container está em execução no Docker.',
+            \\    updated_at = NOW()
+            \\WHERE workspace_id = $1
+            ,
+            .{ runtime.workspace_id },
+        );
+
+        try insertRuntimeEvent(
+            c,
+            runtime.workspace_id,
+            "reconciled-running",
+            "Runtime reconciliado como ativo",
+            "O Zivyar verificou o Docker e encontrou o container deste workspace em execução.",
+        );
+    } else {
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE workspace_runtimes
+            \\SET state = 'stopped',
+            \\    status_message = 'Estado reconciliado: o container está parado no Docker.',
+            \\    updated_at = NOW()
+            \\WHERE workspace_id = $1
+            ,
+            .{ runtime.workspace_id },
+        );
+
+        try insertRuntimeEvent(
+            c,
+            runtime.workspace_id,
+            "reconciled-stopped",
+            "Runtime reconciliado como parado",
+            "O Zivyar verificou o Docker e encontrou o container deste workspace interrompido.",
+        );
+    }
+
+    try insertRuntimeCommandLog(
+        c,
+        runtime.workspace_id,
+        "inspect-container-state",
+        "docker inspect --format {{.State.Running}} <workspace-container>",
+        inspect_result,
+    );
+}
+
 fn loadWorkspaceRuntime(c: *spider.Ctx, workspace_id: i32) ![]WorkspaceRuntimeRow {
     return db.query(
         WorkspaceRuntimeRow,
@@ -1395,6 +1512,10 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
     const linked_squad_id = workspace.default_squad_id orelse 0;
     const runtime_rows = try loadWorkspaceRuntime(c, workspace.id);
 
+    try reconcileWorkspaceRuntimeState(c, runtime_rows[0]);
+
+    const refreshed_runtime_rows = try loadWorkspaceRuntime(c, workspace.id);
+
     const runtime_events = try db.query(
         WorkspaceRuntimeEventRow,
         c.arena,
@@ -1481,7 +1602,7 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .member_count = members.len,
         .missions = workspace_missions,
         .mission_count = workspace_missions.len,
-        .runtime = runtime_rows[0],
+        .runtime = refreshed_runtime_rows[0],
         .runtime_events = runtime_events,
         .runtime_event_count = runtime_events.len,
         .runtime_logs = runtime_logs,
