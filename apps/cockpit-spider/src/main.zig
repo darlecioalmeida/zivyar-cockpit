@@ -35,9 +35,15 @@ pub fn main(init: std.process.Init) !void {
         .get("/providers", providers)
         .get("/providers/new", providerNew)
         .post("/providers", providerCreate)
+        .get("/providers/:id", providerShow)
         .get("/providers/:id/edit", providerEdit)
         .post("/providers/:id/update", providerUpdate)
         .post("/providers/:id/delete", providerDelete)
+        .get("/providers/:id/models/new", providerModelNew)
+        .post("/providers/:id/models", providerModelCreate)
+        .get("/providers/:id/models/:model_id/edit", providerModelEdit)
+        .post("/providers/:id/models/:model_id/update", providerModelUpdate)
+        .post("/providers/:id/models/:model_id/delete", providerModelDelete)
         .listen(.{}) catch {};
 }
 
@@ -80,6 +86,27 @@ const ProviderForm = struct {
 };
 
 const ProviderIdRow = struct {
+    id: i32,
+};
+
+
+const ProviderModelRow = struct {
+    id: i32,
+    provider_id: i32,
+    model_name: []const u8,
+    model_id: []const u8,
+    context_window: i32,
+    is_active: bool,
+};
+
+const ProviderModelForm = struct {
+    model_name: []const u8,
+    model_id: []const u8,
+    context_window: []const u8,
+    is_active: []const u8,
+};
+
+const ProviderModelIdRow = struct {
     id: i32,
 };
 
@@ -348,11 +375,21 @@ fn providers(c: *spider.Ctx) !spider.Response {
         else
             "";
 
+    const model_counts = try db.query(
+        ProviderModelIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM provider_models
+        ,
+        .{},
+    );
+
     return c.view("providers/index", .{
         .title = "Providers",
         .providers = rows,
         .provider_count = rows.len,
         .active_count = countActiveProviders(rows),
+        .model_count = model_counts.len,
         .notice = notice,
     }, .{});
 }
@@ -419,6 +456,314 @@ fn providerCreate(c: *spider.Ctx) !spider.Response {
     );
 
     return c.redirect("/providers?created=1");
+}
+
+fn providerShow(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Provider não informado.", .{ .status = .bad_request });
+
+    const provider_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Provider inválido.", .{ .status = .bad_request });
+
+    const providers_rows = try db.query(
+        ProviderRow,
+        c.arena,
+        \\SELECT id, name, provider_type, base_url, api_key, is_active
+        \\FROM providers
+        \\WHERE id = $1
+        \\LIMIT 1
+        ,
+        .{ provider_id },
+    );
+
+    if (providers_rows.len == 0) {
+        return c.text("Provider não encontrado.", .{ .status = .not_found });
+    }
+
+    const models = try db.query(
+        ProviderModelRow,
+        c.arena,
+        \\SELECT id, provider_id, model_name, model_id, context_window, is_active
+        \\FROM provider_models
+        \\WHERE provider_id = $1
+        \\ORDER BY id DESC
+        ,
+        .{ provider_id },
+    );
+
+    const notice =
+        if (c.query("model_created") != null)
+            "Modelo cadastrado com sucesso."
+        else if (c.query("model_updated") != null)
+            "Modelo atualizado com sucesso."
+        else if (c.query("model_deleted") != null)
+            "Modelo removido com sucesso."
+        else
+            "";
+
+    return c.view("providers/show", .{
+        .title = providers_rows[0].name,
+        .provider = providers_rows[0],
+        .models = models,
+        .model_count = models.len,
+        .notice = notice,
+    }, .{});
+}
+
+fn providerModelNew(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Provider não informado.", .{ .status = .bad_request });
+
+    const provider_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Provider inválido.", .{ .status = .bad_request });
+
+    const providers_rows = try db.query(
+        ProviderRow,
+        c.arena,
+        \\SELECT id, name, provider_type, base_url, api_key, is_active
+        \\FROM providers
+        \\WHERE id = $1
+        \\LIMIT 1
+        ,
+        .{ provider_id },
+    );
+
+    if (providers_rows.len == 0) {
+        return c.text("Provider não encontrado.", .{ .status = .not_found });
+    }
+
+    return c.view("providers/models_new", .{
+        .title = "Novo Modelo",
+        .provider = providers_rows[0],
+        .error_message = "",
+        .form = .{
+            .model_name = "",
+            .model_id = "",
+            .context_window = "0",
+            .is_active = "true",
+        },
+    }, .{});
+}
+
+fn providerModelCreate(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Provider não informado.", .{ .status = .bad_request });
+
+    const provider_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Provider inválido.", .{ .status = .bad_request });
+
+    const form = try c.parseForm(ProviderModelForm);
+    const context_window = std.fmt.parseInt(i32, form.context_window, 10) catch 0;
+    const active = std.mem.eql(u8, form.is_active, "true");
+
+    const duplicated = try db.query(
+        ProviderModelIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM provider_models
+        \\WHERE provider_id = $1
+        \\AND model_id = $2
+        \\LIMIT 1
+        ,
+        .{ provider_id, form.model_id },
+    );
+
+    if (duplicated.len > 0) {
+        const providers_rows = try db.query(
+            ProviderRow,
+            c.arena,
+            \\SELECT id, name, provider_type, base_url, api_key, is_active
+            \\FROM providers
+            \\WHERE id = $1
+            \\LIMIT 1
+            ,
+            .{ provider_id },
+        );
+
+        return c.view("providers/models_new", .{
+            .title = "Novo Modelo",
+            .provider = providers_rows[0],
+            .error_message = "Este model_id já está cadastrado para este provider.",
+            .form = form,
+        }, .{ .status = .bad_request });
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO provider_models (provider_id, model_name, model_id, context_window, is_active)
+        \\VALUES ($1, $2, $3, $4, $5)
+        ,
+        .{
+            provider_id,
+            form.model_name,
+            form.model_id,
+            context_window,
+            active,
+        },
+    );
+
+    const redirect_url = try std.fmt.allocPrint(c.arena, "/providers/{d}?model_created=1", .{ provider_id });
+    return c.redirect(redirect_url);
+}
+
+fn providerModelEdit(c: *spider.Ctx) !spider.Response {
+    const provider_id_raw = c.params.get("id") orelse
+        return c.text("Provider não informado.", .{ .status = .bad_request });
+
+    const model_id_raw = c.params.get("model_id") orelse
+        return c.text("Modelo não informado.", .{ .status = .bad_request });
+
+    const provider_id = std.fmt.parseInt(i32, provider_id_raw, 10) catch
+        return c.text("Provider inválido.", .{ .status = .bad_request });
+
+    const model_row_id = std.fmt.parseInt(i32, model_id_raw, 10) catch
+        return c.text("Modelo inválido.", .{ .status = .bad_request });
+
+    const providers_rows = try db.query(
+        ProviderRow,
+        c.arena,
+        \\SELECT id, name, provider_type, base_url, api_key, is_active
+        \\FROM providers
+        \\WHERE id = $1
+        \\LIMIT 1
+        ,
+        .{ provider_id },
+    );
+
+    const model_rows = try db.query(
+        ProviderModelRow,
+        c.arena,
+        \\SELECT id, provider_id, model_name, model_id, context_window, is_active
+        \\FROM provider_models
+        \\WHERE id = $1
+        \\AND provider_id = $2
+        \\LIMIT 1
+        ,
+        .{ model_row_id, provider_id },
+    );
+
+    if (providers_rows.len == 0 or model_rows.len == 0) {
+        return c.text("Modelo não encontrado.", .{ .status = .not_found });
+    }
+
+    return c.view("providers/models_edit", .{
+        .title = "Editar Modelo",
+        .provider = providers_rows[0],
+        .model = model_rows[0],
+        .error_message = "",
+    }, .{});
+}
+
+fn providerModelUpdate(c: *spider.Ctx) !spider.Response {
+    const provider_id_raw = c.params.get("id") orelse
+        return c.text("Provider não informado.", .{ .status = .bad_request });
+
+    const model_id_raw = c.params.get("model_id") orelse
+        return c.text("Modelo não informado.", .{ .status = .bad_request });
+
+    const provider_id = std.fmt.parseInt(i32, provider_id_raw, 10) catch
+        return c.text("Provider inválido.", .{ .status = .bad_request });
+
+    const model_row_id = std.fmt.parseInt(i32, model_id_raw, 10) catch
+        return c.text("Modelo inválido.", .{ .status = .bad_request });
+
+    const form = try c.parseForm(ProviderModelForm);
+    const context_window = std.fmt.parseInt(i32, form.context_window, 10) catch 0;
+    const active = std.mem.eql(u8, form.is_active, "true");
+
+    const duplicated = try db.query(
+        ProviderModelIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM provider_models
+        \\WHERE provider_id = $1
+        \\AND model_id = $2
+        \\AND id <> $3
+        \\LIMIT 1
+        ,
+        .{ provider_id, form.model_id, model_row_id },
+    );
+
+    if (duplicated.len > 0) {
+        const providers_rows = try db.query(
+            ProviderRow,
+            c.arena,
+            \\SELECT id, name, provider_type, base_url, api_key, is_active
+            \\FROM providers
+            \\WHERE id = $1
+            \\LIMIT 1
+            ,
+            .{ provider_id },
+        );
+
+        const model = ProviderModelRow{
+            .id = model_row_id,
+            .provider_id = provider_id,
+            .model_name = form.model_name,
+            .model_id = form.model_id,
+            .context_window = context_window,
+            .is_active = active,
+        };
+
+        return c.view("providers/models_edit", .{
+            .title = "Editar Modelo",
+            .provider = providers_rows[0],
+            .model = model,
+            .error_message = "Outro modelo já utiliza este model_id neste provider.",
+        }, .{ .status = .bad_request });
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE provider_models
+        \\SET model_name = $1,
+        \\    model_id = $2,
+        \\    context_window = $3,
+        \\    is_active = $4
+        \\WHERE id = $5
+        \\AND provider_id = $6
+        ,
+        .{
+            form.model_name,
+            form.model_id,
+            context_window,
+            active,
+            model_row_id,
+            provider_id,
+        },
+    );
+
+    const redirect_url = try std.fmt.allocPrint(c.arena, "/providers/{d}?model_updated=1", .{ provider_id });
+    return c.redirect(redirect_url);
+}
+
+fn providerModelDelete(c: *spider.Ctx) !spider.Response {
+    const provider_id_raw = c.params.get("id") orelse
+        return c.text("Provider não informado.", .{ .status = .bad_request });
+
+    const model_id_raw = c.params.get("model_id") orelse
+        return c.text("Modelo não informado.", .{ .status = .bad_request });
+
+    const provider_id = std.fmt.parseInt(i32, provider_id_raw, 10) catch
+        return c.text("Provider inválido.", .{ .status = .bad_request });
+
+    const model_row_id = std.fmt.parseInt(i32, model_id_raw, 10) catch
+        return c.text("Modelo inválido.", .{ .status = .bad_request });
+
+    try db.query(
+        void,
+        c.arena,
+        \\DELETE FROM provider_models
+        \\WHERE id = $1
+        \\AND provider_id = $2
+        ,
+        .{ model_row_id, provider_id },
+    );
+
+    const redirect_url = try std.fmt.allocPrint(c.arena, "/providers/{d}?model_deleted=1", .{ provider_id });
+    return c.redirect(redirect_url);
 }
 
 fn providerEdit(c: *spider.Ctx) !spider.Response {

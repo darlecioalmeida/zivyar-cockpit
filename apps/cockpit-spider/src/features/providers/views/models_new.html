@@ -1,0 +1,69 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Novo Modelo</span>
+    <h2>{ provider.name }</h2>
+    <p>
+      Cadastre um modelo disponível neste provider.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/providers/{ provider.id }">Voltar</a>
+  </div>
+</section>
+
+<section class="grid workspace-form-layout">
+  <article class="panel form-panel">
+    <h3>Dados do modelo</h3>
+
+    if (error_message) {
+      <div class="alert danger">
+        { error_message }
+      </div>
+    }
+
+    <form class="cockpit-form" method="post" action="/providers/{ provider.id }/models">
+      <label>
+        <span>Nome exibido</span>
+        <input type="text" name="model_name" value="{ form.model_name }" placeholder="Ex.: GPT-5.5" required />
+      </label>
+
+      <label>
+        <span>Model ID</span>
+        <input type="text" name="model_id" value="{ form.model_id }" placeholder="Ex.: gpt-5.5" required />
+      </label>
+
+      <label>
+        <span>Context window</span>
+        <input type="number" min="0" name="context_window" value="{ form.context_window }" placeholder="Ex.: 200000" required />
+      </label>
+
+      <label>
+        <span>Status</span>
+        <select name="is_active">
+          <option value="true">Ativo</option>
+          <option value="false">Inativo</option>
+        </select>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="primary-button">Salvar modelo</button>
+        <a href="/providers/{ provider.id }" class="ghost-link">Cancelar</a>
+      </div>
+    </form>
+  </article>
+
+  <article class="panel guidance-panel">
+    <span class="eyebrow">Uso futuro</span>
+    <h3>Este modelo será usado em</h3>
+
+    <ol class="numbered-list">
+      <li>Stacks de execução.</li>
+      <li>Squads.</li>
+      <li>Agentes por papel.</li>
+      <li>Benchmarks e recomendações.</li>
+    </ol>
+  </article>
+</section>

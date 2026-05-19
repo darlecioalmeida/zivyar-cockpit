@@ -34,9 +34,9 @@ if (notice) {
   </article>
 
   <article class="metric-card">
-    <span>Integração</span>
-    <strong>OpenCode</strong>
-    <small>Consumo será ligado nas próximas etapas</small>
+    <span>Modelos</span>
+    <strong>{ model_count }</strong>
+    <small>Vinculados aos providers</small>
   </article>
 </section>
 
@@ -74,6 +74,7 @@ if (provider_count > 0) {
       </div>
 
       <div class="workspace-card-actions">
+        <a class="ghost-mini" href="/providers/{ provider.id }">Abrir</a>
         <a class="ghost-mini" href="/providers/{ provider.id }/edit">Editar</a>
 
         <form method="post" action="/providers/{ provider.id }/delete" class="inline-form" onsubmit="return confirm('Remover este provider?');">

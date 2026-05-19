@@ -1,0 +1,74 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Editar Modelo</span>
+    <h2>{ model.model_name }</h2>
+    <p>
+      Atualize a configuração do modelo associado ao provider { provider.name }.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/providers/{ provider.id }">Voltar</a>
+  </div>
+</section>
+
+<section class="grid workspace-form-layout">
+  <article class="panel form-panel">
+    <h3>Dados do modelo</h3>
+
+    if (error_message) {
+      <div class="alert danger">
+        { error_message }
+      </div>
+    }
+
+    <form class="cockpit-form" method="post" action="/providers/{ provider.id }/models/{ model.id }/update">
+      <label>
+        <span>Nome exibido</span>
+        <input type="text" name="model_name" value="{ model.model_name }" required />
+      </label>
+
+      <label>
+        <span>Model ID</span>
+        <input type="text" name="model_id" value="{ model.model_id }" required />
+      </label>
+
+      <label>
+        <span>Context window</span>
+        <input type="number" min="0" name="context_window" value="{ model.context_window }" required />
+      </label>
+
+      <label>
+        <span>Status</span>
+        <select name="is_active">
+          if (model.is_active) {
+            <option value="true">Ativo</option>
+            <option value="false">Inativo</option>
+          } else {
+            <option value="false">Inativo</option>
+            <option value="true">Ativo</option>
+          }
+        </select>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="primary-button">Salvar alterações</button>
+        <a href="/providers/{ provider.id }" class="ghost-link">Cancelar</a>
+      </div>
+    </form>
+  </article>
+
+  <article class="panel guidance-panel">
+    <span class="eyebrow">Governança</span>
+    <h3>Padronização de modelos</h3>
+
+    <ol class="numbered-list">
+      <li>Use nomes claros para exibição.</li>
+      <li>Preserve o model_id real do provider.</li>
+      <li>Cadastre o contexto quando conhecido.</li>
+      <li>Desative sem excluir quando necessário.</li>
+    </ol>
+  </article>
+</section>
