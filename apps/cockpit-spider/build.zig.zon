@@ -1,9 +1,14 @@
 .{
     .name = .zivyar_cockpit_spider,
     .version = "0.1.0",
-    .fingerprint = 0x7f2ad1eb7aa11234,
+    .fingerprint = 0x8b7d4dd8d6e77fa,
     .minimum_zig_version = "0.17.0-dev.0",
-    .dependencies = .{},
+    .dependencies = .{
+        .spider = .{
+            .url = "git+https://github.com/llllOllOOll/spider?ref=main#728058e6505b2202f0d0494864f650cc29749f1b",
+            .hash = "spider-0.4.0-P7cGrlUKEQAlQUTRU7OoyfaWqNvM2xNOH8PrVKXvbBzn",
+        },
+    },
     .paths = .{
         "build.zig",
         "build.zig.zon",
