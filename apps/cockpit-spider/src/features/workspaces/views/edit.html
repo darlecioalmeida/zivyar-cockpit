@@ -2,11 +2,10 @@ extends "layout"
 
 <section class="page-head">
   <div>
-    <span class="eyebrow">Novo Workspace</span>
-    <h2>Adicionar um projeto local</h2>
+    <span class="eyebrow">Editar Workspace</span>
+    <h2>{ workspace.name }</h2>
     <p>
-      Nesta fase o formulário é visual. Na próxima evolução ele será conectado ao
-      PostgreSQL e ao seletor de pastas do Tauri.
+      Atualize os dados do projeto local cadastrado no Cockpit.
     </p>
   </div>
 
@@ -25,16 +24,16 @@ extends "layout"
       </div>
     }
 
-    <form class="cockpit-form" method="post" action="/workspaces">
+    <form class="cockpit-form" method="post" action="/workspaces/{ workspace.id }/update">
       <label>
         <span>Nome do workspace</span>
-        <input type="text" name="name" value="{ form.name }" placeholder="Ex.: Zivyar Cockpit" required />
+        <input type="text" name="name" value="{ workspace.name }" required />
       </label>
 
       <label>
         <span>Caminho local</span>
         <div class="input-action">
-          <input id="workspace-local-path" type="text" name="local_path" value="{ form.local_path }" placeholder="/Users/darlecioalmeida/projetos/zivyar-cockpit" required />
+          <input id="workspace-local-path" type="text" name="local_path" value="{ workspace.local_path }" required />
           <button id="select-workspace-folder" type="button" class="ghost-mini">Selecionar</button>
         </div>
       </label>
@@ -42,6 +41,7 @@ extends "layout"
       <label>
         <span>Stack principal</span>
         <select name="stack_name">
+          <option value="{ workspace.stack_name }">{ workspace.stack_name }</option>
           <option value="Spider + Zig">Spider + Zig</option>
           <option value="PHP / Yii">PHP / Yii</option>
           <option value="Node / TypeScript">Node / TypeScript</option>
@@ -52,6 +52,7 @@ extends "layout"
       <label>
         <span>Squad padrão</span>
         <select name="default_squad">
+          <option value="{ workspace.default_squad }">{ workspace.default_squad }</option>
           <option value="Official Cockpit Squad">Official Cockpit Squad</option>
           <option value="Lean Builder Squad">Lean Builder Squad</option>
           <option value="Customizado depois">Customizado depois</option>
@@ -59,28 +60,27 @@ extends "layout"
       </label>
 
       <div class="form-actions">
-        <button type="submit" class="primary-button">Salvar workspace</button>
+        <button type="submit" class="primary-button">Salvar alterações</button>
         <a href="/workspaces" class="ghost-link">Cancelar</a>
       </div>
     </form>
   </article>
 
   <article class="panel guidance-panel">
-    <span class="eyebrow">Preparação</span>
-    <h3>O que acontecerá ao cadastrar</h3>
+    <span class="eyebrow">Persistência</span>
+    <h3>O que esta etapa já resolve</h3>
 
     <ol class="numbered-list">
-      <li>O Cockpit registra o workspace.</li>
-      <li>O Runtime Manager prepara um container isolado.</li>
-      <li>O OpenCode Server sobe naquele workspace.</li>
-      <li>O usuário cria a primeira missão.</li>
+      <li>Atualização dos dados do workspace.</li>
+      <li>Validação de caminho duplicado.</li>
+      <li>Retorno visual em caso de erro.</li>
+      <li>Preparação para o Runtime Manager.</li>
     </ol>
 
     <div class="note-card">
-      <strong>Observação</strong>
+      <strong>Próxima evolução</strong>
       <p>
-        Por enquanto estamos fechando a experiência visual. A persistência real virá
-        na próxima etapa da Sprint 1.
+        Depois do CRUD concluído, entraremos em Providers, Agents e Squads.
       </p>
     </div>
   </article>

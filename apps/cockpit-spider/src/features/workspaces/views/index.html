@@ -15,6 +15,12 @@ extends "layout"
   </div>
 </section>
 
+if (notice) {
+<section class="alert success workspace-notice">
+  { notice }
+</section>
+}
+
 <section class="metric-grid">
   <article class="metric-card">
     <span>Workspaces</span>
@@ -65,8 +71,12 @@ if (workspace_count > 0) {
       </div>
 
       <div class="workspace-card-actions">
-        <button class="ghost-mini" type="button">Abrir cockpit</button>
-        <button class="ghost-mini" type="button">Runtime em breve</button>
+        <a class="ghost-mini" href="/workspaces/{ workspace.id }">Abrir cockpit</a>
+        <a class="ghost-mini" href="/workspaces/{ workspace.id }/edit">Editar</a>
+
+        <form method="post" action="/workspaces/{ workspace.id }/delete" class="inline-form" onsubmit="return confirm('Remover este workspace?');">
+          <button class="danger-button" type="submit">Excluir</button>
+        </form>
       </div>
     </article>
   }

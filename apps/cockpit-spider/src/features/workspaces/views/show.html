@@ -1,0 +1,136 @@
+extends "layout"
+
+<section class="page-head workspace-detail-head">
+  <div>
+    <span class="eyebrow">Workspace #{ workspace.id }</span>
+    <h2>{ workspace.name }</h2>
+    <p>
+      Cockpit individual do projeto. Esta será a área onde o runtime, missões,
+      contexto e panes multiagente serão coordenados.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/workspaces">Voltar</a>
+    <a class="ghost-link" href="/workspaces/{ workspace.id }/edit">Editar</a>
+
+    <form method="post" action="/workspaces/{ workspace.id }/delete" class="inline-form" onsubmit="return confirm('Remover este workspace?');">
+      <button class="danger-button" type="submit">Excluir</button>
+    </form>
+
+    <button class="primary-button" type="button">Nova missão em breve</button>
+  </div>
+</section>
+
+<section class="workspace-detail-grid">
+  <article class="panel workspace-summary-panel">
+    <span class="eyebrow">Resumo</span>
+    <h3>Identidade do workspace</h3>
+
+    <div class="detail-meta-grid">
+      <div>
+        <span>Caminho local</span>
+        <strong>{ workspace.local_path }</strong>
+      </div>
+
+      <div>
+        <span>Stack principal</span>
+        <strong>{ workspace.stack_name }</strong>
+      </div>
+
+      <div>
+        <span>Squad padrão</span>
+        <strong>{ workspace.default_squad }</strong>
+      </div>
+
+      <div>
+        <span>Status atual</span>
+        <strong>{ workspace.status }</strong>
+      </div>
+    </div>
+  </article>
+
+  <article class="panel runtime-status-panel">
+    <span class="eyebrow">Runtime</span>
+    <h3>Docker + OpenCode Server</h3>
+
+    <div class="runtime-status-box">
+      <div class="status-pill pending">Aguardando Sprint 2</div>
+      <p>
+        O Runtime Manager ainda não está conectado. Em seguida, este painel mostrará:
+      </p>
+      <ul class="feature-list compact">
+        <li>container do workspace;</li>
+        <li>porta do OpenCode Server;</li>
+        <li>estado online/offline;</li>
+        <li>ações iniciar, parar e reiniciar.</li>
+      </ul>
+    </div>
+  </article>
+</section>
+
+<section class="grid cockpit-preview-grid">
+  <article class="panel mission-preview-panel">
+    <div class="panel-title-row">
+      <div>
+        <span class="eyebrow">Mission Room</span>
+        <h3>Missões do workspace</h3>
+      </div>
+      <span class="mini-badge">0 abertas</span>
+    </div>
+
+    <div class="empty-inline-state">
+      <strong>Nenhuma missão criada.</strong>
+      <p>
+        O ciclo Briefing → Planejamento → Execução → Revisão será ativado
+        nas próximas etapas.
+      </p>
+    </div>
+  </article>
+
+  <article class="panel pane-preview-panel">
+    <div class="panel-title-row">
+      <div>
+        <span class="eyebrow">Panes</span>
+        <h3>Squad visual do workspace</h3>
+      </div>
+      <span class="mini-badge">6 slots</span>
+    </div>
+
+    <div class="pane-preview-grid">
+      <div class="mini-pane">Piloto</div>
+      <div class="mini-pane">Planner</div>
+      <div class="mini-pane">Scout</div>
+      <div class="mini-pane">Builder</div>
+      <div class="mini-pane">Reviewer</div>
+      <div class="mini-pane">Executor</div>
+    </div>
+  </article>
+</section>
+
+<section class="grid workspace-intelligence-grid">
+  <article class="panel">
+    <span class="eyebrow">Contexto</span>
+    <h3>Workspace Memory</h3>
+    <p>
+      Decisões, regras técnicas, handoffs e snapshots de contexto serão
+      persistidos aqui.
+    </p>
+  </article>
+
+  <article class="panel">
+    <span class="eyebrow">Graphify</span>
+    <h3>MAP do projeto</h3>
+    <p>
+      A futura indexação exibirá relações entre arquivos, módulos e áreas de risco.
+    </p>
+  </article>
+
+  <article class="panel">
+    <span class="eyebrow">Design</span>
+    <h3>DESIGN.md</h3>
+    <p>
+      Padrões visuais e regras de frontend poderão ser vinculados ao workspace.
+    </p>
+  </article>
+</section>
