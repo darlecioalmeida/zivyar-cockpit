@@ -357,6 +357,24 @@ const WorkspaceRuntimeEventRow = struct {
 };
 
 
+const WorkspaceRuntimeLogRow = struct {
+    id: i32,
+    action: []const u8,
+    command_label: []const u8,
+    exit_code: i32,
+    succeeded: bool,
+    stdout_excerpt: []const u8,
+    stderr_excerpt: []const u8,
+};
+
+const RuntimeCommandResult = struct {
+    ok: bool,
+    exit_code: i32,
+    stdout: []const u8,
+    stderr: []const u8,
+};
+
+
 fn loadWorkspaceSquads(c: *spider.Ctx) ![]WorkspaceSquadOptionRow {
     return db.query(
         WorkspaceSquadOptionRow,
@@ -383,6 +401,74 @@ fn loadWorkspaceSquadsForSelected(c: *spider.Ctx, selected_squad_id: i32) ![]Wor
         \\         name ASC
         ,
         .{ selected_squad_id },
+    );
+}
+
+fn runtimeLogExcerpt(raw: []const u8) []const u8 {
+    const limit: usize = 1800;
+
+    if (raw.len <= limit) {
+        return raw;
+    }
+
+    return raw[raw.len - limit ..];
+}
+
+fn runRuntimeCommand(c: *spider.Ctx, argv: []const []const u8) RuntimeCommandResult {
+    const result = std.process.run(c.arena, c._io, .{
+        .argv = argv,
+    }) catch {
+        return .{
+            .ok = false,
+            .exit_code = -1,
+            .stdout = "",
+            .stderr = "Falha ao executar processo externo.",
+        };
+    };
+
+    const exit_code: i32 = switch (result.term) {
+        .exited => |code| @intCast(code),
+        else => -1,
+    };
+
+    return .{
+        .ok = exit_code == 0,
+        .exit_code = exit_code,
+        .stdout = runtimeLogExcerpt(result.stdout),
+        .stderr = runtimeLogExcerpt(result.stderr),
+    };
+}
+
+fn insertRuntimeCommandLog(
+    c: *spider.Ctx,
+    workspace_id: i32,
+    action: []const u8,
+    command_label: []const u8,
+    result: RuntimeCommandResult,
+) !void {
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO workspace_runtime_logs (
+        \\    workspace_id,
+        \\    action,
+        \\    command_label,
+        \\    exit_code,
+        \\    succeeded,
+        \\    stdout_excerpt,
+        \\    stderr_excerpt
+        \\)
+        \\VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ,
+        .{
+            workspace_id,
+            action,
+            command_label,
+            result.exit_code,
+            result.ok,
+            result.stdout,
+            result.stderr,
+        },
     );
 }
 
@@ -899,7 +985,7 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
     });
 
     if (!image_exists) {
-        const image_built = commandSucceeded(c, &.{
+        const build_result = runRuntimeCommand(c, &.{
             "docker",
             "build",
             "-t",
@@ -907,7 +993,15 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
             runtime_context,
         });
 
-        if (!image_built) {
+        try insertRuntimeCommandLog(
+            c,
+            workspace_id,
+            "build-image",
+            "docker build -t zivyar-opencode-runtime:latest <runtime-context>",
+            build_result,
+        );
+
+        if (!build_result.ok) {
             try db.query(
                 void,
                 c.arena,
@@ -941,16 +1035,29 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
         runtime.container_name,
     });
 
-    var container_started = false;
+    var container_result = RuntimeCommandResult{
+        .ok = false,
+        .exit_code = -1,
+        .stdout = "",
+        .stderr = "",
+    };
 
     if (container_exists) {
-        container_started = commandSucceeded(c, &.{
+        container_result = runRuntimeCommand(c, &.{
             "docker",
             "start",
             runtime.container_name,
         });
+
+        try insertRuntimeCommandLog(
+            c,
+            workspace_id,
+            "start-container",
+            "docker start <workspace-container>",
+            container_result,
+        );
     } else {
-        container_started = commandSucceeded(c, &.{
+        container_result = runRuntimeCommand(c, &.{
             "docker",
             "run",
             "-d",
@@ -968,9 +1075,17 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
             "/workspace",
             image_name,
         });
+
+        try insertRuntimeCommandLog(
+            c,
+            workspace_id,
+            "create-container",
+            "docker run -d --name <workspace-container> -p <host>:<container> -v <workspace>:/workspace",
+            container_result,
+        );
     }
 
-    if (!container_started) {
+    if (!container_result.ok) {
         try db.query(
             void,
             c.arena,
@@ -999,6 +1114,19 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
     const healthy = waitForOpenCodeHealth(c, server_url);
 
     if (!healthy) {
+        try insertRuntimeCommandLog(
+            c,
+            workspace_id,
+            "healthcheck",
+            "curl -fsS <server-url>/global/health",
+            .{
+                .ok = false,
+                .exit_code = -1,
+                .stdout = "",
+                .stderr = "O OpenCode Server não respondeu ao healthcheck dentro da janela esperada.",
+            },
+        );
+
         try db.query(
             void,
             c.arena,
@@ -1085,13 +1213,21 @@ fn workspaceRuntimeStop(c: *spider.Ctx) !spider.Response {
 
     const runtime = runtime_rows[0];
 
-    const stopped = commandSucceeded(c, &.{
+    const stop_result = runRuntimeCommand(c, &.{
         "docker",
         "stop",
         runtime.container_name,
     });
 
-    if (!stopped) {
+    try insertRuntimeCommandLog(
+        c,
+        workspace_id,
+        "stop-container",
+        "docker stop <workspace-container>",
+        stop_result,
+    );
+
+    if (!stop_result.ok) {
         try db.query(
             void,
             c.arena,
@@ -1275,6 +1411,25 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .{ workspace.id },
     );
 
+    const runtime_logs = try db.query(
+        WorkspaceRuntimeLogRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    action,
+        \\    command_label,
+        \\    exit_code,
+        \\    succeeded,
+        \\    stdout_excerpt,
+        \\    stderr_excerpt
+        \\FROM workspace_runtime_logs
+        \\WHERE workspace_id = $1
+        \\ORDER BY id DESC
+        \\LIMIT 8
+        ,
+        .{ workspace.id },
+    );
+
     const workspace_missions = try db.query(
         MissionRow,
         c.arena,
@@ -1329,6 +1484,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .runtime = runtime_rows[0],
         .runtime_events = runtime_events,
         .runtime_event_count = runtime_events.len,
+        .runtime_logs = runtime_logs,
+        .runtime_log_count = runtime_logs.len,
     }, .{});
 }
 

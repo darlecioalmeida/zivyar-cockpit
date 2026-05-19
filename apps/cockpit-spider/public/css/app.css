@@ -1536,3 +1536,113 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   }
 }
 
+
+.runtime-logs-panel {
+  margin-bottom: 22px;
+}
+
+.runtime-log-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.runtime-log-card {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(10, 15, 22, .56);
+  overflow: hidden;
+}
+
+.runtime-log-card summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.runtime-log-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.runtime-log-card summary strong,
+.runtime-log-card summary span {
+  display: block;
+}
+
+.runtime-log-card summary span {
+  color: var(--muted);
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.runtime-log-status {
+  flex: 0 0 auto;
+  min-width: 62px;
+  text-align: center;
+  border-radius: 999px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.runtime-log-status.ok {
+  color: var(--green);
+}
+
+.runtime-log-status.error {
+  color: #ff7b8a;
+}
+
+.runtime-log-body {
+  border-top: 1px solid var(--border);
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.runtime-log-meta,
+.runtime-log-output {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(7, 13, 24, 0.68);
+  padding: 14px;
+}
+
+.runtime-log-meta span,
+.runtime-log-meta strong,
+.runtime-log-output span {
+  display: block;
+}
+
+.runtime-log-meta span,
+.runtime-log-output span {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.runtime-log-output pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.runtime-log-output.danger pre {
+  color: #ffb4bf;
+}
+
+@media (max-width: 760px) {
+  .runtime-log-card summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+

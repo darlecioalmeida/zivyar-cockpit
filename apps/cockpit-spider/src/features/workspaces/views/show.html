@@ -145,6 +145,63 @@ extends "layout"
   }
 </section>
 
+<section class="panel runtime-logs-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Runtime Debug</span>
+      <h3>Logs técnicos</h3>
+    </div>
+    <span class="mini-badge">{ runtime_log_count } registros</span>
+  </div>
+
+  if (runtime_log_count > 0) {
+    <div class="runtime-log-list">
+      for (runtime_logs) |log| {
+        <details class="runtime-log-card">
+          <summary>
+            <div>
+              <strong>{ log.action }</strong>
+              <span>{ log.command_label }</span>
+            </div>
+
+            if (log.succeeded) {
+              <span class="runtime-log-status ok">OK</span>
+            } else {
+              <span class="runtime-log-status error">ERRO</span>
+            }
+          </summary>
+
+          <div class="runtime-log-body">
+            <div class="runtime-log-meta">
+              <span>Exit code</span>
+              <strong>{ log.exit_code }</strong>
+            </div>
+
+            if (log.stdout_excerpt) {
+              <div class="runtime-log-output">
+                <span>STDOUT</span>
+                <pre>{ log.stdout_excerpt }</pre>
+              </div>
+            }
+
+            if (log.stderr_excerpt) {
+              <div class="runtime-log-output danger">
+                <span>STDERR</span>
+                <pre>{ log.stderr_excerpt }</pre>
+              </div>
+            }
+          </div>
+        </details>
+      }
+    </div>
+  } else {
+    <div class="empty-inline-state">
+      <strong>Nenhum log técnico registrado.</strong>
+      <p>Os comandos Docker executados pelo runtime aparecerão aqui.</p>
+    </div>
+  }
+</section>
+
 <section class="grid cockpit-preview-grid">
   <article class="panel mission-preview-panel">
     <div class="panel-title-row">
