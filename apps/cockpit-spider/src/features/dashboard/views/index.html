@@ -1,36 +1,129 @@
 extends "layout"
 
-<section class="hero-card">
-  <div>
-    <span class="eyebrow">Sprint 0</span>
-    <h2>{ subtitle }</h2>
-    <p>
-      A base do cockpit foi criada. O próximo ciclo transforma este scaffold em um painel navegável
-      com workspaces, missões, squads e runtime real.
-    </p>
-  </div>
-  <div class="stat-grid">
-    <article class="stat-card"><strong>6</strong><span>Panes por workspace</span></article>
-    <article class="stat-card"><strong>1</strong><span>OpenCode Server por workspace</span></article>
-    <article class="stat-card"><strong>7</strong><span>Etapas de missão</span></article>
-    <article class="stat-card"><strong>∞</strong><span>Expansão por skills</span></article>
+<section class="dashboard-intro">
+  <p>
+    { subtitle }. Visão consolidada da base operacional já cadastrada no Cockpit.
+  </p>
+
+  <div class="page-actions">
+    <a class="primary-button" href="/workspaces/new">Novo Workspace</a>
+    <a class="ghost-link" href="/missions/new">Nova Missão</a>
   </div>
 </section>
 
-<section class="grid three">
-  <article class="panel">
-    <span class="eyebrow">Runtime</span>
-    <h3>Docker + OpenCode</h3>
-    <p>Ambiente isolado por workspace, com sessões lógicas de agentes sob demanda.</p>
+<section class="dashboard-hero panel">
+  <div>
+    <span class="eyebrow">Estado da fundação</span>
+    <h3>Cockpit navegável com estrutura real de engenharia multiagente</h3>
+    <p>
+      A cadeia Provider → Model → Stack → Agent → Squad → Workspace → Mission já está persistida e navegável.
+    </p>
+  </div>
+
+  <div class="dashboard-hero-badges">
+    <div>
+      <strong>{ workspace_count }</strong>
+      <span>Workspaces</span>
+    </div>
+
+    <div>
+      <strong>{ mission_count }</strong>
+      <span>Missões</span>
+    </div>
+
+    <div>
+      <strong>{ open_mission_count }</strong>
+      <span>Em aberto</span>
+    </div>
+  </div>
+</section>
+
+<section class="dashboard-metrics-grid">
+  <article class="metric-card">
+    <span>Agents</span>
+    <strong>{ agent_count }</strong>
+    <small>Perfis operacionais</small>
   </article>
-  <article class="panel">
-    <span class="eyebrow">Contexto</span>
-    <h3>Workspace Memory</h3>
-    <p>Missão, handoffs, decisões e recuperação de contexto serão tratados pelo cockpit.</p>
+
+  <article class="metric-card">
+    <span>Squads</span>
+    <strong>{ squad_count }</strong>
+    <small>Times configurados</small>
   </article>
-  <article class="panel">
-    <span class="eyebrow">Método</span>
-    <h3>Mission Engine</h3>
-    <p>Briefing, plano, mapeamento, execução, revisão, verificação e entrega.</p>
+
+  <article class="metric-card">
+    <span>Providers</span>
+    <strong>{ provider_count }</strong>
+    <small>Fontes de modelos</small>
+  </article>
+
+  <article class="metric-card">
+    <span>Stacks</span>
+    <strong>{ stack_count }</strong>
+    <small>Ferramenta × modelo</small>
+  </article>
+</section>
+
+<section class="grid dashboard-secondary-grid">
+  <article class="panel dashboard-list-panel">
+    <div class="panel-title-row">
+      <div>
+        <span class="eyebrow">Workspaces</span>
+        <h3>Projetos recentes</h3>
+      </div>
+      <span class="mini-badge">{ recent_workspace_count } exibidos</span>
+    </div>
+
+    if (recent_workspace_count > 0) {
+      <div class="dashboard-item-list">
+        for (recent_workspaces) |workspace| {
+          <article class="dashboard-item-card">
+            <div>
+              <strong>{ workspace.name }</strong>
+              <span>{ workspace.local_path }</span>
+              <small>{ workspace.squad_name }</small>
+            </div>
+
+            <a class="ghost-mini" href="/workspaces/{ workspace.id }">Abrir</a>
+          </article>
+        }
+      </div>
+    } else {
+      <div class="empty-inline-state">
+        <strong>Nenhum workspace cadastrado.</strong>
+        <p>Cadastre o primeiro projeto local para iniciar o Cockpit.</p>
+      </div>
+    }
+  </article>
+
+  <article class="panel dashboard-list-panel">
+    <div class="panel-title-row">
+      <div>
+        <span class="eyebrow">Missions</span>
+        <h3>Missões recentes</h3>
+      </div>
+      <span class="mini-badge">{ recent_mission_count } exibidas</span>
+    </div>
+
+    if (recent_mission_count > 0) {
+      <div class="dashboard-item-list">
+        for (recent_missions) |mission| {
+          <article class="dashboard-item-card mission">
+            <div>
+              <strong>{ mission.title }</strong>
+              <span>{ mission.workspace_name } · { mission.squad_name }</span>
+              <small>{ mission.status } · { mission.priority }</small>
+            </div>
+
+            <a class="ghost-mini" href="/missions/{ mission.id }">Abrir</a>
+          </article>
+        }
+      </div>
+    } else {
+      <div class="empty-inline-state">
+        <strong>Nenhuma missão cadastrada.</strong>
+        <p>Crie uma missão para iniciar o caminho do Mission Engine.</p>
+      </div>
+    }
   </article>
 </section>

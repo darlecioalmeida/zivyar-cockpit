@@ -301,6 +301,27 @@ const MissionWorkspaceOptionRow = struct {
     squad_name: []const u8,
 };
 
+
+const DashboardCountRow = struct {
+    total: i64,
+};
+
+const DashboardWorkspaceRow = struct {
+    id: i32,
+    name: []const u8,
+    local_path: []const u8,
+    squad_name: []const u8,
+};
+
+const DashboardMissionRow = struct {
+    id: i32,
+    title: []const u8,
+    workspace_name: []const u8,
+    squad_name: []const u8,
+    status: []const u8,
+    priority: []const u8,
+};
+
 fn loadWorkspaceSquads(c: *spider.Ctx) ![]WorkspaceSquadOptionRow {
     return db.query(
         WorkspaceSquadOptionRow,
@@ -331,9 +352,119 @@ fn loadWorkspaceSquadsForSelected(c: *spider.Ctx, selected_squad_id: i32) ![]Wor
 }
 
 fn dashboard(c: *spider.Ctx) !spider.Response {
+    const workspace_count_rows = try db.query(
+        DashboardCountRow,
+        c.arena,
+        \\SELECT COUNT(*)::bigint AS total
+        \\FROM workspaces
+        ,
+        .{},
+    );
+
+    const mission_count_rows = try db.query(
+        DashboardCountRow,
+        c.arena,
+        \\SELECT COUNT(*)::bigint AS total
+        \\FROM missions
+        ,
+        .{},
+    );
+
+    const open_mission_count_rows = try db.query(
+        DashboardCountRow,
+        c.arena,
+        \\SELECT COUNT(*)::bigint AS total
+        \\FROM missions
+        \\WHERE status <> 'completed'
+        ,
+        .{},
+    );
+
+    const agent_count_rows = try db.query(
+        DashboardCountRow,
+        c.arena,
+        \\SELECT COUNT(*)::bigint AS total
+        \\FROM agents
+        ,
+        .{},
+    );
+
+    const squad_count_rows = try db.query(
+        DashboardCountRow,
+        c.arena,
+        \\SELECT COUNT(*)::bigint AS total
+        \\FROM squads
+        ,
+        .{},
+    );
+
+    const provider_count_rows = try db.query(
+        DashboardCountRow,
+        c.arena,
+        \\SELECT COUNT(*)::bigint AS total
+        \\FROM providers
+        ,
+        .{},
+    );
+
+    const stack_count_rows = try db.query(
+        DashboardCountRow,
+        c.arena,
+        \\SELECT COUNT(*)::bigint AS total
+        \\FROM stacks
+        ,
+        .{},
+    );
+
+    const recent_workspaces = try db.query(
+        DashboardWorkspaceRow,
+        c.arena,
+        \\SELECT
+        \\    w.id,
+        \\    w.name,
+        \\    w.local_path,
+        \\    COALESCE(s.name, 'Sem squad vinculada') AS squad_name
+        \\FROM workspaces w
+        \\LEFT JOIN squads s ON s.id = w.default_squad_id
+        \\ORDER BY w.id DESC
+        \\LIMIT 4
+        ,
+        .{},
+    );
+
+    const recent_missions = try db.query(
+        DashboardMissionRow,
+        c.arena,
+        \\SELECT
+        \\    m.id,
+        \\    m.title,
+        \\    w.name AS workspace_name,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
+        \\    m.status,
+        \\    m.priority
+        \\FROM missions m
+        \\INNER JOIN workspaces w ON w.id = m.workspace_id
+        \\LEFT JOIN squads s ON s.id = m.squad_id
+        \\ORDER BY m.id DESC
+        \\LIMIT 4
+        ,
+        .{},
+    );
+
     return c.view("dashboard/index", .{
         .title = "Zivyar Cockpit",
         .subtitle = "Desktop Multi-Agent Engineering Cockpit",
+        .workspace_count = workspace_count_rows[0].total,
+        .mission_count = mission_count_rows[0].total,
+        .open_mission_count = open_mission_count_rows[0].total,
+        .agent_count = agent_count_rows[0].total,
+        .squad_count = squad_count_rows[0].total,
+        .provider_count = provider_count_rows[0].total,
+        .stack_count = stack_count_rows[0].total,
+        .recent_workspaces = recent_workspaces,
+        .recent_workspace_count = recent_workspaces.len,
+        .recent_missions = recent_missions,
+        .recent_mission_count = recent_missions.len,
     }, .{});
 }
 
