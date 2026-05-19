@@ -1013,3 +1013,59 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
     grid-template-columns: 1fr;
   }
 }
+
+.workspace-squad-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.workspace-squad-card {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(10, 15, 22, .56);
+  display: grid;
+  gap: 14px;
+}
+
+.workspace-squad-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.workspace-squad-head strong,
+.workspace-squad-head span {
+  display: block;
+}
+
+.workspace-squad-head span {
+  color: var(--muted);
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.workspace-squad-meta {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(17, 24, 39, .62);
+}
+
+.workspace-squad-meta span,
+.workspace-squad-meta strong {
+  display: block;
+}
+
+.workspace-squad-meta span {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 980px) {
+  .workspace-squad-grid {
+    grid-template-columns: 1fr;
+  }
+}

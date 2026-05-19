@@ -555,10 +555,35 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
     }
 
     const workspace = rows[0];
+    const linked_squad_id = workspace.default_squad_id orelse 0;
+
+    const members = try db.query(
+        SquadMemberRow,
+        c.arena,
+        \\SELECT
+        \\    sm.id,
+        \\    sm.squad_id,
+        \\    sm.role_name,
+        \\    sm.agent_id,
+        \\    sm.display_order,
+        \\    a.name AS agent_name,
+        \\    a.handle AS agent_handle,
+        \\    a.agent_role,
+        \\    s.name AS stack_name
+        \\FROM squad_members sm
+        \\INNER JOIN agents a ON a.id = sm.agent_id
+        \\INNER JOIN stacks s ON s.id = a.default_stack_id
+        \\WHERE sm.squad_id = $1
+        \\ORDER BY sm.display_order ASC
+        ,
+        .{ linked_squad_id },
+    );
 
     return c.view("workspaces/show", .{
         .title = workspace.name,
         .workspace = workspace,
+        .members = members,
+        .member_count = members.len,
     }, .{});
 }
 

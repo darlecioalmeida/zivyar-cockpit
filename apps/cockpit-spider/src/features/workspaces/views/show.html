@@ -91,20 +91,37 @@ extends "layout"
   <article class="panel pane-preview-panel">
     <div class="panel-title-row">
       <div>
-        <span class="eyebrow">Panes</span>
-        <h3>Squad visual do workspace</h3>
+        <span class="eyebrow">Squad</span>
+        <h3>Composição ativa do workspace</h3>
       </div>
-      <span class="mini-badge">6 slots</span>
+      <span class="mini-badge">{ member_count } membros</span>
     </div>
 
-    <div class="pane-preview-grid">
-      <div class="mini-pane">Piloto</div>
-      <div class="mini-pane">Planner</div>
-      <div class="mini-pane">Scout</div>
-      <div class="mini-pane">Builder</div>
-      <div class="mini-pane">Reviewer</div>
-      <div class="mini-pane">Executor</div>
-    </div>
+    if (member_count > 0) {
+      <div class="workspace-squad-grid">
+        for (members) |member| {
+          <article class="workspace-squad-card">
+            <div class="workspace-squad-head">
+              <div class="provider-avatar compact">A</div>
+              <div>
+                <strong>{ member.role_name }</strong>
+                <span>{ member.agent_name } · { member.agent_handle }</span>
+              </div>
+            </div>
+
+            <div class="workspace-squad-meta">
+              <span>Stack padrão</span>
+              <strong>{ member.stack_name }</strong>
+            </div>
+          </article>
+        }
+      </div>
+    } else {
+      <div class="empty-inline-state">
+        <strong>Nenhuma squad vinculada.</strong>
+        <p>Edite este workspace e selecione uma squad ativa para visualizar sua composição.</p>
+      </div>
+    }
   </article>
 </section>
 
