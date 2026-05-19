@@ -28,6 +28,7 @@ pub fn main(init: std.process.Init) !void {
         .get("/workspaces/:id/edit", workspaceEdit)
         .post("/workspaces/:id/update", workspaceUpdate)
         .post("/workspaces/:id/delete", workspaceDelete)
+        .post("/workspaces/:id/runtime/prepare", workspaceRuntimePrepare)
         .get("/workspaces/:id", workspaceShow)
         .get("/missions", missions)
         .get("/missions/new", missionNew)
@@ -322,6 +323,21 @@ const DashboardMissionRow = struct {
     priority: []const u8,
 };
 
+
+const WorkspaceRuntimeRow = struct {
+    workspace_id: i32,
+    state: []const u8,
+    container_name: []const u8,
+    opencode_port_label: []const u8,
+    server_url_label: []const u8,
+    status_message: []const u8,
+    is_prepared: bool,
+};
+
+const WorkspaceRuntimeCountRow = struct {
+    total: i64,
+};
+
 fn loadWorkspaceSquads(c: *spider.Ctx) ![]WorkspaceSquadOptionRow {
     return db.query(
         WorkspaceSquadOptionRow,
@@ -348,6 +364,33 @@ fn loadWorkspaceSquadsForSelected(c: *spider.Ctx, selected_squad_id: i32) ![]Wor
         \\         name ASC
         ,
         .{ selected_squad_id },
+    );
+}
+
+fn loadWorkspaceRuntime(c: *spider.Ctx, workspace_id: i32) ![]WorkspaceRuntimeRow {
+    return db.query(
+        WorkspaceRuntimeRow,
+        c.arena,
+        \\SELECT
+        \\    w.id AS workspace_id,
+        \\    COALESCE(r.state, 'not_prepared') AS state,
+        \\    COALESCE(NULLIF(r.container_name, ''), 'Ainda não criado') AS container_name,
+        \\    CASE
+        \\        WHEN r.opencode_port IS NULL OR r.opencode_port = 0 THEN 'A definir'
+        \\        ELSE r.opencode_port::text
+        \\    END AS opencode_port_label,
+        \\    COALESCE(NULLIF(r.server_url, ''), 'A definir') AS server_url_label,
+        \\    COALESCE(NULLIF(r.status_message, ''), 'Runtime ainda não preparado.') AS status_message,
+        \\    CASE
+        \\        WHEN r.id IS NULL THEN FALSE
+        \\        ELSE TRUE
+        \\    END AS is_prepared
+        \\FROM workspaces w
+        \\LEFT JOIN workspace_runtimes r ON r.workspace_id = w.id
+        \\WHERE w.id = $1
+        \\LIMIT 1
+        ,
+        .{ workspace_id },
     );
 }
 
@@ -487,6 +530,15 @@ fn workspaces(c: *spider.Ctx) !spider.Response {
         .{},
     );
 
+    const runtime_count_rows = try db.query(
+        WorkspaceRuntimeCountRow,
+        c.arena,
+        \\SELECT COUNT(*)::bigint AS total
+        \\FROM workspace_runtimes
+        ,
+        .{},
+    );
+
     const notice =
         if (c.query("created") != null)
             "Workspace cadastrado com sucesso."
@@ -501,7 +553,7 @@ fn workspaces(c: *spider.Ctx) !spider.Response {
         .title = "Workspaces",
         .workspaces = rows,
         .workspace_count = rows.len,
-        .runtime_count = 0,
+        .runtime_count = runtime_count_rows[0].total,
         .mission_count = 0,
         .notice = notice,
     }, .{});
@@ -682,6 +734,65 @@ fn workspaceUpdate(c: *spider.Ctx) !spider.Response {
     return c.redirect("/workspaces?updated=1");
 }
 
+fn workspaceRuntimePrepare(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const workspace_rows = try db.query(
+        WorkspaceIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM workspaces
+        \\WHERE id = $1
+        \\LIMIT 1
+        ,
+        .{ workspace_id },
+    );
+
+    if (workspace_rows.len == 0) {
+        return c.text("Workspace não encontrado.", .{ .status = .not_found });
+    }
+
+    const container_name = try std.fmt.allocPrint(
+        c.arena,
+        "zivyar_workspace_{d}",
+        .{ workspace_id },
+    );
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO workspace_runtimes (
+        \\    workspace_id,
+        \\    state,
+        \\    container_name,
+        \\    opencode_port,
+        \\    server_url,
+        \\    status_message
+        \\)
+        \\VALUES ($1, 'stopped', $2, 0, '', 'Runtime preparado, aguardando inicialização.')
+        \\ON CONFLICT (workspace_id)
+        \\DO UPDATE SET
+        \\    state = 'stopped',
+        \\    container_name = EXCLUDED.container_name,
+        \\    status_message = 'Runtime preparado, aguardando inicialização.',
+        \\    updated_at = NOW()
+        ,
+        .{ workspace_id, container_name },
+    );
+
+    const redirect_url = try std.fmt.allocPrint(
+        c.arena,
+        "/workspaces/{d}",
+        .{ workspace_id },
+    );
+
+    return c.redirect(redirect_url);
+}
+
 fn workspaceDelete(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
         return c.text("Workspace não informado.", .{ .status = .bad_request });
@@ -733,6 +844,7 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
 
     const workspace = rows[0];
     const linked_squad_id = workspace.default_squad_id orelse 0;
+    const runtime_rows = try loadWorkspaceRuntime(c, workspace.id);
 
     const workspace_missions = try db.query(
         MissionRow,
@@ -785,6 +897,7 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .member_count = members.len,
         .missions = workspace_missions,
         .mission_count = workspace_missions.len,
+        .runtime = runtime_rows[0],
     }, .{});
 }
 

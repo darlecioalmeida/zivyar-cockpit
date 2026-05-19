@@ -1311,3 +1311,46 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
     flex-direction: column;
   }
 }
+
+.runtime-state-badge {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 8px 14px;
+  margin: 12px 0 14px;
+  border: 1px solid var(--border);
+  background: rgba(10, 15, 22, .56);
+  color: var(--amber);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.runtime-detail-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.runtime-detail-grid div {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(10, 15, 22, .56);
+  padding: 14px;
+}
+
+.runtime-detail-grid span,
+.runtime-detail-grid strong {
+  display: block;
+}
+
+.runtime-detail-grid span {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.runtime-actions,
+.runtime-prepare-form {
+  margin-top: 18px;
+}

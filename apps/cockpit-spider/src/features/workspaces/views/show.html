@@ -54,18 +54,38 @@ extends "layout"
     <span class="eyebrow">Runtime</span>
     <h3>Docker + OpenCode Server</h3>
 
-    <div class="runtime-status-box">
-      <div class="status-pill pending">Aguardando Sprint 2</div>
-      <p>
-        O Runtime Manager ainda não está conectado. Em seguida, este painel mostrará:
-      </p>
-      <ul class="feature-list compact">
-        <li>container do workspace;</li>
-        <li>porta do OpenCode Server;</li>
-        <li>estado online/offline;</li>
-        <li>ações iniciar, parar e reiniciar.</li>
-      </ul>
+    <div class="runtime-state-badge">
+      { runtime.state }
     </div>
+
+    <p>{ runtime.status_message }</p>
+
+    <div class="runtime-detail-grid">
+      <div>
+        <span>Container</span>
+        <strong>{ runtime.container_name }</strong>
+      </div>
+
+      <div>
+        <span>Porta OpenCode</span>
+        <strong>{ runtime.opencode_port_label }</strong>
+      </div>
+
+      <div>
+        <span>Servidor</span>
+        <strong>{ runtime.server_url_label }</strong>
+      </div>
+    </div>
+
+    if (runtime.is_prepared) {
+      <div class="form-actions runtime-actions">
+        <button class="ghost-link" type="button">Runtime preparado</button>
+      </div>
+    } else {
+      <form method="post" action="/workspaces/{ workspace.id }/runtime/prepare" class="runtime-prepare-form">
+        <button class="primary-button" type="submit">Preparar Runtime</button>
+      </form>
+    }
   </article>
 </section>
 
