@@ -825,3 +825,108 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
     text-align: center;
   }
 }
+
+.agent-cards {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.agent-card {
+  display: grid;
+  gap: 18px;
+}
+
+.agent-card-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.agent-avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 22px;
+  color: #041019;
+  background: linear-gradient(135deg, var(--amber), var(--cyan));
+}
+
+.agent-card-head small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.agent-summary {
+  min-height: 56px;
+}
+
+.agent-meta {
+  display: grid;
+  gap: 12px;
+}
+
+.agent-meta div {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(10, 15, 22, .55);
+}
+
+.agent-meta span,
+.agent-meta strong,
+.agent-meta small {
+  display: block;
+}
+
+.agent-meta span {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.agent-meta small {
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.agent-form-layout {
+  grid-template-columns: 1.2fr .8fr;
+}
+
+.cockpit-form textarea {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(10, 15, 22, .75);
+  color: var(--text);
+  padding: 14px;
+  font: inherit;
+  resize: vertical;
+}
+
+.agent-detail-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+.code-block {
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  background: rgba(10, 15, 22, .58);
+  color: var(--text);
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
+@media (max-width: 980px) {
+  .agent-cards,
+  .agent-form-layout,
+  .agent-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}

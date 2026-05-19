@@ -1,0 +1,115 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Novo Agente</span>
+    <h2>Criar perfil operacional</h2>
+    <p>
+      Defina como este agente se comportará e qual stack ele usará por padrão.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/agents">Voltar</a>
+  </div>
+</section>
+
+<section class="grid agent-form-layout">
+  <article class="panel form-panel">
+    <h3>Dados do agente</h3>
+
+    if (error_message) {
+      <div class="alert danger">
+        { error_message }
+      </div>
+    }
+
+    if (stack_count == 0) {
+      <div class="alert danger">
+        Cadastre ao menos uma stack ativa antes de criar um agente.
+      </div>
+    }
+
+    <form class="cockpit-form" method="post" action="/agents">
+      <label>
+        <span>Nome</span>
+        <input type="text" name="name" value="{ form.name }" placeholder="Ex.: Mission Commander" required />
+      </label>
+
+      <label>
+        <span>Handle</span>
+        <input type="text" name="handle" value="{ form.handle }" placeholder="@piloto" required />
+      </label>
+
+      <label>
+        <span>Papel</span>
+        <select name="agent_role">
+          <option value="Piloto">Piloto</option>
+          <option value="Planner">Planner</option>
+          <option value="Scout">Scout</option>
+          <option value="Builder">Builder</option>
+          <option value="Reviewer">Reviewer</option>
+          <option value="Executor">Executor</option>
+          <option value="Custom">Custom</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Resumo</span>
+        <textarea name="summary" rows="3" placeholder="Descreva a função principal do agente." required>{ form.summary }</textarea>
+      </label>
+
+      <label>
+        <span>Prompt base</span>
+        <textarea name="system_prompt" rows="7" placeholder="Instruções estruturais do agente." required>{ form.system_prompt }</textarea>
+      </label>
+
+      <label>
+        <span>Regras operacionais</span>
+        <textarea name="operating_rules" rows="6" placeholder="Limites, critérios de qualidade e obrigações." required>{ form.operating_rules }</textarea>
+      </label>
+
+      <label>
+        <span>Stack padrão</span>
+        <select name="default_stack_id" required>
+          <option value="">Selecione uma stack</option>
+          for (stacks) |stack| {
+            <option value="{ stack.id }">{ stack.name } · { stack.runtime_tool } · { stack.model_name }</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Status</span>
+        <select name="is_active">
+          <option value="true">Ativo</option>
+          <option value="false">Inativo</option>
+        </select>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="primary-button">Salvar agente</button>
+        <a href="/agents" class="ghost-link">Cancelar</a>
+      </div>
+    </form>
+  </article>
+
+  <article class="panel guidance-panel">
+    <span class="eyebrow">Referência inicial</span>
+    <h3>Exemplo de estrutura de agente</h3>
+
+    <ol class="numbered-list">
+      <li><strong>Papel:</strong> Piloto.</li>
+      <li><strong>Missão:</strong> coordenar o squad.</li>
+      <li><strong>Prompt:</strong> delegar, sintetizar, validar.</li>
+      <li><strong>Stack:</strong> OpenCode + modelo escolhido.</li>
+    </ol>
+
+    <div class="note-card">
+      <strong>Próxima etapa</strong>
+      <p>
+        Depois dos agentes, criaremos Squads com cargos e atribuições reais.
+      </p>
+    </div>
+  </article>
+</section>

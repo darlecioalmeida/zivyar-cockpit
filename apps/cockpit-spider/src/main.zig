@@ -31,6 +31,12 @@ pub fn main(init: std.process.Init) !void {
         .get("/workspaces/:id", workspaceShow)
         .get("/missions", missions)
         .get("/agents", agents)
+        .get("/agents/new", agentNew)
+        .post("/agents", agentCreate)
+        .get("/agents/:id", agentShow)
+        .get("/agents/:id/edit", agentEdit)
+        .post("/agents/:id/update", agentUpdate)
+        .post("/agents/:id/delete", agentDelete)
         .get("/squads", squads)
         .get("/providers", providers)
         .get("/providers/new", providerNew)
@@ -144,6 +150,44 @@ const StackModelOptionRow = struct {
     model_name: []const u8,
     model_identifier: []const u8,
     provider_name: []const u8,
+};
+
+
+const AgentRow = struct {
+    id: i32,
+    name: []const u8,
+    handle: []const u8,
+    agent_role: []const u8,
+    summary: []const u8,
+    system_prompt: []const u8,
+    operating_rules: []const u8,
+    default_stack_id: i32,
+    stack_name: []const u8,
+    runtime_tool: []const u8,
+    model_name: []const u8,
+    is_active: bool,
+};
+
+const AgentForm = struct {
+    name: []const u8,
+    handle: []const u8,
+    agent_role: []const u8,
+    summary: []const u8,
+    system_prompt: []const u8,
+    operating_rules: []const u8,
+    default_stack_id: []const u8,
+    is_active: []const u8,
+};
+
+const AgentIdRow = struct {
+    id: i32,
+};
+
+const AgentStackOptionRow = struct {
+    id: i32,
+    name: []const u8,
+    runtime_tool: []const u8,
+    model_name: []const u8,
 };
 
 fn dashboard(c: *spider.Ctx) !spider.Response {
@@ -383,7 +427,429 @@ fn missions(c: *spider.Ctx) !spider.Response {
 }
 
 fn agents(c: *spider.Ctx) !spider.Response {
-    return c.view("agents/index", .{ .title = "Agents" }, .{});
+    const rows = try db.query(
+        AgentRow,
+        c.arena,
+        \\SELECT
+        \\    a.id,
+        \\    a.name,
+        \\    a.handle,
+        \\    a.agent_role,
+        \\    a.summary,
+        \\    a.system_prompt,
+        \\    a.operating_rules,
+        \\    a.default_stack_id,
+        \\    s.name AS stack_name,
+        \\    s.runtime_tool,
+        \\    pm.model_name,
+        \\    a.is_active
+        \\FROM agents a
+        \\INNER JOIN stacks s ON s.id = a.default_stack_id
+        \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
+        \\ORDER BY a.id DESC
+        ,
+        .{},
+    );
+
+    const notice =
+        if (c.query("created") != null)
+            "Agente cadastrado com sucesso."
+        else if (c.query("updated") != null)
+            "Agente atualizado com sucesso."
+        else if (c.query("deleted") != null)
+            "Agente removido com sucesso."
+        else
+            "";
+
+    return c.view("agents/index", .{
+        .title = "Agents",
+        .agents = rows,
+        .agent_count = rows.len,
+        .active_count = countActiveAgents(rows),
+        .notice = notice,
+    }, .{});
+}
+
+fn countActiveAgents(rows: []const AgentRow) usize {
+    var total: usize = 0;
+    for (rows) |row| {
+        if (row.is_active) total += 1;
+    }
+    return total;
+}
+
+fn agentNew(c: *spider.Ctx) !spider.Response {
+    const stacks_rows = try db.query(
+        AgentStackOptionRow,
+        c.arena,
+        \\SELECT
+        \\    s.id,
+        \\    s.name,
+        \\    s.runtime_tool,
+        \\    pm.model_name
+        \\FROM stacks s
+        \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
+        \\WHERE s.is_active = TRUE
+        \\ORDER BY s.name ASC
+        ,
+        .{},
+    );
+
+    return c.view("agents/new", .{
+        .title = "Novo Agente",
+        .stacks = stacks_rows,
+        .stack_count = stacks_rows.len,
+        .error_message = "",
+        .form = .{
+            .name = "",
+            .handle = "",
+            .agent_role = "Piloto",
+            .summary = "",
+            .system_prompt = "",
+            .operating_rules = "",
+            .default_stack_id = "",
+            .is_active = "true",
+        },
+    }, .{});
+}
+
+fn agentCreate(c: *spider.Ctx) !spider.Response {
+    const form = try c.parseForm(AgentForm);
+    const stack_id = std.fmt.parseInt(i32, form.default_stack_id, 10) catch 0;
+    const active = std.mem.eql(u8, form.is_active, "true");
+
+    const duplicated = try db.query(
+        AgentIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM agents
+        \\WHERE handle = $1
+        \\LIMIT 1
+        ,
+        .{ form.handle },
+    );
+
+    const stacks_rows = try db.query(
+        AgentStackOptionRow,
+        c.arena,
+        \\SELECT
+        \\    s.id,
+        \\    s.name,
+        \\    s.runtime_tool,
+        \\    pm.model_name
+        \\FROM stacks s
+        \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
+        \\WHERE s.is_active = TRUE
+        \\ORDER BY s.name ASC
+        ,
+        .{},
+    );
+
+    if (duplicated.len > 0) {
+        return c.view("agents/new", .{
+            .title = "Novo Agente",
+            .stacks = stacks_rows,
+            .stack_count = stacks_rows.len,
+            .error_message = "Já existe um agente cadastrado com este handle.",
+            .form = form,
+        }, .{ .status = .bad_request });
+    }
+
+    if (stack_id <= 0) {
+        return c.view("agents/new", .{
+            .title = "Novo Agente",
+            .stacks = stacks_rows,
+            .stack_count = stacks_rows.len,
+            .error_message = "Selecione uma stack padrão válida.",
+            .form = form,
+        }, .{ .status = .bad_request });
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO agents (
+        \\    name,
+        \\    handle,
+        \\    agent_role,
+        \\    summary,
+        \\    system_prompt,
+        \\    operating_rules,
+        \\    default_stack_id,
+        \\    is_active
+        \\)
+        \\VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ,
+        .{
+            form.name,
+            form.handle,
+            form.agent_role,
+            form.summary,
+            form.system_prompt,
+            form.operating_rules,
+            stack_id,
+            active,
+        },
+    );
+
+    return c.redirect("/agents?created=1");
+}
+
+fn agentShow(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Agente não informado.", .{ .status = .bad_request });
+
+    const agent_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Agente inválido.", .{ .status = .bad_request });
+
+    const rows = try db.query(
+        AgentRow,
+        c.arena,
+        \\SELECT
+        \\    a.id,
+        \\    a.name,
+        \\    a.handle,
+        \\    a.agent_role,
+        \\    a.summary,
+        \\    a.system_prompt,
+        \\    a.operating_rules,
+        \\    a.default_stack_id,
+        \\    s.name AS stack_name,
+        \\    s.runtime_tool,
+        \\    pm.model_name,
+        \\    a.is_active
+        \\FROM agents a
+        \\INNER JOIN stacks s ON s.id = a.default_stack_id
+        \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
+        \\WHERE a.id = $1
+        \\LIMIT 1
+        ,
+        .{ agent_id },
+    );
+
+    if (rows.len == 0) {
+        return c.text("Agente não encontrado.", .{ .status = .not_found });
+    }
+
+    return c.view("agents/show", .{
+        .title = rows[0].name,
+        .agent = rows[0],
+    }, .{});
+}
+
+fn agentEdit(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Agente não informado.", .{ .status = .bad_request });
+
+    const agent_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Agente inválido.", .{ .status = .bad_request });
+
+    const rows = try db.query(
+        AgentRow,
+        c.arena,
+        \\SELECT
+        \\    a.id,
+        \\    a.name,
+        \\    a.handle,
+        \\    a.agent_role,
+        \\    a.summary,
+        \\    a.system_prompt,
+        \\    a.operating_rules,
+        \\    a.default_stack_id,
+        \\    s.name AS stack_name,
+        \\    s.runtime_tool,
+        \\    pm.model_name,
+        \\    a.is_active
+        \\FROM agents a
+        \\INNER JOIN stacks s ON s.id = a.default_stack_id
+        \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
+        \\WHERE a.id = $1
+        \\LIMIT 1
+        ,
+        .{ agent_id },
+    );
+
+    if (rows.len == 0) {
+        return c.text("Agente não encontrado.", .{ .status = .not_found });
+    }
+
+    const stacks_rows = try db.query(
+        AgentStackOptionRow,
+        c.arena,
+        \\SELECT
+        \\    s.id,
+        \\    s.name,
+        \\    s.runtime_tool,
+        \\    pm.model_name
+        \\FROM stacks s
+        \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
+        \\WHERE s.is_active = TRUE
+        \\ORDER BY CASE WHEN s.id = $1 THEN 0 ELSE 1 END,
+        \\         s.name ASC
+        ,
+        .{ rows[0].default_stack_id },
+    );
+
+    return c.view("agents/edit", .{
+        .title = "Editar Agente",
+        .agent = rows[0],
+        .stacks = stacks_rows,
+        .stack_count = stacks_rows.len,
+        .error_message = "",
+    }, .{});
+}
+
+fn agentUpdate(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Agente não informado.", .{ .status = .bad_request });
+
+    const agent_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Agente inválido.", .{ .status = .bad_request });
+
+    const form = try c.parseForm(AgentForm);
+    const stack_id = std.fmt.parseInt(i32, form.default_stack_id, 10) catch 0;
+    const active = std.mem.eql(u8, form.is_active, "true");
+
+    const duplicated = try db.query(
+        AgentIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM agents
+        \\WHERE handle = $1
+        \\AND id <> $2
+        \\LIMIT 1
+        ,
+        .{ form.handle, agent_id },
+    );
+
+    const current_rows = try db.query(
+        AgentRow,
+        c.arena,
+        \\SELECT
+        \\    a.id,
+        \\    a.name,
+        \\    a.handle,
+        \\    a.agent_role,
+        \\    a.summary,
+        \\    a.system_prompt,
+        \\    a.operating_rules,
+        \\    a.default_stack_id,
+        \\    s.name AS stack_name,
+        \\    s.runtime_tool,
+        \\    pm.model_name,
+        \\    a.is_active
+        \\FROM agents a
+        \\INNER JOIN stacks s ON s.id = a.default_stack_id
+        \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
+        \\WHERE a.id = $1
+        \\LIMIT 1
+        ,
+        .{ agent_id },
+    );
+
+    if (current_rows.len == 0) {
+        return c.text("Agente não encontrado.", .{ .status = .not_found });
+    }
+
+    const stacks_rows = try db.query(
+        AgentStackOptionRow,
+        c.arena,
+        \\SELECT
+        \\    s.id,
+        \\    s.name,
+        \\    s.runtime_tool,
+        \\    pm.model_name
+        \\FROM stacks s
+        \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
+        \\WHERE s.is_active = TRUE
+        \\ORDER BY CASE WHEN s.id = $1 THEN 0 ELSE 1 END,
+        \\         s.name ASC
+        ,
+        .{ stack_id },
+    );
+
+    if (duplicated.len > 0) {
+        const agent = AgentRow{
+            .id = agent_id,
+            .name = form.name,
+            .handle = form.handle,
+            .agent_role = form.agent_role,
+            .summary = form.summary,
+            .system_prompt = form.system_prompt,
+            .operating_rules = form.operating_rules,
+            .default_stack_id = stack_id,
+            .stack_name = current_rows[0].stack_name,
+            .runtime_tool = current_rows[0].runtime_tool,
+            .model_name = current_rows[0].model_name,
+            .is_active = active,
+        };
+
+        return c.view("agents/edit", .{
+            .title = "Editar Agente",
+            .agent = agent,
+            .stacks = stacks_rows,
+            .stack_count = stacks_rows.len,
+            .error_message = "Outro agente já utiliza este handle.",
+        }, .{ .status = .bad_request });
+    }
+
+    if (stack_id <= 0) {
+        return c.view("agents/edit", .{
+            .title = "Editar Agente",
+            .agent = current_rows[0],
+            .stacks = stacks_rows,
+            .stack_count = stacks_rows.len,
+            .error_message = "Selecione uma stack padrão válida.",
+        }, .{ .status = .bad_request });
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE agents
+        \\SET name = $1,
+        \\    handle = $2,
+        \\    agent_role = $3,
+        \\    summary = $4,
+        \\    system_prompt = $5,
+        \\    operating_rules = $6,
+        \\    default_stack_id = $7,
+        \\    is_active = $8
+        \\WHERE id = $9
+        ,
+        .{
+            form.name,
+            form.handle,
+            form.agent_role,
+            form.summary,
+            form.system_prompt,
+            form.operating_rules,
+            stack_id,
+            active,
+            agent_id,
+        },
+    );
+
+    return c.redirect("/agents?updated=1");
+}
+
+fn agentDelete(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Agente não informado.", .{ .status = .bad_request });
+
+    const agent_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Agente inválido.", .{ .status = .bad_request });
+
+    try db.query(
+        void,
+        c.arena,
+        \\DELETE FROM agents
+        \\WHERE id = $1
+        ,
+        .{ agent_id },
+    );
+
+    return c.redirect("/agents?deleted=1");
 }
 
 fn squads(c: *spider.Ctx) !spider.Response {

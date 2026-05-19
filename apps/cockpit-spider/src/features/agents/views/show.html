@@ -1,0 +1,69 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">{ agent.agent_role }</span>
+    <h2>{ agent.name }</h2>
+    <p>{ agent.summary }</p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/agents">Voltar</a>
+    <a class="ghost-link" href="/agents/{ agent.id }/edit">Editar</a>
+  </div>
+</section>
+
+<section class="workspace-detail-grid">
+  <article class="panel workspace-summary-panel">
+    <span class="eyebrow">Identidade</span>
+    <h3>Configuração do agente</h3>
+
+    <div class="detail-meta-grid">
+      <div>
+        <span>Handle</span>
+        <strong>{ agent.handle }</strong>
+      </div>
+
+      <div>
+        <span>Papel</span>
+        <strong>{ agent.agent_role }</strong>
+      </div>
+
+      <div>
+        <span>Status</span>
+        if (agent.is_active) {
+          <strong class="provider-status active">Ativo</strong>
+        } else {
+          <strong class="provider-status inactive">Inativo</strong>
+        }
+      </div>
+
+      <div>
+        <span>Stack padrão</span>
+        <strong>{ agent.stack_name }</strong>
+      </div>
+    </div>
+  </article>
+
+  <article class="panel runtime-status-panel">
+    <span class="eyebrow">Stack</span>
+    <h3>{ agent.runtime_tool } + { agent.model_name }</h3>
+    <p>
+      Esta será a configuração inicial usada quando o agente entrar em um squad.
+    </p>
+  </article>
+</section>
+
+<section class="grid agent-detail-grid">
+  <article class="panel prose-panel">
+    <span class="eyebrow">Prompt base</span>
+    <h3>Instruções estruturais</h3>
+    <pre class="code-block">{ agent.system_prompt }</pre>
+  </article>
+
+  <article class="panel prose-panel">
+    <span class="eyebrow">Regras</span>
+    <h3>Condutas operacionais</h3>
+    <pre class="code-block">{ agent.operating_rules }</pre>
+  </article>
+</section>

@@ -1,0 +1,140 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Editar Agente</span>
+    <h2>{ agent.name }</h2>
+    <p>
+      Atualize papel, prompt, regras e stack padrão.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/agents">Voltar</a>
+  </div>
+</section>
+
+<section class="grid agent-form-layout">
+  <article class="panel form-panel">
+    <h3>Dados do agente</h3>
+
+    if (error_message) {
+      <div class="alert danger">
+        { error_message }
+      </div>
+    }
+
+    <form class="cockpit-form" method="post" action="/agents/{ agent.id }/update">
+      <label>
+        <span>Nome</span>
+        <input type="text" name="name" value="{ agent.name }" required />
+      </label>
+
+      <label>
+        <span>Handle</span>
+        <input type="text" name="handle" value="{ agent.handle }" required />
+      </label>
+
+      <label>
+        <span>Papel</span>
+        <select name="agent_role">
+          if (agent.agent_role == "Piloto") {
+            <option value="Piloto" selected>Piloto</option>
+          } else {
+            <option value="Piloto">Piloto</option>
+          }
+
+          if (agent.agent_role == "Planner") {
+            <option value="Planner" selected>Planner</option>
+          } else {
+            <option value="Planner">Planner</option>
+          }
+
+          if (agent.agent_role == "Scout") {
+            <option value="Scout" selected>Scout</option>
+          } else {
+            <option value="Scout">Scout</option>
+          }
+
+          if (agent.agent_role == "Builder") {
+            <option value="Builder" selected>Builder</option>
+          } else {
+            <option value="Builder">Builder</option>
+          }
+
+          if (agent.agent_role == "Reviewer") {
+            <option value="Reviewer" selected>Reviewer</option>
+          } else {
+            <option value="Reviewer">Reviewer</option>
+          }
+
+          if (agent.agent_role == "Executor") {
+            <option value="Executor" selected>Executor</option>
+          } else {
+            <option value="Executor">Executor</option>
+          }
+
+          if (agent.agent_role == "Custom") {
+            <option value="Custom" selected>Custom</option>
+          } else {
+            <option value="Custom">Custom</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Resumo</span>
+        <textarea name="summary" rows="3" required>{ agent.summary }</textarea>
+      </label>
+
+      <label>
+        <span>Prompt base</span>
+        <textarea name="system_prompt" rows="7" required>{ agent.system_prompt }</textarea>
+      </label>
+
+      <label>
+        <span>Regras operacionais</span>
+        <textarea name="operating_rules" rows="6" required>{ agent.operating_rules }</textarea>
+      </label>
+
+      <label>
+        <span>Stack padrão</span>
+        <select name="default_stack_id" required>
+          for (stacks) |stack| {
+            <option value="{ stack.id }">{ stack.name } · { stack.runtime_tool } · { stack.model_name }</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Status</span>
+        <select name="is_active">
+          if (agent.is_active) {
+            <option value="true">Ativo</option>
+            <option value="false">Inativo</option>
+          } else {
+            <option value="false">Inativo</option>
+            <option value="true">Ativo</option>
+          }
+        </select>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="primary-button">Salvar alterações</button>
+        <a href="/agents" class="ghost-link">Cancelar</a>
+      </div>
+    </form>
+  </article>
+
+  <article class="panel guidance-panel">
+    <span class="eyebrow">Governança</span>
+    <h3>Boas práticas para agentes</h3>
+
+    <ol class="numbered-list">
+      <li>Use handles curtos e inequívocos.</li>
+      <li>Escreva prompts objetivos e estruturados.</li>
+      <li>Registre limites e critérios de aceite.</li>
+      <li>Associe stacks coerentes ao papel.</li>
+    </ol>
+  </article>
+</section>

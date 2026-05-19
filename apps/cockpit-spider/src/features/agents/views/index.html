@@ -1,18 +1,111 @@
 extends "layout"
 
-<section class="panel page-intro">
-  <span class="eyebrow">Módulo</span>
-  <h2>Agents</h2>
-  <p>Catálogo inicial: Piloto, Planner, Scout, Builder, Reviewer e Executor.</p>
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Agents</span>
+    <h2>Catálogo de agentes operacionais</h2>
+    <p>
+      Configure perfis especializados que futuramente serão alocados em Squads e Missões.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="primary-button" href="/agents/new">Novo Agente</a>
+  </div>
 </section>
 
-<section class="grid two">
-  <article class="panel placeholder">
-    <h3>Próxima entrega</h3>
-    <p>Esta tela será detalhada na Sprint 1.</p>
+if (notice) {
+<section class="alert success">
+  { notice }
+</section>
+}
+
+<section class="metric-grid">
+  <article class="metric-card">
+    <span>Agentes</span>
+    <strong>{ agent_count }</strong>
+    <small>Cadastrados no Cockpit</small>
   </article>
-  <article class="panel placeholder">
-    <h3>Base preparada</h3>
-    <p>Rotas e estrutura de views já fazem parte do scaffold inicial.</p>
+
+  <article class="metric-card">
+    <span>Ativos</span>
+    <strong>{ active_count }</strong>
+    <small>Disponíveis para squads</small>
+  </article>
+
+  <article class="metric-card">
+    <span>Próxima camada</span>
+    <strong>Squads</strong>
+    <small>Composição de papéis</small>
   </article>
 </section>
+
+if (agent_count > 0) {
+<section class="grid agent-cards">
+  for (agents) |agent| {
+    <article class="panel agent-card">
+      <div class="agent-card-head">
+        <div class="agent-avatar">@</div>
+        <div>
+          <span class="eyebrow">{ agent.agent_role }</span>
+          <h3>{ agent.name }</h3>
+          <small>{ agent.handle }</small>
+        </div>
+      </div>
+
+      <p class="agent-summary">{ agent.summary }</p>
+
+      <div class="agent-meta">
+        <div>
+          <span>Stack padrão</span>
+          <strong>{ agent.stack_name }</strong>
+          <small>{ agent.runtime_tool } · { agent.model_name }</small>
+        </div>
+
+        <div>
+          <span>Status</span>
+          if (agent.is_active) {
+            <strong class="provider-status active">Ativo</strong>
+          } else {
+            <strong class="provider-status inactive">Inativo</strong>
+          }
+        </div>
+      </div>
+
+      <div class="workspace-card-actions">
+        <a class="ghost-mini" href="/agents/{ agent.id }">Abrir</a>
+        <a class="ghost-mini" href="/agents/{ agent.id }/edit">Editar</a>
+
+        <form method="post" action="/agents/{ agent.id }/delete" class="inline-form" onsubmit="return confirm('Remover este agente?');">
+          <button class="danger-button" type="submit">Excluir</button>
+        </form>
+      </div>
+    </article>
+  }
+</section>
+} else {
+<section class="grid workspace-layout">
+  <article class="panel empty-state-panel">
+    <div class="empty-icon">@</div>
+    <span class="eyebrow">Estado inicial</span>
+    <h3>Nenhum agente cadastrado</h3>
+    <p>
+      Cadastre o primeiro perfil operacional para iniciar a montagem de squads.
+    </p>
+    <a class="primary-button inline" href="/agents/new">Cadastrar primeiro agente</a>
+  </article>
+
+  <article class="panel architecture-panel">
+    <span class="eyebrow">Modelo de agente</span>
+    <h3>O que define um agente</h3>
+
+    <ul class="feature-list">
+      <li>Papel operacional.</li>
+      <li>Prompt base.</li>
+      <li>Regras de atuação.</li>
+      <li>Stack padrão.</li>
+      <li>Status ativo/inativo.</li>
+    </ul>
+  </article>
+</section>
+}
