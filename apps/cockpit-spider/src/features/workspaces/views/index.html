@@ -18,21 +18,60 @@ extends "layout"
 <section class="metric-grid">
   <article class="metric-card">
     <span>Workspaces</span>
-    <strong>0</strong>
-    <small>Base preparada para persistência</small>
+    <strong>{ workspace_count }</strong>
+    <small>Cadastrados no PostgreSQL local</small>
   </article>
   <article class="metric-card">
     <span>Runtimes ativos</span>
-    <strong>0</strong>
-    <small>Docker Runtime Manager será ligado na Sprint 2</small>
+    <strong>{ runtime_count }</strong>
+    <small>Docker Runtime Manager entra na Sprint 2</small>
   </article>
   <article class="metric-card">
     <span>Missões abertas</span>
-    <strong>0</strong>
+    <strong>{ mission_count }</strong>
     <small>Mission Engine entra na Sprint 4</small>
   </article>
 </section>
 
+if (workspace_count > 0) {
+<section class="grid workspace-cards">
+  for (workspaces) |workspace| {
+    <article class="panel workspace-card">
+      <div class="workspace-card-head">
+        <div class="workspace-avatar">W</div>
+        <div>
+          <span class="eyebrow">Workspace #{ workspace.id }</span>
+          <h3>{ workspace.name }</h3>
+        </div>
+      </div>
+
+      <div class="workspace-meta">
+        <div>
+          <span>Caminho</span>
+          <strong>{ workspace.local_path }</strong>
+        </div>
+        <div>
+          <span>Stack</span>
+          <strong>{ workspace.stack_name }</strong>
+        </div>
+        <div>
+          <span>Squad padrão</span>
+          <strong>{ workspace.default_squad }</strong>
+        </div>
+        <div>
+          <span>Status</span>
+          <strong>{ workspace.status }</strong>
+        </div>
+      </div>
+
+      <div class="workspace-card-actions">
+        <button class="ghost-mini" type="button">Abrir cockpit</button>
+        <button class="ghost-mini" type="button">Runtime em breve</button>
+      </div>
+    </article>
+  }
+</section>
+} else {
 <section class="grid workspace-layout">
   <article class="panel empty-state-panel">
     <div class="empty-icon">⌘</div>
@@ -74,3 +113,4 @@ extends "layout"
     </ul>
   </article>
 </section>
+}

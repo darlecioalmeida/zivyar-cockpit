@@ -19,41 +19,41 @@ extends "layout"
   <article class="panel form-panel">
     <h3>Dados do workspace</h3>
 
-    <form class="cockpit-form">
+    <form class="cockpit-form" method="post" action="/workspaces">
       <label>
         <span>Nome do workspace</span>
-        <input type="text" placeholder="Ex.: Zivyar Cockpit" />
+        <input type="text" name="name" placeholder="Ex.: Zivyar Cockpit" required />
       </label>
 
       <label>
         <span>Caminho local</span>
         <div class="input-action">
-          <input type="text" placeholder="/Users/darlecioalmeida/projetos/zivyar-cockpit" />
+          <input type="text" name="local_path" placeholder="/Users/darlecioalmeida/projetos/zivyar-cockpit" required />
           <button type="button" class="ghost-mini">Selecionar</button>
         </div>
       </label>
 
       <label>
         <span>Stack principal</span>
-        <select>
-          <option>Spider + Zig</option>
-          <option>PHP / Yii</option>
-          <option>Node / TypeScript</option>
-          <option>Outro</option>
+        <select name="stack_name">
+          <option value="Spider + Zig">Spider + Zig</option>
+          <option value="PHP / Yii">PHP / Yii</option>
+          <option value="Node / TypeScript">Node / TypeScript</option>
+          <option value="Outro">Outro</option>
         </select>
       </label>
 
       <label>
         <span>Squad padrão</span>
-        <select>
-          <option>Official Cockpit Squad</option>
-          <option>Lean Builder Squad</option>
-          <option>Customizado depois</option>
+        <select name="default_squad">
+          <option value="Official Cockpit Squad">Official Cockpit Squad</option>
+          <option value="Lean Builder Squad">Lean Builder Squad</option>
+          <option value="Customizado depois">Customizado depois</option>
         </select>
       </label>
 
       <div class="form-actions">
-        <button type="button" class="primary-button">Salvar depois</button>
+        <button type="submit" class="primary-button">Salvar workspace</button>
         <a href="/workspaces" class="ghost-link">Cancelar</a>
       </div>
     </form>
