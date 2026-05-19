@@ -70,7 +70,8 @@ const WorkspaceRow = struct {
     name: []const u8,
     local_path: []const u8,
     stack_name: []const u8,
-    default_squad: []const u8,
+    default_squad_id: ?i32,
+    squad_name: []const u8,
     status: []const u8,
 };
 
@@ -78,11 +79,18 @@ const WorkspaceForm = struct {
     name: []const u8,
     local_path: []const u8,
     stack_name: []const u8,
-    default_squad: []const u8,
+    default_squad_id: []const u8,
 };
 
 const WorkspaceIdRow = struct {
     id: i32,
+};
+
+
+const WorkspaceSquadOptionRow = struct {
+    id: i32,
+    name: []const u8,
+    slug: []const u8,
 };
 
 
@@ -247,6 +255,35 @@ const SquadMemberAgentIdRow = struct {
     agent_id: i32,
 };
 
+fn loadWorkspaceSquads(c: *spider.Ctx) ![]WorkspaceSquadOptionRow {
+    return db.query(
+        WorkspaceSquadOptionRow,
+        c.arena,
+        \\SELECT id, name, slug
+        \\FROM squads
+        \\WHERE is_active = TRUE
+        \\ORDER BY is_default DESC, name ASC
+        ,
+        .{},
+    );
+}
+
+
+fn loadWorkspaceSquadsForSelected(c: *spider.Ctx, selected_squad_id: i32) ![]WorkspaceSquadOptionRow {
+    return db.query(
+        WorkspaceSquadOptionRow,
+        c.arena,
+        \\SELECT id, name, slug
+        \\FROM squads
+        \\WHERE is_active = TRUE
+        \\ORDER BY CASE WHEN id = $1 THEN 0 ELSE 1 END,
+        \\         is_default DESC,
+        \\         name ASC
+        ,
+        .{ selected_squad_id },
+    );
+}
+
 fn dashboard(c: *spider.Ctx) !spider.Response {
     return c.view("dashboard/index", .{
         .title = "Zivyar Cockpit",
@@ -258,9 +295,17 @@ fn workspaces(c: *spider.Ctx) !spider.Response {
     const rows = try db.query(
         WorkspaceRow,
         c.arena,
-        \\SELECT id, name, local_path, stack_name, default_squad, status
-        \\FROM workspaces
-        \\ORDER BY id DESC
+        \\SELECT
+        \\    w.id,
+        \\    w.name,
+        \\    w.local_path,
+        \\    w.stack_name,
+        \\    w.default_squad_id,
+        \\    COALESCE(s.name, 'Sem squad vinculada') AS squad_name,
+        \\    w.status
+        \\FROM workspaces w
+        \\LEFT JOIN squads s ON s.id = w.default_squad_id
+        \\ORDER BY w.id DESC
         ,
         .{},
     );
@@ -286,14 +331,18 @@ fn workspaces(c: *spider.Ctx) !spider.Response {
 }
 
 fn workspaceNew(c: *spider.Ctx) !spider.Response {
+    const squads_rows = try loadWorkspaceSquads(c);
+
     return c.view("workspaces/new", .{
         .title = "Novo Workspace",
+        .squads = squads_rows,
+        .squad_count = squads_rows.len,
         .error_message = "",
         .form = .{
             .name = "",
             .local_path = "",
             .stack_name = "Spider + Zig",
-            .default_squad = "Official Cockpit Squad",
+            .default_squad_id = "",
         },
     }, .{});
 }
@@ -309,9 +358,17 @@ fn workspaceEdit(c: *spider.Ctx) !spider.Response {
     const rows = try db.query(
         WorkspaceRow,
         c.arena,
-        \\SELECT id, name, local_path, stack_name, default_squad, status
-        \\FROM workspaces
-        \\WHERE id = $1
+        \\SELECT
+        \\    w.id,
+        \\    w.name,
+        \\    w.local_path,
+        \\    w.stack_name,
+        \\    w.default_squad_id,
+        \\    COALESCE(s.name, 'Sem squad vinculada') AS squad_name,
+        \\    w.status
+        \\FROM workspaces w
+        \\LEFT JOIN squads s ON s.id = w.default_squad_id
+        \\WHERE w.id = $1
         \\LIMIT 1
         ,
         .{ workspace_id },
@@ -322,10 +379,16 @@ fn workspaceEdit(c: *spider.Ctx) !spider.Response {
     }
 
     const workspace = rows[0];
+    const squads_rows = try loadWorkspaceSquadsForSelected(
+        c,
+        workspace.default_squad_id orelse 0,
+    );
 
     return c.view("workspaces/edit", .{
         .title = "Editar Workspace",
         .workspace = workspace,
+        .squads = squads_rows,
+        .squad_count = squads_rows.len,
         .error_message = "",
     }, .{});
 }
@@ -338,6 +401,31 @@ fn workspaceUpdate(c: *spider.Ctx) !spider.Response {
         return c.text("Workspace inválido.", .{ .status = .bad_request });
 
     const form = try c.parseForm(WorkspaceForm);
+    const squads_rows = try loadWorkspaceSquads(c);
+    const default_squad_id = std.fmt.parseInt(i32, form.default_squad_id, 10) catch 0;
+
+    const current_rows = try db.query(
+        WorkspaceRow,
+        c.arena,
+        \\SELECT
+        \\    w.id,
+        \\    w.name,
+        \\    w.local_path,
+        \\    w.stack_name,
+        \\    w.default_squad_id,
+        \\    COALESCE(s.name, 'Sem squad vinculada') AS squad_name,
+        \\    w.status
+        \\FROM workspaces w
+        \\LEFT JOIN squads s ON s.id = w.default_squad_id
+        \\WHERE w.id = $1
+        \\LIMIT 1
+        ,
+        .{ workspace_id },
+    );
+
+    if (current_rows.len == 0) {
+        return c.text("Workspace não encontrado.", .{ .status = .not_found });
+    }
 
     const duplicated = try db.query(
         WorkspaceIdRow,
@@ -352,19 +440,44 @@ fn workspaceUpdate(c: *spider.Ctx) !spider.Response {
     );
 
     if (duplicated.len > 0) {
-        const workspace = WorkspaceRow{
-            .id = workspace_id,
-            .name = form.name,
-            .local_path = form.local_path,
-            .stack_name = form.stack_name,
-            .default_squad = form.default_squad,
-            .status = "registered",
-        };
-
         return c.view("workspaces/edit", .{
             .title = "Editar Workspace",
-            .workspace = workspace,
+            .workspace = current_rows[0],
+            .squads = squads_rows,
+            .squad_count = squads_rows.len,
             .error_message = "Outro workspace já utiliza este caminho local.",
+        }, .{ .status = .bad_request });
+    }
+
+    if (default_squad_id <= 0) {
+        return c.view("workspaces/edit", .{
+            .title = "Editar Workspace",
+            .workspace = current_rows[0],
+            .squads = squads_rows,
+            .squad_count = squads_rows.len,
+            .error_message = "Selecione uma squad padrão válida.",
+        }, .{ .status = .bad_request });
+    }
+
+    const selected_squad_rows = try db.query(
+        WorkspaceSquadOptionRow,
+        c.arena,
+        \\SELECT id, name, slug
+        \\FROM squads
+        \\WHERE id = $1
+        \\AND is_active = TRUE
+        \\LIMIT 1
+        ,
+        .{ default_squad_id },
+    );
+
+    if (selected_squad_rows.len == 0) {
+        return c.view("workspaces/edit", .{
+            .title = "Editar Workspace",
+            .workspace = current_rows[0],
+            .squads = squads_rows,
+            .squad_count = squads_rows.len,
+            .error_message = "A squad selecionada não está disponível.",
         }, .{ .status = .bad_request });
     }
 
@@ -375,14 +488,16 @@ fn workspaceUpdate(c: *spider.Ctx) !spider.Response {
         \\SET name = $1,
         \\    local_path = $2,
         \\    stack_name = $3,
-        \\    default_squad = $4
-        \\WHERE id = $5
+        \\    default_squad = $4,
+        \\    default_squad_id = $5
+        \\WHERE id = $6
         ,
         .{
             form.name,
             form.local_path,
             form.stack_name,
-            form.default_squad,
+            selected_squad_rows[0].name,
+            default_squad_id,
             workspace_id,
         },
     );
@@ -419,9 +534,17 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
     const rows = try db.query(
         WorkspaceRow,
         c.arena,
-        \\SELECT id, name, local_path, stack_name, default_squad, status
-        \\FROM workspaces
-        \\WHERE id = $1
+        \\SELECT
+        \\    w.id,
+        \\    w.name,
+        \\    w.local_path,
+        \\    w.stack_name,
+        \\    w.default_squad_id,
+        \\    COALESCE(s.name, 'Sem squad vinculada') AS squad_name,
+        \\    w.status
+        \\FROM workspaces w
+        \\LEFT JOIN squads s ON s.id = w.default_squad_id
+        \\WHERE w.id = $1
         \\LIMIT 1
         ,
         .{ workspace_id },
@@ -442,6 +565,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
 
 fn workspaceCreate(c: *spider.Ctx) !spider.Response {
     const form = try c.parseForm(WorkspaceForm);
+    const squads_rows = try loadWorkspaceSquads(c);
+    const default_squad_id = std.fmt.parseInt(i32, form.default_squad_id, 10) catch 0;
 
     const duplicated = try db.query(
         WorkspaceIdRow,
@@ -457,7 +582,41 @@ fn workspaceCreate(c: *spider.Ctx) !spider.Response {
     if (duplicated.len > 0) {
         return c.view("workspaces/new", .{
             .title = "Novo Workspace",
+            .squads = squads_rows,
+            .squad_count = squads_rows.len,
             .error_message = "Já existe um workspace cadastrado com este caminho local.",
+            .form = form,
+        }, .{ .status = .bad_request });
+    }
+
+    if (default_squad_id <= 0) {
+        return c.view("workspaces/new", .{
+            .title = "Novo Workspace",
+            .squads = squads_rows,
+            .squad_count = squads_rows.len,
+            .error_message = "Selecione uma squad padrão válida para este workspace.",
+            .form = form,
+        }, .{ .status = .bad_request });
+    }
+
+    const squad_rows = try db.query(
+        WorkspaceSquadOptionRow,
+        c.arena,
+        \\SELECT id, name, slug
+        \\FROM squads
+        \\WHERE id = $1
+        \\AND is_active = TRUE
+        \\LIMIT 1
+        ,
+        .{ default_squad_id },
+    );
+
+    if (squad_rows.len == 0) {
+        return c.view("workspaces/new", .{
+            .title = "Novo Workspace",
+            .squads = squads_rows,
+            .squad_count = squads_rows.len,
+            .error_message = "A squad selecionada não está disponível.",
             .form = form,
         }, .{ .status = .bad_request });
     }
@@ -465,14 +624,21 @@ fn workspaceCreate(c: *spider.Ctx) !spider.Response {
     try db.query(
         void,
         c.arena,
-        \\INSERT INTO workspaces (name, local_path, stack_name, default_squad)
-        \\VALUES ($1, $2, $3, $4)
+        \\INSERT INTO workspaces (
+        \\    name,
+        \\    local_path,
+        \\    stack_name,
+        \\    default_squad,
+        \\    default_squad_id
+        \\)
+        \\VALUES ($1, $2, $3, $4, $5)
         ,
         .{
             form.name,
             form.local_path,
             form.stack_name,
-            form.default_squad,
+            squad_rows[0].name,
+            default_squad_id,
         },
     );
 

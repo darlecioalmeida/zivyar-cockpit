@@ -25,6 +25,13 @@ extends "layout"
       </div>
     }
 
+
+    if (squad_count == 0) {
+      <div class="alert danger">
+        Cadastre ao menos uma squad ativa antes de criar um workspace.
+      </div>
+    }
+
     <form class="cockpit-form" method="post" action="/workspaces">
       <label>
         <span>Nome do workspace</span>
@@ -51,10 +58,11 @@ extends "layout"
 
       <label>
         <span>Squad padrão</span>
-        <select name="default_squad">
-          <option value="Official Cockpit Squad">Official Cockpit Squad</option>
-          <option value="Lean Builder Squad">Lean Builder Squad</option>
-          <option value="Customizado depois">Customizado depois</option>
+        <select name="default_squad_id" required>
+          <option value="">Selecione uma squad</option>
+          for (squads) |squad| {
+            <option value="{ squad.id }">{ squad.name } · { squad.slug }</option>
+          }
         </select>
       </label>
 

@@ -51,11 +51,10 @@ extends "layout"
 
       <label>
         <span>Squad padrão</span>
-        <select name="default_squad">
-          <option value="{ workspace.default_squad }">{ workspace.default_squad }</option>
-          <option value="Official Cockpit Squad">Official Cockpit Squad</option>
-          <option value="Lean Builder Squad">Lean Builder Squad</option>
-          <option value="Customizado depois">Customizado depois</option>
+        <select name="default_squad_id" required>
+          for (squads) |squad| {
+            <option value="{ squad.id }">{ squad.name } · { squad.slug }</option>
+          }
         </select>
       </label>
 
