@@ -9,6 +9,7 @@ pub fn main() !void {
     server
         .get("/", dashboard)
         .get("/workspaces", workspaces)
+        .get("/workspaces/new", workspaceNew)
         .get("/missions", missions)
         .get("/agents", agents)
         .get("/squads", squads)
@@ -25,6 +26,10 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
 
 fn workspaces(c: *spider.Ctx) !spider.Response {
     return c.view("workspaces/index", .{ .title = "Workspaces" }, .{});
+}
+
+fn workspaceNew(c: *spider.Ctx) !spider.Response {
+    return c.view("workspaces/new", .{ .title = "Novo Workspace" }, .{});
 }
 
 fn missions(c: *spider.Ctx) !spider.Response {

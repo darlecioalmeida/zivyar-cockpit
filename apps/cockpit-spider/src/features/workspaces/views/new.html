@@ -1,0 +1,81 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Novo Workspace</span>
+    <h2>Adicionar um projeto local</h2>
+    <p>
+      Nesta fase o formulário é visual. Na próxima evolução ele será conectado ao
+      PostgreSQL e ao seletor de pastas do Tauri.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/workspaces">Voltar</a>
+  </div>
+</section>
+
+<section class="grid workspace-form-layout">
+  <article class="panel form-panel">
+    <h3>Dados do workspace</h3>
+
+    <form class="cockpit-form">
+      <label>
+        <span>Nome do workspace</span>
+        <input type="text" placeholder="Ex.: Zivyar Cockpit" />
+      </label>
+
+      <label>
+        <span>Caminho local</span>
+        <div class="input-action">
+          <input type="text" placeholder="/Users/darlecioalmeida/projetos/zivyar-cockpit" />
+          <button type="button" class="ghost-mini">Selecionar</button>
+        </div>
+      </label>
+
+      <label>
+        <span>Stack principal</span>
+        <select>
+          <option>Spider + Zig</option>
+          <option>PHP / Yii</option>
+          <option>Node / TypeScript</option>
+          <option>Outro</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Squad padrão</span>
+        <select>
+          <option>Official Cockpit Squad</option>
+          <option>Lean Builder Squad</option>
+          <option>Customizado depois</option>
+        </select>
+      </label>
+
+      <div class="form-actions">
+        <button type="button" class="primary-button">Salvar depois</button>
+        <a href="/workspaces" class="ghost-link">Cancelar</a>
+      </div>
+    </form>
+  </article>
+
+  <article class="panel guidance-panel">
+    <span class="eyebrow">Preparação</span>
+    <h3>O que acontecerá ao cadastrar</h3>
+
+    <ol class="numbered-list">
+      <li>O Cockpit registra o workspace.</li>
+      <li>O Runtime Manager prepara um container isolado.</li>
+      <li>O OpenCode Server sobe naquele workspace.</li>
+      <li>O usuário cria a primeira missão.</li>
+    </ol>
+
+    <div class="note-card">
+      <strong>Observação</strong>
+      <p>
+        Por enquanto estamos fechando a experiência visual. A persistência real virá
+        na próxima etapa da Sprint 1.
+      </p>
+    </div>
+  </article>
+</section>

@@ -1,18 +1,76 @@
 extends "layout"
 
-<section class="panel page-intro">
-  <span class="eyebrow">Módulo</span>
-  <h2>Workspaces</h2>
-  <p>Cadastre pastas locais, configure runtime e prepare a indexação do projeto.</p>
+<section class="page-head workspace-head">
+  <div>
+    <span class="eyebrow">Workspaces</span>
+    <h2>Projetos locais sob comando do Cockpit</h2>
+    <p>
+      Cada workspace terá seu próprio runtime Docker, um OpenCode Server e múltiplas sessões
+      de agentes acionadas sob demanda.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="primary-button" href="/workspaces/new">Novo Workspace</a>
+  </div>
 </section>
 
-<section class="grid two">
-  <article class="panel placeholder">
-    <h3>Próxima entrega</h3>
-    <p>Esta tela será detalhada na Sprint 1.</p>
+<section class="metric-grid">
+  <article class="metric-card">
+    <span>Workspaces</span>
+    <strong>0</strong>
+    <small>Base preparada para persistência</small>
   </article>
-  <article class="panel placeholder">
-    <h3>Base preparada</h3>
-    <p>Rotas e estrutura de views já fazem parte do scaffold inicial.</p>
+  <article class="metric-card">
+    <span>Runtimes ativos</span>
+    <strong>0</strong>
+    <small>Docker Runtime Manager será ligado na Sprint 2</small>
+  </article>
+  <article class="metric-card">
+    <span>Missões abertas</span>
+    <strong>0</strong>
+    <small>Mission Engine entra na Sprint 4</small>
+  </article>
+</section>
+
+<section class="grid workspace-layout">
+  <article class="panel empty-state-panel">
+    <div class="empty-icon">⌘</div>
+    <span class="eyebrow">Estado inicial</span>
+    <h3>Nenhum workspace cadastrado</h3>
+    <p>
+      Cadastre o primeiro projeto local para iniciar o ciclo: workspace, runtime,
+      squad, missão e panes de agentes.
+    </p>
+    <a class="primary-button inline" href="/workspaces/new">Cadastrar primeiro workspace</a>
+  </article>
+
+  <article class="panel architecture-panel">
+    <span class="eyebrow">Modelo operacional</span>
+    <h3>Como um workspace funcionará</h3>
+
+    <div class="runtime-flow">
+      <div class="runtime-step">
+        <strong>01</strong>
+        <span>Pasta local</span>
+      </div>
+      <div class="runtime-arrow">→</div>
+      <div class="runtime-step">
+        <strong>02</strong>
+        <span>Container Docker</span>
+      </div>
+      <div class="runtime-arrow">→</div>
+      <div class="runtime-step">
+        <strong>03</strong>
+        <span>OpenCode Server</span>
+      </div>
+    </div>
+
+    <ul class="feature-list">
+      <li>1 runtime isolado por workspace.</li>
+      <li>Sessões Piloto, Scout, Builder e Reviewer sob demanda.</li>
+      <li>Contexto e decisões persistidas pelo Cockpit.</li>
+      <li>Graphify entrará para indexação e mapa do projeto.</li>
+    </ul>
   </article>
 </section>
