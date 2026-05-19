@@ -1,7 +1,7 @@
 const spider = @import("spider");
 
 pub fn main() !void {
-    var server = spider.app();
+    var server = spider.server();
     defer server.deinit();
 
     server
@@ -11,7 +11,7 @@ pub fn main() !void {
         .get("/agents", agents)
         .get("/squads", squads)
         .get("/providers", providers)
-        .listen(3000) catch {};
+        .listen(.{}) catch {};
 }
 
 fn dashboard(c: *spider.Ctx) !spider.Response {
