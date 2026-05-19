@@ -33,6 +33,11 @@ pub fn main(init: std.process.Init) !void {
         .get("/agents", agents)
         .get("/squads", squads)
         .get("/providers", providers)
+        .get("/providers/new", providerNew)
+        .post("/providers", providerCreate)
+        .get("/providers/:id/edit", providerEdit)
+        .post("/providers/:id/update", providerUpdate)
+        .post("/providers/:id/delete", providerDelete)
         .listen(.{}) catch {};
 }
 
@@ -53,6 +58,28 @@ const WorkspaceForm = struct {
 };
 
 const WorkspaceIdRow = struct {
+    id: i32,
+};
+
+
+const ProviderRow = struct {
+    id: i32,
+    name: []const u8,
+    provider_type: []const u8,
+    base_url: []const u8,
+    api_key: []const u8,
+    is_active: bool,
+};
+
+const ProviderForm = struct {
+    name: []const u8,
+    provider_type: []const u8,
+    base_url: []const u8,
+    api_key: []const u8,
+    is_active: []const u8,
+};
+
+const ProviderIdRow = struct {
     id: i32,
 };
 
@@ -301,5 +328,207 @@ fn squads(c: *spider.Ctx) !spider.Response {
 }
 
 fn providers(c: *spider.Ctx) !spider.Response {
-    return c.view("providers/index", .{ .title = "Providers" }, .{});
+    const rows = try db.query(
+        ProviderRow,
+        c.arena,
+        \\SELECT id, name, provider_type, base_url, api_key, is_active
+        \\FROM providers
+        \\ORDER BY id DESC
+        ,
+        .{},
+    );
+
+    const notice =
+        if (c.query("created") != null)
+            "Provider cadastrado com sucesso."
+        else if (c.query("updated") != null)
+            "Provider atualizado com sucesso."
+        else if (c.query("deleted") != null)
+            "Provider removido com sucesso."
+        else
+            "";
+
+    return c.view("providers/index", .{
+        .title = "Providers",
+        .providers = rows,
+        .provider_count = rows.len,
+        .active_count = countActiveProviders(rows),
+        .notice = notice,
+    }, .{});
+}
+
+fn countActiveProviders(rows: []const ProviderRow) usize {
+    var total: usize = 0;
+    for (rows) |row| {
+        if (row.is_active) total += 1;
+    }
+    return total;
+}
+
+fn providerNew(c: *spider.Ctx) !spider.Response {
+    return c.view("providers/new", .{
+        .title = "Novo Provider",
+        .error_message = "",
+        .form = .{
+            .name = "",
+            .provider_type = "OpenAI Compatible",
+            .base_url = "",
+            .api_key = "",
+            .is_active = "true",
+        },
+    }, .{});
+}
+
+fn providerCreate(c: *spider.Ctx) !spider.Response {
+    const form = try c.parseForm(ProviderForm);
+
+    const duplicated = try db.query(
+        ProviderIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM providers
+        \\WHERE name = $1
+        \\LIMIT 1
+        ,
+        .{ form.name },
+    );
+
+    if (duplicated.len > 0) {
+        return c.view("providers/new", .{
+            .title = "Novo Provider",
+            .error_message = "Já existe um provider cadastrado com este nome.",
+            .form = form,
+        }, .{ .status = .bad_request });
+    }
+
+    const active = std.mem.eql(u8, form.is_active, "true");
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO providers (name, provider_type, base_url, api_key, is_active)
+        \\VALUES ($1, $2, $3, $4, $5)
+        ,
+        .{
+            form.name,
+            form.provider_type,
+            form.base_url,
+            form.api_key,
+            active,
+        },
+    );
+
+    return c.redirect("/providers?created=1");
+}
+
+fn providerEdit(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Provider não informado.", .{ .status = .bad_request });
+
+    const provider_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Provider inválido.", .{ .status = .bad_request });
+
+    const rows = try db.query(
+        ProviderRow,
+        c.arena,
+        \\SELECT id, name, provider_type, base_url, api_key, is_active
+        \\FROM providers
+        \\WHERE id = $1
+        \\LIMIT 1
+        ,
+        .{ provider_id },
+    );
+
+    if (rows.len == 0) {
+        return c.text("Provider não encontrado.", .{ .status = .not_found });
+    }
+
+    return c.view("providers/edit", .{
+        .title = "Editar Provider",
+        .provider = rows[0],
+        .error_message = "",
+    }, .{});
+}
+
+fn providerUpdate(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Provider não informado.", .{ .status = .bad_request });
+
+    const provider_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Provider inválido.", .{ .status = .bad_request });
+
+    const form = try c.parseForm(ProviderForm);
+
+    const duplicated = try db.query(
+        ProviderIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM providers
+        \\WHERE name = $1
+        \\AND id <> $2
+        \\LIMIT 1
+        ,
+        .{ form.name, provider_id },
+    );
+
+    if (duplicated.len > 0) {
+        const provider = ProviderRow{
+            .id = provider_id,
+            .name = form.name,
+            .provider_type = form.provider_type,
+            .base_url = form.base_url,
+            .api_key = form.api_key,
+            .is_active = std.mem.eql(u8, form.is_active, "true"),
+        };
+
+        return c.view("providers/edit", .{
+            .title = "Editar Provider",
+            .provider = provider,
+            .error_message = "Outro provider já utiliza este nome.",
+        }, .{ .status = .bad_request });
+    }
+
+    const active = std.mem.eql(u8, form.is_active, "true");
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE providers
+        \\SET name = $1,
+        \\    provider_type = $2,
+        \\    base_url = $3,
+        \\    api_key = $4,
+        \\    is_active = $5
+        \\WHERE id = $6
+        ,
+        .{
+            form.name,
+            form.provider_type,
+            form.base_url,
+            form.api_key,
+            active,
+            provider_id,
+        },
+    );
+
+    return c.redirect("/providers?updated=1");
+}
+
+fn providerDelete(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Provider não informado.", .{ .status = .bad_request });
+
+    const provider_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Provider inválido.", .{ .status = .bad_request });
+
+    try db.query(
+        void,
+        c.arena,
+        \\DELETE FROM providers
+        \\WHERE id = $1
+        ,
+        .{ provider_id },
+    );
+
+    return c.redirect("/providers?deleted=1");
 }

@@ -1,18 +1,112 @@
 extends "layout"
 
-<section class="panel page-intro">
-  <span class="eyebrow">Módulo</span>
-  <h2>Providers</h2>
-  <p>Gerencie chaves, modelos e endpoints de LLM.</p>
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Providers</span>
+    <h2>Provedores e endpoints de modelos</h2>
+    <p>
+      Cadastre os provedores que alimentarão OpenCode, Stacks, Squads e Agentes.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="primary-button" href="/providers/new">Novo Provider</a>
+  </div>
 </section>
 
-<section class="grid two">
-  <article class="panel placeholder">
-    <h3>Próxima entrega</h3>
-    <p>Esta tela será detalhada na Sprint 1.</p>
+if (notice) {
+<section class="alert success">
+  { notice }
+</section>
+}
+
+<section class="metric-grid">
+  <article class="metric-card">
+    <span>Providers</span>
+    <strong>{ provider_count }</strong>
+    <small>Cadastrados no Cockpit</small>
   </article>
-  <article class="panel placeholder">
-    <h3>Base preparada</h3>
-    <p>Rotas e estrutura de views já fazem parte do scaffold inicial.</p>
+
+  <article class="metric-card">
+    <span>Ativos</span>
+    <strong>{ active_count }</strong>
+    <small>Prontos para futuras stacks</small>
+  </article>
+
+  <article class="metric-card">
+    <span>Integração</span>
+    <strong>OpenCode</strong>
+    <small>Consumo será ligado nas próximas etapas</small>
   </article>
 </section>
+
+if (provider_count > 0) {
+<section class="grid provider-cards">
+  for (providers) |provider| {
+    <article class="panel provider-card">
+      <div class="provider-card-head">
+        <div class="provider-avatar">AI</div>
+        <div>
+          <span class="eyebrow">Provider #{ provider.id }</span>
+          <h3>{ provider.name }</h3>
+        </div>
+      </div>
+
+      <div class="provider-meta">
+        <div>
+          <span>Tipo</span>
+          <strong>{ provider.provider_type }</strong>
+        </div>
+
+        <div>
+          <span>Base URL</span>
+          <strong>{ provider.base_url }</strong>
+        </div>
+
+        <div>
+          <span>Status</span>
+          if (provider.is_active) {
+            <strong class="provider-status active">Ativo</strong>
+          } else {
+            <strong class="provider-status inactive">Inativo</strong>
+          }
+        </div>
+      </div>
+
+      <div class="workspace-card-actions">
+        <a class="ghost-mini" href="/providers/{ provider.id }/edit">Editar</a>
+
+        <form method="post" action="/providers/{ provider.id }/delete" class="inline-form" onsubmit="return confirm('Remover este provider?');">
+          <button class="danger-button" type="submit">Excluir</button>
+        </form>
+      </div>
+    </article>
+  }
+</section>
+} else {
+<section class="grid workspace-layout">
+  <article class="panel empty-state-panel">
+    <div class="empty-icon">AI</div>
+    <span class="eyebrow">Estado inicial</span>
+    <h3>Nenhum provider cadastrado</h3>
+    <p>
+      Cadastre o primeiro endpoint para preparar o Cockpit para a criação
+      de stacks, squads e execuções de agentes.
+    </p>
+    <a class="primary-button inline" href="/providers/new">Cadastrar primeiro provider</a>
+  </article>
+
+  <article class="panel architecture-panel">
+    <span class="eyebrow">Modelo de integração</span>
+    <h3>O que um provider representa</h3>
+
+    <ul class="feature-list">
+      <li>Nome lógico do provedor.</li>
+      <li>Tipo de compatibilidade.</li>
+      <li>Endpoint base da API.</li>
+      <li>Credencial de autenticação.</li>
+      <li>Status ativo/inativo.</li>
+    </ul>
+  </article>
+</section>
+}

@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS providers (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(180) NOT NULL UNIQUE,
+    provider_type VARCHAR(80) NOT NULL,
+    base_url TEXT NOT NULL,
+    api_key TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

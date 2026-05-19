@@ -1,0 +1,84 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Editar Provider</span>
+    <h2>{ provider.name }</h2>
+    <p>
+      Atualize endpoint, credencial ou estado operacional do provedor.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/providers">Voltar</a>
+  </div>
+</section>
+
+<section class="grid workspace-form-layout">
+  <article class="panel form-panel">
+    <h3>Dados do provider</h3>
+
+    if (error_message) {
+      <div class="alert danger">
+        { error_message }
+      </div>
+    }
+
+    <form class="cockpit-form" method="post" action="/providers/{ provider.id }/update">
+      <label>
+        <span>Nome</span>
+        <input type="text" name="name" value="{ provider.name }" required />
+      </label>
+
+      <label>
+        <span>Tipo</span>
+        <select name="provider_type">
+          <option value="{ provider.provider_type }">{ provider.provider_type }</option>
+          <option value="OpenAI Compatible">OpenAI Compatible</option>
+          <option value="Anthropic Compatible">Anthropic Compatible</option>
+          <option value="Custom">Custom</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Base URL</span>
+        <input type="text" name="base_url" value="{ provider.base_url }" required />
+      </label>
+
+      <label>
+        <span>API Key</span>
+        <input type="password" name="api_key" value="{ provider.api_key }" required />
+      </label>
+
+      <label>
+        <span>Status</span>
+        <select name="is_active">
+          if (provider.is_active) {
+            <option value="true">Ativo</option>
+            <option value="false">Inativo</option>
+          } else {
+            <option value="false">Inativo</option>
+            <option value="true">Ativo</option>
+          }
+        </select>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="primary-button">Salvar alterações</button>
+        <a href="/providers" class="ghost-link">Cancelar</a>
+      </div>
+    </form>
+  </article>
+
+  <article class="panel guidance-panel">
+    <span class="eyebrow">Uso futuro</span>
+    <h3>Provider no pipeline do Cockpit</h3>
+
+    <ol class="numbered-list">
+      <li>Base para cadastrar modelos.</li>
+      <li>Vinculação com Stacks.</li>
+      <li>Escolha de modelos por agente.</li>
+      <li>Configuração do runtime OpenCode.</li>
+    </ol>
+  </article>
+</section>

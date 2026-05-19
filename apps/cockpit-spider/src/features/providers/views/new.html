@@ -1,0 +1,87 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Novo Provider</span>
+    <h2>Adicionar provedor de modelos</h2>
+    <p>
+      Configure o endpoint que será usado pelo ecossistema de Stacks e Agentes.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/providers">Voltar</a>
+  </div>
+</section>
+
+<section class="grid workspace-form-layout">
+  <article class="panel form-panel">
+    <h3>Dados do provider</h3>
+
+    if (error_message) {
+      <div class="alert danger">
+        { error_message }
+      </div>
+    }
+
+    <form class="cockpit-form" method="post" action="/providers">
+      <label>
+        <span>Nome</span>
+        <input type="text" name="name" value="{ form.name }" placeholder="Ex.: OpenAI Principal" required />
+      </label>
+
+      <label>
+        <span>Tipo</span>
+        <select name="provider_type">
+          <option value="{ form.provider_type }">{ form.provider_type }</option>
+          <option value="OpenAI Compatible">OpenAI Compatible</option>
+          <option value="Anthropic Compatible">Anthropic Compatible</option>
+          <option value="Custom">Custom</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Base URL</span>
+        <input type="text" name="base_url" value="{ form.base_url }" placeholder="https://api.exemplo.com/v1" required />
+      </label>
+
+      <label>
+        <span>API Key</span>
+        <input type="password" name="api_key" value="{ form.api_key }" placeholder="Cole sua chave aqui" required />
+      </label>
+
+      <label>
+        <span>Status</span>
+        <select name="is_active">
+          <option value="true">Ativo</option>
+          <option value="false">Inativo</option>
+        </select>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="primary-button">Salvar provider</button>
+        <a href="/providers" class="ghost-link">Cancelar</a>
+      </div>
+    </form>
+  </article>
+
+  <article class="panel guidance-panel">
+    <span class="eyebrow">Próxima etapa</span>
+    <h3>Onde este provider será usado</h3>
+
+    <ol class="numbered-list">
+      <li>Stacks: Ferramenta × Cérebro.</li>
+      <li>Squads: modelos por papel.</li>
+      <li>OpenCode: providers do runtime.</li>
+      <li>Benchmarks e recomendações futuras.</li>
+    </ol>
+
+    <div class="note-card">
+      <strong>Segurança</strong>
+      <p>
+        Nesta fase inicial a chave fica no banco local. Depois vamos migrar
+        para armazenamento seguro desktop.
+      </p>
+    </div>
+  </article>
+</section>
