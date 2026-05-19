@@ -24,6 +24,7 @@ pub fn main(init: std.process.Init) !void {
         .get("/", dashboard)
         .get("/workspaces", workspaces)
         .get("/workspaces/new", workspaceNew)
+        .get("/workspaces/:id", workspaceShow)
         .post("/workspaces", workspaceCreate)
         .get("/missions", missions)
         .get("/agents", agents)
@@ -77,6 +78,37 @@ fn workspaces(c: *spider.Ctx) !spider.Response {
 
 fn workspaceNew(c: *spider.Ctx) !spider.Response {
     return c.view("workspaces/new", .{ .title = "Novo Workspace" }, .{});
+}
+
+
+fn workspaceShow(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const rows = try db.query(
+        WorkspaceRow,
+        c.arena,
+        \\SELECT id, name, local_path, stack_name, default_squad, status
+        \\FROM workspaces
+        \\WHERE id = $1
+        \\LIMIT 1
+        ,
+        .{ workspace_id },
+    );
+
+    if (rows.len == 0) {
+        return c.text("Workspace não encontrado.", .{ .status = .not_found });
+    }
+
+    const workspace = rows[0];
+
+    return c.view("workspaces/show", .{
+        .title = workspace.name,
+        .workspace = workspace,
+    }, .{});
 }
 
 
