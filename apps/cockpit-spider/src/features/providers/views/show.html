@@ -1,0 +1,130 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Provider #{ provider.id }</span>
+    <h2>{ provider.name }</h2>
+    <p>
+      Gerencie os modelos associados a este provedor. Eles serão usados posteriormente
+      na composição das Stacks e dos Squads.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/providers">Voltar</a>
+    <a class="ghost-link" href="/providers/{ provider.id }/edit">Editar Provider</a>
+    <a class="primary-button" href="/providers/{ provider.id }/models/new">Novo Modelo</a>
+  </div>
+</section>
+
+if (notice) {
+<section class="alert success">
+  { notice }
+</section>
+}
+
+<section class="workspace-detail-grid">
+  <article class="panel workspace-summary-panel">
+    <span class="eyebrow">Resumo</span>
+    <h3>Configuração do provider</h3>
+
+    <div class="detail-meta-grid">
+      <div>
+        <span>Tipo</span>
+        <strong>{ provider.provider_type }</strong>
+      </div>
+
+      <div>
+        <span>Base URL</span>
+        <strong>{ provider.base_url }</strong>
+      </div>
+
+      <div>
+        <span>Status</span>
+        if (provider.is_active) {
+          <strong class="provider-status active">Ativo</strong>
+        } else {
+          <strong class="provider-status inactive">Inativo</strong>
+        }
+      </div>
+
+      <div>
+        <span>Modelos cadastrados</span>
+        <strong>{ model_count }</strong>
+      </div>
+    </div>
+  </article>
+
+  <article class="panel runtime-status-panel">
+    <span class="eyebrow">Próxima camada</span>
+    <h3>Preparação para Stacks</h3>
+    <p>
+      Cada modelo aqui cadastrado poderá formar uma stack do tipo:
+    </p>
+
+    <div class="concept-chip">
+      OpenCode + Modelo
+    </div>
+
+    <ul class="feature-list compact">
+      <li>Stack de execução por agente.</li>
+      <li>Modelo atribuído por papel.</li>
+      <li>Squads montados sobre stacks.</li>
+    </ul>
+  </article>
+</section>
+
+<section class="panel models-section">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Models</span>
+      <h3>Modelos do provider</h3>
+    </div>
+    <span class="mini-badge">{ model_count } cadastrados</span>
+  </div>
+
+  if (model_count > 0) {
+    <section class="grid model-cards">
+      for (models) |model| {
+        <article class="model-card">
+          <div class="model-card-head">
+            <div class="provider-avatar compact">M</div>
+            <div>
+              <strong>{ model.model_name }</strong>
+              <span>{ model.model_id }</span>
+            </div>
+          </div>
+
+          <div class="model-meta">
+            <div>
+              <span>Context window</span>
+              <strong>{ model.context_window }</strong>
+            </div>
+
+            <div>
+              <span>Status</span>
+              if (model.is_active) {
+                <strong class="provider-status active">Ativo</strong>
+              } else {
+                <strong class="provider-status inactive">Inativo</strong>
+              }
+            </div>
+          </div>
+
+          <div class="workspace-card-actions">
+            <a class="ghost-mini" href="/providers/{ model.provider_id }/models/{ model.id }/edit">Editar</a>
+
+            <form method="post" action="/providers/{ model.provider_id }/models/{ model.id }/delete" class="inline-form" onsubmit="return confirm('Remover este modelo?');">
+              <button class="danger-button" type="submit">Excluir</button>
+            </form>
+          </div>
+        </article>
+      }
+    </section>
+  } else {
+    <div class="empty-inline-state">
+      <strong>Nenhum modelo cadastrado.</strong>
+      <p>Adicione o primeiro model_id deste provider para avançarmos para Stacks.</p>
+    </div>
+  }
+</section>
