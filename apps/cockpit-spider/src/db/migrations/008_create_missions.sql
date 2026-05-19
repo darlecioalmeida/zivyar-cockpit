@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS missions (
+    id SERIAL PRIMARY KEY,
+    workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    squad_id INTEGER NOT NULL REFERENCES squads(id) ON DELETE RESTRICT,
+    title VARCHAR(220) NOT NULL,
+    objective TEXT NOT NULL,
+    status VARCHAR(60) NOT NULL DEFAULT 'briefing',
+    priority VARCHAR(40) NOT NULL DEFAULT 'normal',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

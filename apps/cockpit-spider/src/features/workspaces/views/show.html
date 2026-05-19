@@ -18,7 +18,7 @@ extends "layout"
       <button class="danger-button" type="submit">Excluir</button>
     </form>
 
-    <button class="primary-button" type="button">Nova missão em breve</button>
+    <a class="primary-button" href="/missions/new">Nova missão</a>
   </div>
 </section>
 
@@ -76,16 +76,27 @@ extends "layout"
         <span class="eyebrow">Mission Room</span>
         <h3>Missões do workspace</h3>
       </div>
-      <span class="mini-badge">0 abertas</span>
+      <span class="mini-badge">{ mission_count } abertas</span>
     </div>
 
-    <div class="empty-inline-state">
-      <strong>Nenhuma missão criada.</strong>
-      <p>
-        O ciclo Briefing → Planejamento → Execução → Revisão será ativado
-        nas próximas etapas.
-      </p>
-    </div>
+    if (mission_count > 0) {
+      <div class="workspace-mission-list">
+        for (missions) |mission| {
+          <article class="workspace-mission-card">
+            <div>
+              <strong>{ mission.title }</strong>
+              <span>{ mission.status } · { mission.priority }</span>
+            </div>
+            <a class="ghost-mini" href="/missions/{ mission.id }">Abrir</a>
+          </article>
+        }
+      </div>
+    } else {
+      <div class="empty-inline-state">
+        <strong>Nenhuma missão criada.</strong>
+        <p>Crie a primeira missão para iniciar o ciclo Briefing → Planejamento → Execução.</p>
+      </div>
+    }
   </article>
 
   <article class="panel pane-preview-panel">

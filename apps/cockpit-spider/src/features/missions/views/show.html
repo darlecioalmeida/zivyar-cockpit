@@ -1,0 +1,51 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Mission</span>
+    <h2>{ mission.title }</h2>
+    <p>{ mission.objective }</p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/missions">Voltar</a>
+    <a class="ghost-link" href="/missions/{ mission.id }/edit">Editar</a>
+  </div>
+</section>
+
+<section class="workspace-detail-grid">
+  <article class="panel workspace-summary-panel">
+    <span class="eyebrow">Contexto</span>
+    <h3>Identidade da missão</h3>
+
+    <div class="detail-meta-grid">
+      <div>
+        <span>Workspace</span>
+        <strong>{ mission.workspace_name }</strong>
+      </div>
+
+      <div>
+        <span>Squad herdada</span>
+        <strong>{ mission.squad_name }</strong>
+      </div>
+
+      <div>
+        <span>Status</span>
+        <strong>{ mission.status }</strong>
+      </div>
+
+      <div>
+        <span>Prioridade</span>
+        <strong>{ mission.priority }</strong>
+      </div>
+    </div>
+  </article>
+
+  <article class="panel runtime-status-panel">
+    <span class="eyebrow">Próxima etapa</span>
+    <h3>Mission Room</h3>
+    <p>
+      Esta missão será expandida com fases, eventos, briefings e execução multiagente.
+    </p>
+  </article>
+</section>

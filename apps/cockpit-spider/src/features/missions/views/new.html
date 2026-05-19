@@ -1,0 +1,94 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Nova Missão</span>
+    <h2>Criar objetivo para um workspace</h2>
+    <p>
+      A missão herdará automaticamente a squad vinculada ao workspace escolhido.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/missions">Voltar</a>
+  </div>
+</section>
+
+<section class="grid mission-form-layout">
+  <article class="panel form-panel">
+    <h3>Dados da missão</h3>
+
+    if (error_message) {
+      <div class="alert danger">
+        { error_message }
+      </div>
+    }
+
+    if (workspace_count == 0) {
+      <div class="alert danger">
+        Cadastre um workspace com squad vinculada antes de criar missões.
+      </div>
+    }
+
+    <form class="cockpit-form" method="post" action="/missions">
+      <label>
+        <span>Workspace</span>
+        <select name="workspace_id" required>
+          <option value="">Selecione um workspace</option>
+          for (workspaces) |workspace| {
+            <option value="{ workspace.id }">{ workspace.name } · { workspace.squad_name }</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Título</span>
+        <input type="text" name="title" value="{ form.title }" placeholder="Ex.: Construir tela de runtime do workspace" required />
+      </label>
+
+      <label>
+        <span>Objetivo</span>
+        <textarea name="objective" rows="6" placeholder="Descreva o resultado esperado da missão." required>{ form.objective }</textarea>
+      </label>
+
+      <label>
+        <span>Status inicial</span>
+        <select name="status">
+          <option value="briefing">Briefing</option>
+          <option value="planned">Planejada</option>
+          <option value="active">Ativa</option>
+          <option value="review">Em revisão</option>
+          <option value="completed">Concluída</option>
+          <option value="paused">Pausada</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Prioridade</span>
+        <select name="priority">
+          <option value="normal">Normal</option>
+          <option value="low">Baixa</option>
+          <option value="high">Alta</option>
+          <option value="critical">Crítica</option>
+        </select>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="primary-button">Salvar missão</button>
+        <a href="/missions" class="ghost-link">Cancelar</a>
+      </div>
+    </form>
+  </article>
+
+  <article class="panel guidance-panel">
+    <span class="eyebrow">Mission Engine</span>
+    <h3>Primeira versão operacional</h3>
+
+    <ol class="numbered-list">
+      <li>Escolha o workspace.</li>
+      <li>A squad é herdada automaticamente.</li>
+      <li>Defina objetivo, status e prioridade.</li>
+      <li>Depois entraremos em fases e eventos.</li>
+    </ol>
+  </article>
+</section>

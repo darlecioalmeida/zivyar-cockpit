@@ -1,0 +1,138 @@
+extends "layout"
+
+<section class="page-head">
+  <div>
+    <span class="eyebrow">Editar Missão</span>
+    <h2>{ mission.title }</h2>
+    <p>
+      Atualize objetivo, status e prioridade. Workspace e squad permanecem preservados.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/missions">Voltar</a>
+  </div>
+</section>
+
+<section class="grid mission-form-layout">
+  <article class="panel form-panel">
+    <h3>Dados da missão</h3>
+
+    if (error_message) {
+      <div class="alert danger">
+        { error_message }
+      </div>
+    }
+
+    <div class="readonly-meta">
+      <div>
+        <span>Workspace</span>
+        <strong>{ mission.workspace_name }</strong>
+      </div>
+
+      <div>
+        <span>Squad herdada</span>
+        <strong>{ mission.squad_name }</strong>
+      </div>
+    </div>
+
+    <form class="cockpit-form" method="post" action="/missions/{ mission.id }/update">
+      <label>
+        <span>Título</span>
+        <input type="text" name="title" value="{ mission.title }" required />
+      </label>
+
+      <label>
+        <span>Objetivo</span>
+        <textarea name="objective" rows="6" required>{ mission.objective }</textarea>
+      </label>
+
+      <label>
+        <span>Status</span>
+        <select name="status">
+          if (mission.status == "briefing") {
+            <option value="briefing" selected>Briefing</option>
+          } else {
+            <option value="briefing">Briefing</option>
+          }
+
+          if (mission.status == "planned") {
+            <option value="planned" selected>Planejada</option>
+          } else {
+            <option value="planned">Planejada</option>
+          }
+
+          if (mission.status == "active") {
+            <option value="active" selected>Ativa</option>
+          } else {
+            <option value="active">Ativa</option>
+          }
+
+          if (mission.status == "review") {
+            <option value="review" selected>Em revisão</option>
+          } else {
+            <option value="review">Em revisão</option>
+          }
+
+          if (mission.status == "completed") {
+            <option value="completed" selected>Concluída</option>
+          } else {
+            <option value="completed">Concluída</option>
+          }
+
+          if (mission.status == "paused") {
+            <option value="paused" selected>Pausada</option>
+          } else {
+            <option value="paused">Pausada</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Prioridade</span>
+        <select name="priority">
+          if (mission.priority == "normal") {
+            <option value="normal" selected>Normal</option>
+          } else {
+            <option value="normal">Normal</option>
+          }
+
+          if (mission.priority == "low") {
+            <option value="low" selected>Baixa</option>
+          } else {
+            <option value="low">Baixa</option>
+          }
+
+          if (mission.priority == "high") {
+            <option value="high" selected>Alta</option>
+          } else {
+            <option value="high">Alta</option>
+          }
+
+          if (mission.priority == "critical") {
+            <option value="critical" selected>Crítica</option>
+          } else {
+            <option value="critical">Crítica</option>
+          }
+        </select>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="primary-button">Salvar alterações</button>
+        <a href="/missions" class="ghost-link">Cancelar</a>
+      </div>
+    </form>
+  </article>
+
+  <article class="panel guidance-panel">
+    <span class="eyebrow">Governança</span>
+    <h3>Preservação da missão</h3>
+
+    <ol class="numbered-list">
+      <li>Workspace permanece fixo.</li>
+      <li>Squad é snapshot da criação.</li>
+      <li>Status evolui no ciclo de trabalho.</li>
+      <li>Prioridade ajuda a ordenar execução.</li>
+    </ol>
+  </article>
+</section>

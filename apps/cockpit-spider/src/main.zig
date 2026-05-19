@@ -30,6 +30,12 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces/:id/delete", workspaceDelete)
         .get("/workspaces/:id", workspaceShow)
         .get("/missions", missions)
+        .get("/missions/new", missionNew)
+        .post("/missions", missionCreate)
+        .get("/missions/:id", missionShow)
+        .get("/missions/:id/edit", missionEdit)
+        .post("/missions/:id/update", missionUpdate)
+        .post("/missions/:id/delete", missionDelete)
         .get("/agents", agents)
         .get("/agents/new", agentNew)
         .post("/agents", agentCreate)
@@ -253,6 +259,46 @@ const SquadMemberRow = struct {
 
 const SquadMemberAgentIdRow = struct {
     agent_id: i32,
+};
+
+
+const MissionRow = struct {
+    id: i32,
+    workspace_id: i32,
+    workspace_name: []const u8,
+    squad_id: i32,
+    squad_name: []const u8,
+    title: []const u8,
+    objective: []const u8,
+    status: []const u8,
+    priority: []const u8,
+};
+
+const MissionForm = struct {
+    workspace_id: []const u8,
+    title: []const u8,
+    objective: []const u8,
+    status: []const u8,
+    priority: []const u8,
+};
+
+const MissionUpdateForm = struct {
+    title: []const u8,
+    objective: []const u8,
+    status: []const u8,
+    priority: []const u8,
+};
+
+const MissionIdRow = struct {
+    id: i32,
+};
+
+const MissionWorkspaceOptionRow = struct {
+    id: i32,
+    name: []const u8,
+    local_path: []const u8,
+    default_squad_id: i32,
+    squad_name: []const u8,
 };
 
 fn loadWorkspaceSquads(c: *spider.Ctx) ![]WorkspaceSquadOptionRow {
@@ -557,6 +603,28 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
     const workspace = rows[0];
     const linked_squad_id = workspace.default_squad_id orelse 0;
 
+    const workspace_missions = try db.query(
+        MissionRow,
+        c.arena,
+        \\SELECT
+        \\    m.id,
+        \\    m.workspace_id,
+        \\    w.name AS workspace_name,
+        \\    m.squad_id,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
+        \\    m.title,
+        \\    m.objective,
+        \\    m.status,
+        \\    m.priority
+        \\FROM missions m
+        \\INNER JOIN workspaces w ON w.id = m.workspace_id
+        \\LEFT JOIN squads s ON s.id = m.squad_id
+        \\WHERE m.workspace_id = $1
+        \\ORDER BY m.id DESC
+        ,
+        .{ workspace.id },
+    );
+
     const members = try db.query(
         SquadMemberRow,
         c.arena,
@@ -584,6 +652,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .workspace = workspace,
         .members = members,
         .member_count = members.len,
+        .missions = workspace_missions,
+        .mission_count = workspace_missions.len,
     }, .{});
 }
 
@@ -671,7 +741,315 @@ fn workspaceCreate(c: *spider.Ctx) !spider.Response {
 }
 
 fn missions(c: *spider.Ctx) !spider.Response {
-    return c.view("missions/index", .{ .title = "Missions" }, .{});
+    const rows = try db.query(
+        MissionRow,
+        c.arena,
+        \\SELECT
+        \\    m.id,
+        \\    m.workspace_id,
+        \\    w.name AS workspace_name,
+        \\    m.squad_id,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
+        \\    m.title,
+        \\    m.objective,
+        \\    m.status,
+        \\    m.priority
+        \\FROM missions m
+        \\INNER JOIN workspaces w ON w.id = m.workspace_id
+        \\LEFT JOIN squads s ON s.id = m.squad_id
+        \\ORDER BY m.id DESC
+        ,
+        .{},
+    );
+
+    const notice =
+        if (c.query("created") != null)
+            "Missão cadastrada com sucesso."
+        else if (c.query("updated") != null)
+            "Missão atualizada com sucesso."
+        else if (c.query("deleted") != null)
+            "Missão removida com sucesso."
+        else
+            "";
+
+    return c.view("missions/index", .{
+        .title = "Missions",
+        .missions = rows,
+        .mission_count = rows.len,
+        .open_count = countOpenMissions(rows),
+        .notice = notice,
+    }, .{});
+}
+
+fn countOpenMissions(rows: []const MissionRow) usize {
+    var total: usize = 0;
+    for (rows) |row| {
+        if (!std.mem.eql(u8, row.status, "completed")) {
+            total += 1;
+        }
+    }
+    return total;
+}
+
+fn loadMissionWorkspaces(c: *spider.Ctx) ![]MissionWorkspaceOptionRow {
+    return db.query(
+        MissionWorkspaceOptionRow,
+        c.arena,
+        \\SELECT
+        \\    w.id,
+        \\    w.name,
+        \\    w.local_path,
+        \\    w.default_squad_id,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name
+        \\FROM workspaces w
+        \\INNER JOIN squads s ON s.id = w.default_squad_id
+        \\WHERE w.default_squad_id IS NOT NULL
+        \\ORDER BY w.name ASC
+        ,
+        .{},
+    );
+}
+
+fn missionNew(c: *spider.Ctx) !spider.Response {
+    const workspaces_rows = try loadMissionWorkspaces(c);
+
+    return c.view("missions/new", .{
+        .title = "Nova Missão",
+        .workspaces = workspaces_rows,
+        .workspace_count = workspaces_rows.len,
+        .error_message = "",
+        .form = .{
+            .workspace_id = "",
+            .title = "",
+            .objective = "",
+            .status = "briefing",
+            .priority = "normal",
+        },
+    }, .{});
+}
+
+fn missionCreate(c: *spider.Ctx) !spider.Response {
+    const form = try c.parseForm(MissionForm);
+    const workspaces_rows = try loadMissionWorkspaces(c);
+    const workspace_id = std.fmt.parseInt(i32, form.workspace_id, 10) catch 0;
+
+    if (workspace_id <= 0) {
+        return c.view("missions/new", .{
+            .title = "Nova Missão",
+            .workspaces = workspaces_rows,
+            .workspace_count = workspaces_rows.len,
+            .error_message = "Selecione um workspace válido.",
+            .form = form,
+        }, .{ .status = .bad_request });
+    }
+
+    const selected_workspace = try db.query(
+        MissionWorkspaceOptionRow,
+        c.arena,
+        \\SELECT
+        \\    w.id,
+        \\    w.name,
+        \\    w.local_path,
+        \\    w.default_squad_id,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name
+        \\FROM workspaces w
+        \\INNER JOIN squads s ON s.id = w.default_squad_id
+        \\WHERE w.id = $1
+        \\AND w.default_squad_id IS NOT NULL
+        \\LIMIT 1
+        ,
+        .{ workspace_id },
+    );
+
+    if (selected_workspace.len == 0) {
+        return c.view("missions/new", .{
+            .title = "Nova Missão",
+            .workspaces = workspaces_rows,
+            .workspace_count = workspaces_rows.len,
+            .error_message = "O workspace selecionado não possui uma squad válida vinculada.",
+            .form = form,
+        }, .{ .status = .bad_request });
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO missions (
+        \\    workspace_id,
+        \\    squad_id,
+        \\    title,
+        \\    objective,
+        \\    status,
+        \\    priority
+        \\)
+        \\VALUES ($1, $2, $3, $4, $5, $6)
+        ,
+        .{
+            workspace_id,
+            selected_workspace[0].default_squad_id,
+            form.title,
+            form.objective,
+            form.status,
+            form.priority,
+        },
+    );
+
+    return c.redirect("/missions?created=1");
+}
+
+fn missionShow(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Missão não informada.", .{ .status = .bad_request });
+
+    const mission_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Missão inválida.", .{ .status = .bad_request });
+
+    const rows = try db.query(
+        MissionRow,
+        c.arena,
+        \\SELECT
+        \\    m.id,
+        \\    m.workspace_id,
+        \\    w.name AS workspace_name,
+        \\    m.squad_id,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
+        \\    m.title,
+        \\    m.objective,
+        \\    m.status,
+        \\    m.priority
+        \\FROM missions m
+        \\INNER JOIN workspaces w ON w.id = m.workspace_id
+        \\LEFT JOIN squads s ON s.id = m.squad_id
+        \\WHERE m.id = $1
+        \\LIMIT 1
+        ,
+        .{ mission_id },
+    );
+
+    if (rows.len == 0) {
+        return c.text("Missão não encontrada.", .{ .status = .not_found });
+    }
+
+    return c.view("missions/show", .{
+        .title = rows[0].title,
+        .mission = rows[0],
+    }, .{});
+}
+
+fn missionEdit(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Missão não informada.", .{ .status = .bad_request });
+
+    const mission_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Missão inválida.", .{ .status = .bad_request });
+
+    const rows = try db.query(
+        MissionRow,
+        c.arena,
+        \\SELECT
+        \\    m.id,
+        \\    m.workspace_id,
+        \\    w.name AS workspace_name,
+        \\    m.squad_id,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
+        \\    m.title,
+        \\    m.objective,
+        \\    m.status,
+        \\    m.priority
+        \\FROM missions m
+        \\INNER JOIN workspaces w ON w.id = m.workspace_id
+        \\LEFT JOIN squads s ON s.id = m.squad_id
+        \\WHERE m.id = $1
+        \\LIMIT 1
+        ,
+        .{ mission_id },
+    );
+
+    if (rows.len == 0) {
+        return c.text("Missão não encontrada.", .{ .status = .not_found });
+    }
+
+    return c.view("missions/edit", .{
+        .title = "Editar Missão",
+        .mission = rows[0],
+        .error_message = "",
+    }, .{});
+}
+
+fn missionUpdate(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Missão não informada.", .{ .status = .bad_request });
+
+    const mission_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Missão inválida.", .{ .status = .bad_request });
+
+    const form = try c.parseForm(MissionUpdateForm);
+
+    const current_rows = try db.query(
+        MissionRow,
+        c.arena,
+        \\SELECT
+        \\    m.id,
+        \\    m.workspace_id,
+        \\    w.name AS workspace_name,
+        \\    m.squad_id,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
+        \\    m.title,
+        \\    m.objective,
+        \\    m.status,
+        \\    m.priority
+        \\FROM missions m
+        \\INNER JOIN workspaces w ON w.id = m.workspace_id
+        \\LEFT JOIN squads s ON s.id = m.squad_id
+        \\WHERE m.id = $1
+        \\LIMIT 1
+        ,
+        .{ mission_id },
+    );
+
+    if (current_rows.len == 0) {
+        return c.text("Missão não encontrada.", .{ .status = .not_found });
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE missions
+        \\SET title = $1,
+        \\    objective = $2,
+        \\    status = $3,
+        \\    priority = $4
+        \\WHERE id = $5
+        ,
+        .{
+            form.title,
+            form.objective,
+            form.status,
+            form.priority,
+            mission_id,
+        },
+    );
+
+    return c.redirect("/missions?updated=1");
+}
+
+fn missionDelete(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Missão não informada.", .{ .status = .bad_request });
+
+    const mission_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Missão inválida.", .{ .status = .bad_request });
+
+    try db.query(
+        void,
+        c.arena,
+        \\DELETE FROM missions
+        \\WHERE id = $1
+        ,
+        .{ mission_id },
+    );
+
+    return c.redirect("/missions?deleted=1");
 }
 
 fn agents(c: *spider.Ctx) !spider.Response {
