@@ -116,6 +116,35 @@ extends "layout"
   </article>
 </section>
 
+<section class="panel runtime-history-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Runtime Manager</span>
+      <h3>Histórico operacional</h3>
+    </div>
+    <span class="mini-badge">{ runtime_event_count } eventos</span>
+  </div>
+
+  if (runtime_event_count > 0) {
+    <div class="runtime-event-list">
+      for (runtime_events) |event| {
+        <article class="runtime-event-card">
+          <span class="runtime-event-type">{ event.event_type }</span>
+          <div>
+            <strong>{ event.title }</strong>
+            <p>{ event.message }</p>
+          </div>
+        </article>
+      }
+    </div>
+  } else {
+    <div class="empty-inline-state">
+      <strong>Nenhum evento registrado.</strong>
+      <p>Prepare ou inicie o runtime para gerar o histórico operacional deste workspace.</p>
+    </div>
+  }
+</section>
+
 <section class="grid cockpit-preview-grid">
   <article class="panel mission-preview-panel">
     <div class="panel-title-row">

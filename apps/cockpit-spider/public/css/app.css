@@ -1478,3 +1478,61 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   }
 }
 
+
+.runtime-history-panel {
+  margin-bottom: 22px;
+}
+
+.runtime-event-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.runtime-event-card {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(10, 15, 22, .56);
+  padding: 16px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.runtime-event-type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--cyan);
+  background: rgba(10, 15, 22, .7);
+}
+
+.runtime-event-card strong,
+.runtime-event-card p {
+  display: block;
+}
+
+.runtime-event-card p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .runtime-event-card {
+    grid-template-columns: 1fr;
+  }
+
+  .runtime-event-type {
+    width: fit-content;
+  }
+}
+

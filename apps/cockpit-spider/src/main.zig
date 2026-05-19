@@ -349,6 +349,14 @@ const WorkspaceRuntimeControlRow = struct {
 };
 
 
+const WorkspaceRuntimeEventRow = struct {
+    id: i32,
+    event_type: []const u8,
+    title: []const u8,
+    message: []const u8,
+};
+
+
 fn loadWorkspaceSquads(c: *spider.Ctx) ![]WorkspaceSquadOptionRow {
     return db.query(
         WorkspaceSquadOptionRow,
@@ -415,6 +423,33 @@ fn waitForOpenCodeHealth(c: *spider.Ctx, server_url: []const u8) bool {
     }
 
     return false;
+}
+
+fn insertRuntimeEvent(
+    c: *spider.Ctx,
+    workspace_id: i32,
+    event_type: []const u8,
+    title: []const u8,
+    message: []const u8,
+) !void {
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO workspace_runtime_events (
+        \\    workspace_id,
+        \\    event_type,
+        \\    title,
+        \\    message
+        \\)
+        \\VALUES ($1, $2, $3, $4)
+        ,
+        .{
+            workspace_id,
+            event_type,
+            title,
+            message,
+        },
+    );
 }
 
 fn loadWorkspaceRuntime(c: *spider.Ctx, workspace_id: i32) ![]WorkspaceRuntimeRow {
@@ -847,6 +882,15 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
         .{ workspace_id },
     );
 
+
+    try insertRuntimeEvent(
+        c,
+        workspace_id,
+        "starting",
+        "Inicialização solicitada",
+        "O Zivyar iniciou o fluxo de validação da imagem Docker e abertura do OpenCode Server.",
+    );
+
     const image_exists = commandSucceeded(c, &.{
         "docker",
         "image",
@@ -874,6 +918,15 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
                 \\WHERE workspace_id = $1
                 ,
                 .{ workspace_id },
+            );
+
+
+            try insertRuntimeEvent(
+                c,
+                workspace_id,
+                "error",
+                "Falha ao construir imagem",
+                "O Docker não conseguiu construir a imagem zivyar-opencode-runtime:latest.",
             );
 
             const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
@@ -930,6 +983,15 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
             .{ workspace_id },
         );
 
+
+        try insertRuntimeEvent(
+            c,
+            workspace_id,
+            "error",
+            "Falha ao iniciar container",
+            "O Docker não conseguiu criar ou iniciar o container associado a este workspace.",
+        );
+
         const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
         return c.redirect(redirect_url);
     }
@@ -951,6 +1013,15 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
             .{ host_port, server_url, workspace_id },
         );
 
+
+        try insertRuntimeEvent(
+            c,
+            workspace_id,
+            "error",
+            "Healthcheck indisponível",
+            "O container iniciou, porém o endpoint de saúde do OpenCode não respondeu dentro da janela esperada.",
+        );
+
         const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
         return c.redirect(redirect_url);
     }
@@ -967,6 +1038,15 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
         \\WHERE workspace_id = $3
         ,
         .{ host_port, server_url, workspace_id },
+    );
+
+
+    try insertRuntimeEvent(
+        c,
+        workspace_id,
+        "running",
+        "Runtime em execução",
+        "O container foi iniciado e o OpenCode Server respondeu ao healthcheck com sucesso.",
     );
 
     _ = host_port_text;
@@ -1023,6 +1103,15 @@ fn workspaceRuntimeStop(c: *spider.Ctx) !spider.Response {
             ,
             .{ workspace_id },
         );
+
+
+        try insertRuntimeEvent(
+            c,
+            workspace_id,
+            "error",
+            "Falha ao parar runtime",
+            "O Docker não confirmou a parada do container deste workspace.",
+        );
     } else {
         try db.query(
             void,
@@ -1034,6 +1123,15 @@ fn workspaceRuntimeStop(c: *spider.Ctx) !spider.Response {
             \\WHERE workspace_id = $1
             ,
             .{ workspace_id },
+        );
+
+
+        try insertRuntimeEvent(
+            c,
+            workspace_id,
+            "stopped",
+            "Runtime parado",
+            "O usuário interrompeu o OpenCode Server deste workspace.",
         );
     }
 
@@ -1089,6 +1187,14 @@ fn workspaceRuntimePrepare(c: *spider.Ctx) !spider.Response {
         \\    updated_at = NOW()
         ,
         .{ workspace_id, container_name },
+    );
+
+    try insertRuntimeEvent(
+        c,
+        workspace_id,
+        "prepared",
+        "Runtime preparado",
+        "O workspace foi registrado no Runtime Manager e está pronto para iniciar o OpenCode Server.",
     );
 
     const redirect_url = try std.fmt.allocPrint(
@@ -1153,6 +1259,22 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
     const linked_squad_id = workspace.default_squad_id orelse 0;
     const runtime_rows = try loadWorkspaceRuntime(c, workspace.id);
 
+    const runtime_events = try db.query(
+        WorkspaceRuntimeEventRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    event_type,
+        \\    title,
+        \\    message
+        \\FROM workspace_runtime_events
+        \\WHERE workspace_id = $1
+        \\ORDER BY id DESC
+        \\LIMIT 8
+        ,
+        .{ workspace.id },
+    );
+
     const workspace_missions = try db.query(
         MissionRow,
         c.arena,
@@ -1205,6 +1327,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .missions = workspace_missions,
         .mission_count = workspace_missions.len,
         .runtime = runtime_rows[0],
+        .runtime_events = runtime_events,
+        .runtime_event_count = runtime_events.len,
     }, .{});
 }
 
