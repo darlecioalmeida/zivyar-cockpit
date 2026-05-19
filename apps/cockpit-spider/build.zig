@@ -19,12 +19,20 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    spider_mod.addAnonymousImport("spider_config", .{
-        .root_source_file = b.path("spider.config.zig"),
-        .imports = &.{
-            .{ .name = "spider", .module = spider_mod },
-        },
-    });
+    // Torna spider.config.zig visível para o módulo Spider.
+const spider_config_mod = b.createModule(.{
+    .root_source_file = b.path("spider.config.zig"),
+    .imports = &.{
+        .{ .name = "spider", .module = spider_mod },
+    },
+});
+spider_mod.addImport("spider_config", spider_config_mod);
+
+    // Auto-generate embedded templates for Spider embed mode
+    const gen = b.addRunArtifact(spider_dep.artifact("generate-templates"));
+    gen.addArg("src/");
+    gen.addArg("src/embedded_templates.zig");
+    exe.step.dependOn(&gen.step);
 
     b.installArtifact(exe);
 

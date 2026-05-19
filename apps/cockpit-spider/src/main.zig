@@ -1,5 +1,7 @@
 const spider = @import("spider");
 
+pub const spider_templates = @import("embedded_templates.zig").EmbeddedTemplates;
+
 pub fn main() !void {
     var server = spider.server();
     defer server.deinit();
@@ -15,28 +17,28 @@ pub fn main() !void {
 }
 
 fn dashboard(c: *spider.Ctx) !spider.Response {
-    return c.view("features/dashboard/views/index", .{
+    return c.view("dashboard/index", .{
         .title = "Zivyar Cockpit",
         .subtitle = "Desktop Multi-Agent Engineering Cockpit",
     }, .{});
 }
 
 fn workspaces(c: *spider.Ctx) !spider.Response {
-    return c.view("features/workspaces/views/index", .{ .title = "Workspaces" }, .{});
+    return c.view("workspaces/index", .{ .title = "Workspaces" }, .{});
 }
 
 fn missions(c: *spider.Ctx) !spider.Response {
-    return c.view("features/missions/views/index", .{ .title = "Missions" }, .{});
+    return c.view("missions/index", .{ .title = "Missions" }, .{});
 }
 
 fn agents(c: *spider.Ctx) !spider.Response {
-    return c.view("features/agents/views/index", .{ .title = "Agents" }, .{});
+    return c.view("agents/index", .{ .title = "Agents" }, .{});
 }
 
 fn squads(c: *spider.Ctx) !spider.Response {
-    return c.view("features/squads/views/index", .{ .title = "Squads" }, .{});
+    return c.view("squads/index", .{ .title = "Squads" }, .{});
 }
 
 fn providers(c: *spider.Ctx) !spider.Response {
-    return c.view("features/providers/views/index", .{ .title = "Providers" }, .{});
+    return c.view("providers/index", .{ .title = "Providers" }, .{});
 }

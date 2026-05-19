@@ -26,3 +26,7 @@ storage/
 # IDE
 .vscode/
 .idea/
+
+# Zig local fetched packages / generated templates
+apps/cockpit-spider/zig-pkg/
+apps/cockpit-spider/src/embedded_templates.zig
