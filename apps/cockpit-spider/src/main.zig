@@ -29,6 +29,8 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces/:id/update", workspaceUpdate)
         .post("/workspaces/:id/delete", workspaceDelete)
         .post("/workspaces/:id/runtime/prepare", workspaceRuntimePrepare)
+        .post("/workspaces/:id/runtime/start", workspaceRuntimeStart)
+        .post("/workspaces/:id/runtime/stop", workspaceRuntimeStop)
         .get("/workspaces/:id", workspaceShow)
         .get("/missions", missions)
         .get("/missions/new", missionNew)
@@ -338,6 +340,15 @@ const WorkspaceRuntimeCountRow = struct {
     total: i64,
 };
 
+
+const WorkspaceRuntimeControlRow = struct {
+    workspace_id: i32,
+    local_path: []const u8,
+    container_name: []const u8,
+    state: []const u8,
+};
+
+
 fn loadWorkspaceSquads(c: *spider.Ctx) ![]WorkspaceSquadOptionRow {
     return db.query(
         WorkspaceSquadOptionRow,
@@ -365,6 +376,45 @@ fn loadWorkspaceSquadsForSelected(c: *spider.Ctx, selected_squad_id: i32) ![]Wor
         ,
         .{ selected_squad_id },
     );
+}
+
+fn commandSucceeded(c: *spider.Ctx, argv: []const []const u8) bool {
+    const result = std.process.run(c.arena, c._io, .{
+        .argv = argv,
+    }) catch return false;
+
+    return switch (result.term) {
+        .exited => |code| code == 0,
+        else => false,
+    };
+}
+
+fn runtimeHostPort(workspace_id: i32) i32 {
+    const base_port = spider.env.getInt(i32, "ZIVYAR_RUNTIME_HOST_PORT_BASE", 43000);
+    return base_port + workspace_id;
+}
+
+fn waitForOpenCodeHealth(c: *spider.Ctx, server_url: []const u8) bool {
+    const health_url = std.fmt.allocPrint(
+        c.arena,
+        "{s}/global/health",
+        .{ server_url },
+    ) catch return false;
+
+    var attempt: usize = 0;
+    while (attempt < 12) : (attempt += 1) {
+        if (commandSucceeded(c, &.{
+            "curl",
+            "-fsS",
+            health_url,
+        })) {
+            return true;
+        }
+
+        std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(500), .real) catch {};
+    }
+
+    return false;
 }
 
 fn loadWorkspaceRuntime(c: *spider.Ctx, workspace_id: i32) ![]WorkspaceRuntimeRow {
@@ -732,6 +782,263 @@ fn workspaceUpdate(c: *spider.Ctx) !spider.Response {
     );
 
     return c.redirect("/workspaces?updated=1");
+}
+
+fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const runtime_rows = try db.query(
+        WorkspaceRuntimeControlRow,
+        c.arena,
+        \\SELECT
+        \\    w.id AS workspace_id,
+        \\    w.local_path,
+        \\    r.container_name,
+        \\    r.state
+        \\FROM workspaces w
+        \\INNER JOIN workspace_runtimes r ON r.workspace_id = w.id
+        \\WHERE w.id = $1
+        \\LIMIT 1
+        ,
+        .{ workspace_id },
+    );
+
+    if (runtime_rows.len == 0) {
+        return c.text("Prepare o runtime antes de iniciar.", .{ .status = .bad_request });
+    }
+
+    const runtime = runtime_rows[0];
+    const image_name = spider.env.getOr("ZIVYAR_RUNTIME_IMAGE", "zivyar-opencode-runtime:latest");
+    const runtime_context = spider.env.getOr("ZIVYAR_RUNTIME_CONTEXT", "../../infra/docker/opencode-runtime");
+    const internal_port = spider.env.getInt(i32, "ZIVYAR_RUNTIME_INTERNAL_PORT", 4096);
+    const host_port = runtimeHostPort(workspace_id);
+
+    const host_port_text = try std.fmt.allocPrint(c.arena, "{d}", .{ host_port });
+    const internal_port_text = try std.fmt.allocPrint(c.arena, "{d}", .{ internal_port });
+    const published_port = try std.fmt.allocPrint(
+        c.arena,
+        "127.0.0.1:{d}:{d}",
+        .{ host_port, internal_port },
+    );
+    const volume_mount = try std.fmt.allocPrint(
+        c.arena,
+        "{s}:/workspace",
+        .{ runtime.local_path },
+    );
+    const server_url = try std.fmt.allocPrint(
+        c.arena,
+        "http://127.0.0.1:{d}",
+        .{ host_port },
+    );
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE workspace_runtimes
+        \\SET state = 'starting',
+        \\    status_message = 'Preparando imagem e iniciando OpenCode Server...',
+        \\    updated_at = NOW()
+        \\WHERE workspace_id = $1
+        ,
+        .{ workspace_id },
+    );
+
+    const image_exists = commandSucceeded(c, &.{
+        "docker",
+        "image",
+        "inspect",
+        image_name,
+    });
+
+    if (!image_exists) {
+        const image_built = commandSucceeded(c, &.{
+            "docker",
+            "build",
+            "-t",
+            image_name,
+            runtime_context,
+        });
+
+        if (!image_built) {
+            try db.query(
+                void,
+                c.arena,
+                \\UPDATE workspace_runtimes
+                \\SET state = 'error',
+                \\    status_message = 'Falha ao construir a imagem do runtime Zivyar.',
+                \\    updated_at = NOW()
+                \\WHERE workspace_id = $1
+                ,
+                .{ workspace_id },
+            );
+
+            const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+            return c.redirect(redirect_url);
+        }
+    }
+
+    const container_exists = commandSucceeded(c, &.{
+        "docker",
+        "container",
+        "inspect",
+        runtime.container_name,
+    });
+
+    var container_started = false;
+
+    if (container_exists) {
+        container_started = commandSucceeded(c, &.{
+            "docker",
+            "start",
+            runtime.container_name,
+        });
+    } else {
+        container_started = commandSucceeded(c, &.{
+            "docker",
+            "run",
+            "-d",
+            "--name",
+            runtime.container_name,
+            "-p",
+            published_port,
+            "-e",
+            "OPENCODE_HOST=0.0.0.0",
+            "-e",
+            "OPENCODE_PORT=4096",
+            "-v",
+            volume_mount,
+            "-w",
+            "/workspace",
+            image_name,
+        });
+    }
+
+    if (!container_started) {
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE workspace_runtimes
+            \\SET state = 'error',
+            \\    status_message = 'Falha ao criar ou iniciar o container do runtime.',
+            \\    updated_at = NOW()
+            \\WHERE workspace_id = $1
+            ,
+            .{ workspace_id },
+        );
+
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        return c.redirect(redirect_url);
+    }
+
+    const healthy = waitForOpenCodeHealth(c, server_url);
+
+    if (!healthy) {
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE workspace_runtimes
+            \\SET state = 'error',
+            \\    opencode_port = $1,
+            \\    server_url = $2,
+            \\    status_message = 'Container iniciou, mas o healthcheck do OpenCode não respondeu.',
+            \\    updated_at = NOW()
+            \\WHERE workspace_id = $3
+            ,
+            .{ host_port, server_url, workspace_id },
+        );
+
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        return c.redirect(redirect_url);
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE workspace_runtimes
+        \\SET state = 'running',
+        \\    opencode_port = $1,
+        \\    server_url = $2,
+        \\    status_message = 'OpenCode Server em execução e validado com sucesso.',
+        \\    updated_at = NOW()
+        \\WHERE workspace_id = $3
+        ,
+        .{ host_port, server_url, workspace_id },
+    );
+
+    _ = host_port_text;
+    _ = internal_port_text;
+
+    const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+    return c.redirect(redirect_url);
+}
+
+fn workspaceRuntimeStop(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const runtime_rows = try db.query(
+        WorkspaceRuntimeControlRow,
+        c.arena,
+        \\SELECT
+        \\    w.id AS workspace_id,
+        \\    w.local_path,
+        \\    r.container_name,
+        \\    r.state
+        \\FROM workspaces w
+        \\INNER JOIN workspace_runtimes r ON r.workspace_id = w.id
+        \\WHERE w.id = $1
+        \\LIMIT 1
+        ,
+        .{ workspace_id },
+    );
+
+    if (runtime_rows.len == 0) {
+        return c.text("Runtime não encontrado.", .{ .status = .not_found });
+    }
+
+    const runtime = runtime_rows[0];
+
+    const stopped = commandSucceeded(c, &.{
+        "docker",
+        "stop",
+        runtime.container_name,
+    });
+
+    if (!stopped) {
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE workspace_runtimes
+            \\SET state = 'error',
+            \\    status_message = 'Falha ao parar o container do runtime.',
+            \\    updated_at = NOW()
+            \\WHERE workspace_id = $1
+            ,
+            .{ workspace_id },
+        );
+    } else {
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE workspace_runtimes
+            \\SET state = 'stopped',
+            \\    status_message = 'Runtime parado pelo usuário.',
+            \\    updated_at = NOW()
+            \\WHERE workspace_id = $1
+            ,
+            .{ workspace_id },
+        );
+    }
+
+    const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+    return c.redirect(redirect_url);
 }
 
 fn workspaceRuntimePrepare(c: *spider.Ctx) !spider.Response {

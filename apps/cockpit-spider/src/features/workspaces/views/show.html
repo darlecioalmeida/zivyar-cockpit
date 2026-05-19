@@ -78,11 +78,38 @@ extends "layout"
     </div>
 
     if (runtime.is_prepared) {
-      <div class="form-actions runtime-actions">
-        <button class="ghost-link" type="button">Runtime preparado</button>
-      </div>
+      if (runtime.state == "running") {
+        <div class="form-actions runtime-actions">
+          <a class="primary-button" href="{ runtime.server_url_label }" target="_blank" rel="noreferrer">Abrir Server</a>
+
+          <form
+            method="post"
+            action="/workspaces/{ workspace.id }/runtime/stop"
+            class="inline-form runtime-action-form"
+            data-runtime-action="stop"
+          >
+            <button class="danger-button" type="submit">Parar Runtime</button>
+          </form>
+        </div>
+      } else {
+        <div class="form-actions runtime-actions">
+          <form
+            method="post"
+            action="/workspaces/{ workspace.id }/runtime/start"
+            class="inline-form runtime-action-form"
+            data-runtime-action="start"
+          >
+            <button class="primary-button" type="submit">Iniciar Runtime</button>
+          </form>
+        </div>
+      }
     } else {
-      <form method="post" action="/workspaces/{ workspace.id }/runtime/prepare" class="runtime-prepare-form">
+      <form
+        method="post"
+        action="/workspaces/{ workspace.id }/runtime/prepare"
+        class="runtime-prepare-form runtime-action-form"
+        data-runtime-action="prepare"
+      >
         <button class="primary-button" type="submit">Preparar Runtime</button>
       </form>
     }
@@ -182,3 +209,29 @@ extends "layout"
     </p>
   </article>
 </section>
+
+<div id="runtime-loading-overlay" class="runtime-loading-overlay" hidden>
+  <div class="runtime-loading-card">
+    <div class="runtime-loader-spinner" aria-hidden="true"></div>
+
+    <div class="runtime-loading-content">
+      <span class="eyebrow">Runtime Manager</span>
+      <h3 id="runtime-loading-title">Processando runtime...</h3>
+      <p id="runtime-loading-message">
+        Aguarde enquanto o Zivyar executa esta ação.
+      </p>
+
+      <div class="runtime-loading-progress">
+        <span class="runtime-loading-dot"></span>
+        <strong id="runtime-loading-step">Preparando operação</strong>
+      </div>
+
+      <small id="runtime-loading-hint">
+        Não feche esta tela até a conclusão da ação.
+      </small>
+    </div>
+  </div>
+</div>
+
+<script src="/js/runtime-actions.js"></script>
+

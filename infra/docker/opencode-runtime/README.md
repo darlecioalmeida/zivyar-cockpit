@@ -1,17 +1,23 @@
-# OpenCode Runtime
+# Zivyar OpenCode Runtime
 
-Este diretório será a base do runtime Docker dos agentes.
+Imagem Docker própria do Zivyar Cockpit, construída como uma camada fina sobre a imagem oficial do OpenCode.
 
-## Papel
-- Isolar o workspace.
-- Executar OpenCode Server.
-- Permitir sessões de agentes por workspace.
-- Expor porta interna apenas para o Cockpit local.
+## Responsabilidades
 
-## Próxima evolução
-Na Sprint 2:
-- instalar OpenCode;
-- criar entrypoint;
-- iniciar `opencode serve`;
-- parametrizar workspace e porta;
-- habilitar healthcheck.
+- 1 container por workspace.
+- Montagem da pasta local do projeto em /workspace.
+- Inicialização automática do OpenCode Server.
+- Porta interna padrão: 4096.
+- Healthcheck feito pelo Zivyar via /global/health.
+
+## Base da imagem
+
+    ghcr.io/anomalyco/opencode:latest
+
+## Comando executado
+
+    opencode serve --hostname 0.0.0.0 --port 4096
+
+## Tag gerenciada pelo Cockpit
+
+    zivyar-opencode-runtime:latest
