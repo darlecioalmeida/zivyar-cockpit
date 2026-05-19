@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: zivyar_cockpit_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: zivyar_cockpit
+      POSTGRES_USER: zivyar
+      POSTGRES_PASSWORD: zivyar_dev_password
+    ports:
+      - "55432:5432"
+    volumes:
+      - zivyar_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zivyar -d zivyar_cockpit"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  zivyar_pgdata:

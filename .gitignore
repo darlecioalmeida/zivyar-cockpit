@@ -1,0 +1,28 @@
+# System
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Zig
+zig-out/
+.zig-cache/
+
+# Node/Tauri
+node_modules/
+dist/
+target/
+apps/desktop-tauri/src-tauri/target/
+
+# Logs/runtime
+logs/
+runtime/
+storage/
+*.log
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,14 @@
+.{
+    .name = .zivyar_cockpit_spider,
+    .version = "0.1.0",
+    .fingerprint = 0x7f2ad1eb7aa11234,
+    .minimum_zig_version = "0.17.0-dev.0",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "spider.config.zig",
+        "src",
+        "public",
+    },
+}

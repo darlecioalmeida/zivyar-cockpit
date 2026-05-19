@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{ title ?? "Zivyar Cockpit" }</title>
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">Z</div>
+        <div>
+          <strong>Zivyar Cockpit</strong>
+          <small>Agentic Desktop</small>
+        </div>
+      </div>
+
+      <nav>
+        <a href="/">Dashboard</a>
+        <a href="/workspaces">Workspaces</a>
+        <a href="/missions">Missions</a>
+        <a href="/agents">Agents</a>
+        <a href="/squads">Squads</a>
+        <a href="/providers">Providers</a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <span class="dot online"></span>
+        Backend local ativo
+      </div>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div>
+          <span class="eyebrow">Foundation Release</span>
+          <h1>{ title ?? "Zivyar Cockpit" }</h1>
+        </div>
+        <button class="ghost">Novo Workspace</button>
+      </header>
+
+      { slot }
+    </main>
+  </div>
+</body>
+</html>
