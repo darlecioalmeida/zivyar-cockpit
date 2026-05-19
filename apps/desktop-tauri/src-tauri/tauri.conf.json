@@ -3,12 +3,28 @@
   "productName": "Zivyar Cockpit",
   "version": "0.1.0",
   "identifier": "com.zivyar.cockpit",
-  "build": { "frontendDist": "../ui-placeholder", "devUrl": "http://127.0.0.1:3000" },
+  "build": {
+    "frontendDist": "../ui-placeholder",
+    "devUrl": "http://127.0.0.1:3000"
+  },
   "app": {
     "windows": [
-      { "title": "Zivyar Cockpit", "width": 1480, "height": 940, "minWidth": 1180, "minHeight": 760, "resizable": true }
+      {
+        "title": "Zivyar Cockpit",
+        "width": 1480,
+        "height": 940,
+        "minWidth": 1180,
+        "minHeight": 760,
+        "resizable": true
+      }
     ],
-    "security": { "csp": null }
+    "security": {
+      "csp": null
+    },
+    "withGlobalTauri": true
   },
-  "bundle": { "active": true, "targets": "all" }
+  "bundle": {
+    "active": true,
+    "targets": "all"
+  }
 }
