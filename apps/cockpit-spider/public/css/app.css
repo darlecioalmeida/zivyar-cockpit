@@ -652,6 +652,94 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   background: linear-gradient(135deg, rgba(255, 123, 138, 0.10), rgba(67, 214, 255, 0.04));
 }
 
+.mission-progress-panel {
+  margin-top: 18px;
+}
+
+.mission-progress-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.mission-progress-step {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(7, 13, 24, 0.68);
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.mission-progress-step span,
+.mission-progress-step strong,
+.mission-progress-step small {
+  display: block;
+}
+
+.mission-progress-step span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.mission-progress-step strong {
+  font-size: 16px;
+}
+
+.mission-progress-step small {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.mission-progress-step[data-step-state="done"] {
+  border-color: rgba(61, 226, 151, 0.42);
+  background: rgba(61, 226, 151, 0.08);
+}
+
+.mission-progress-step[data-step-state="done"] small {
+  color: var(--green);
+  background: rgba(61, 226, 151, 0.14);
+}
+
+.mission-progress-step[data-step-state="current"] {
+  border-color: rgba(67, 214, 255, 0.48);
+  background: linear-gradient(135deg, rgba(67, 214, 255, 0.12), rgba(61, 226, 151, 0.05));
+  transform: translateY(-1px);
+}
+
+.mission-progress-step[data-step-state="current"] small {
+  color: var(--cyan);
+  background: rgba(67, 214, 255, 0.14);
+}
+
+.mission-progress-step[data-step-state="pending"] {
+  opacity: 0.76;
+}
+
+.mission-progress-step[data-step-state="pending"] small {
+  color: var(--muted);
+  background: rgba(148, 163, 184, 0.12);
+}
+
+@media (min-width: 760px) {
+  .mission-progress-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1180px) {
+  .mission-progress-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .empty-inline-state {
   border: 1px dashed var(--border);
   border-radius: 18px;

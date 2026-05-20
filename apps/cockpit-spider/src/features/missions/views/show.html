@@ -269,6 +269,187 @@ extends "layout"
   </article>
 </section>
 
+<section class="panel mission-progress-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Operational Flow</span>
+      <h3>Trilha do ciclo da missão</h3>
+    </div>
+
+    if (mission.mission_operational_closure_status == "closed") {
+      <span class="mini-badge">Ciclo encerrado</span>
+    } else {
+      <span class="mini-badge">Ciclo em andamento</span>
+    }
+  </div>
+
+  <div class="mission-progress-grid">
+    <article
+      class="mission-progress-step"
+      if (mission.pilot_operational_brief_status == "captured") {
+        data-step-state="done"
+      } else {
+        data-step-state="current"
+      }
+    >
+      <span>01</span>
+      <strong>Briefing</strong>
+      if (mission.pilot_operational_brief_status == "captured") {
+        <small>Concluída</small>
+      } else {
+        <small>Etapa atual</small>
+      }
+    </article>
+
+    <article
+      class="mission-progress-step"
+      if (mission.planner_operational_plan_status == "captured") {
+        data-step-state="done"
+      } else if (mission.pilot_operational_brief_status == "captured") {
+        data-step-state="current"
+      } else {
+        data-step-state="pending"
+      }
+    >
+      <span>02</span>
+      <strong>Planejamento</strong>
+      if (mission.planner_operational_plan_status == "captured") {
+        <small>Concluída</small>
+      } else if (mission.pilot_operational_brief_status == "captured") {
+        <small>Etapa atual</small>
+      } else {
+        <small>Pendente</small>
+      }
+    </article>
+
+    <article
+      class="mission-progress-step"
+      if (mission.scout_report_status == "captured") {
+        data-step-state="done"
+      } else if (mission.planner_operational_plan_status == "captured") {
+        data-step-state="current"
+      } else {
+        data-step-state="pending"
+      }
+    >
+      <span>03</span>
+      <strong>Scout</strong>
+      if (mission.scout_report_status == "captured") {
+        <small>Concluída</small>
+      } else if (mission.planner_operational_plan_status == "captured") {
+        <small>Etapa atual</small>
+      } else {
+        <small>Pendente</small>
+      }
+    </article>
+
+    <article
+      class="mission-progress-step"
+      if (mission.builder_implementation_report_status == "captured") {
+        data-step-state="done"
+      } else if (mission.scout_report_status == "captured") {
+        data-step-state="current"
+      } else {
+        data-step-state="pending"
+      }
+    >
+      <span>04</span>
+      <strong>Builder</strong>
+      if (mission.builder_implementation_report_status == "captured") {
+        <small>Concluída</small>
+      } else if (mission.scout_report_status == "captured") {
+        <small>Etapa atual</small>
+      } else {
+        <small>Pendente</small>
+      }
+    </article>
+
+    <article
+      class="mission-progress-step"
+      if (mission.reviewer_review_report_status == "captured") {
+        data-step-state="done"
+      } else if (mission.builder_implementation_report_status == "captured") {
+        data-step-state="current"
+      } else {
+        data-step-state="pending"
+      }
+    >
+      <span>05</span>
+      <strong>Reviewer</strong>
+      if (mission.reviewer_review_report_status == "captured") {
+        <small>Concluída</small>
+      } else if (mission.builder_implementation_report_status == "captured") {
+        <small>Etapa atual</small>
+      } else {
+        <small>Pendente</small>
+      }
+    </article>
+
+    <article
+      class="mission-progress-step"
+      if (mission.executor_verification_report_status == "captured") {
+        data-step-state="done"
+      } else if (mission.reviewer_review_report_status == "captured") {
+        data-step-state="current"
+      } else {
+        data-step-state="pending"
+      }
+    >
+      <span>06</span>
+      <strong>Executor</strong>
+      if (mission.executor_verification_report_status == "captured") {
+        <small>Concluída</small>
+      } else if (mission.reviewer_review_report_status == "captured") {
+        <small>Etapa atual</small>
+      } else {
+        <small>Pendente</small>
+      }
+    </article>
+
+    <article
+      class="mission-progress-step"
+      if (mission.pilot_delivery_report_status == "captured") {
+        data-step-state="done"
+      } else if (mission.executor_verification_report_status == "captured") {
+        data-step-state="current"
+      } else {
+        data-step-state="pending"
+      }
+    >
+      <span>07</span>
+      <strong>Entrega Final</strong>
+      if (mission.pilot_delivery_report_status == "captured") {
+        <small>Concluída</small>
+      } else if (mission.executor_verification_report_status == "captured") {
+        <small>Etapa atual</small>
+      } else {
+        <small>Pendente</small>
+      }
+    </article>
+
+    <article
+      class="mission-progress-step"
+      if (mission.mission_operational_closure_status == "closed") {
+        data-step-state="done"
+      } else if (mission.pilot_delivery_report_status == "captured") {
+        data-step-state="current"
+      } else {
+        data-step-state="pending"
+      }
+    >
+      <span>08</span>
+      <strong>Encerramento</strong>
+      if (mission.mission_operational_closure_status == "closed") {
+        <small>Concluída</small>
+      } else if (mission.pilot_delivery_report_status == "captured") {
+        <small>Etapa atual</small>
+      } else {
+        <small>Pendente</small>
+      }
+    </article>
+  </div>
+</section>
+
 
 <section class="panel mission-brief-panel">
   <div class="panel-title-row">
