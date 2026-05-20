@@ -2383,6 +2383,50 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
         else
             "";
 
+    if (
+        pane.session_external_id.len > 0 and
+        (is_recreating_stale_session or is_recreating_outdated_context)
+    ) {
+        const replacement_reason =
+            if (is_recreating_stale_session)
+                "stale_recovery"
+            else
+                "context_outdated";
+
+        try db.query(
+            void,
+            c.arena,
+            \\INSERT INTO workspace_pane_session_history (
+            \\    workspace_id,
+            \\    pane_id,
+            \\    role_name,
+            \\    previous_session_external_id,
+            \\    previous_session_agent_id,
+            \\    previous_session_agent_handle,
+            \\    previous_context_state,
+            \\    replacement_session_external_id,
+            \\    replacement_session_agent_id,
+            \\    replacement_session_agent_handle,
+            \\    replacement_reason
+            \\)
+            \\VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ,
+            .{
+                workspace_id,
+                pane_id,
+                pane.role_name,
+                pane.session_external_id,
+                pane.session_agent_id,
+                pane.session_agent_handle,
+                pane.context_state,
+                session_id,
+                pane.agent_id,
+                session_agent_handle,
+                replacement_reason,
+            },
+        );
+    }
+
     try db.query(
         void,
         c.arena,
