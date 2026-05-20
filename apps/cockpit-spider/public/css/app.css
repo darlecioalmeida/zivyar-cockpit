@@ -2379,6 +2379,97 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   }
 }
 
+.active-mission-progress-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(61, 226, 151, 0.28);
+  border-radius: 20px;
+  background: rgba(61, 226, 151, 0.05);
+  padding: 14px;
+}
+
+.active-mission-progress-head span,
+.active-mission-progress-head strong {
+  display: block;
+}
+
+.active-mission-progress-head span {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.active-mission-progress-head strong {
+  font-size: 16px;
+}
+
+.active-mission-progress-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.active-mission-progress-step {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(7, 13, 24, 0.68);
+  padding: 11px 12px;
+}
+
+.active-mission-progress-step span,
+.active-mission-progress-step strong {
+  display: block;
+}
+
+.active-mission-progress-step span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.active-mission-progress-step strong {
+  font-size: 13px;
+}
+
+.active-mission-progress-step[data-step-state="done"] {
+  border-color: rgba(61, 226, 151, 0.42);
+  background: rgba(61, 226, 151, 0.10);
+}
+
+.active-mission-progress-step[data-step-state="done"] span,
+.active-mission-progress-step[data-step-state="done"] strong {
+  color: var(--green);
+}
+
+.active-mission-progress-step[data-step-state="current"] {
+  border-color: rgba(67, 214, 255, 0.48);
+  background: rgba(67, 214, 255, 0.12);
+}
+
+.active-mission-progress-step[data-step-state="current"] span,
+.active-mission-progress-step[data-step-state="current"] strong {
+  color: var(--cyan);
+}
+
+.active-mission-progress-step[data-step-state="pending"] {
+  opacity: 0.72;
+}
+
+@media (min-width: 760px) {
+  .active-mission-progress-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1180px) {
+  .active-mission-progress-grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+}
+
 .active-mission-dispatch-panel {
   display: grid;
   gap: 12px;
