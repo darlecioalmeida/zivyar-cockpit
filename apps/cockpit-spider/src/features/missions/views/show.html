@@ -277,9 +277,9 @@ extends "layout"
     ) {
       <div class="mission-next-step-actions">
         <form method="post" action="/missions/{ mission.id }/next-step" class="inline-form">
-          <button class="primary-button compact" type="submit" disabled>Executar próxima etapa</button>
+          <button class="primary-button compact" type="submit">Executar próxima etapa</button>
         </form>
-        <small>O modo supervised_auto está preparado, mas o motor automático ainda será ativado em sprint futura.</small>
+        <small>Modo diagnóstico: o Cockpit detecta a próxima etapa, mas ainda não executa automaticamente.</small>
       </div>
     }
 </article>

@@ -548,6 +548,28 @@ const MissionPilotDeliveryDispatchTraceRow = struct {
     pilot_delivery_dispatch_user_message_id: []const u8,
 };
 
+const MissionNextStepRow = struct {
+    id: i32,
+    workspace_id: i32,
+    title: []const u8,
+    execution_mode: []const u8,
+    mission_operational_closure_status: []const u8,
+    pilot_dispatch_status: []const u8,
+    pilot_operational_brief_status: []const u8,
+    planner_dispatch_status: []const u8,
+    planner_operational_plan_status: []const u8,
+    scout_dispatch_status: []const u8,
+    scout_report_status: []const u8,
+    builder_dispatch_status: []const u8,
+    builder_implementation_report_status: []const u8,
+    reviewer_dispatch_status: []const u8,
+    reviewer_review_report_status: []const u8,
+    executor_dispatch_status: []const u8,
+    executor_verification_report_status: []const u8,
+    pilot_delivery_dispatch_status: []const u8,
+    pilot_delivery_report_status: []const u8,
+};
+
 const MissionClosureFinalizeRow = struct {
     id: i32,
     workspace_id: i32,
@@ -9388,16 +9410,28 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
         return c.text("Missão inválida.", .{ .status = .bad_request });
 
     const rows = try db.query(
-        MissionClosureFinalizeRow,
+        MissionNextStepRow,
         c.arena,
         \\SELECT
         \\    id,
         \\    workspace_id,
         \\    title,
-        \\    pilot_delivery_report,
-        \\    pilot_delivery_report_status,
-        \\    mission_final_verdict,
-        \\    mission_operational_closure_status
+        \\    execution_mode,
+        \\    mission_operational_closure_status,
+        \\    pilot_dispatch_status,
+        \\    pilot_operational_brief_status,
+        \\    planner_dispatch_status,
+        \\    planner_operational_plan_status,
+        \\    scout_dispatch_status,
+        \\    scout_report_status,
+        \\    builder_dispatch_status,
+        \\    builder_implementation_report_status,
+        \\    reviewer_dispatch_status,
+        \\    reviewer_review_report_status,
+        \\    executor_dispatch_status,
+        \\    executor_verification_report_status,
+        \\    pilot_delivery_dispatch_status,
+        \\    pilot_delivery_report_status
         \\FROM missions
         \\WHERE id = $1
         \\LIMIT 1
@@ -9409,17 +9443,68 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
         return c.text("Missão não encontrada.", .{ .status = .not_found });
     }
 
-    if (std.mem.eql(u8, rows[0].mission_operational_closure_status, "closed")) {
+    const mission = rows[0];
+
+    if (std.mem.eql(u8, mission.mission_operational_closure_status, "closed")) {
         return c.text(
             "Missões encerradas operacionalmente não podem executar próxima etapa.",
             .{ .status = .bad_request },
         );
     }
 
-    return c.text(
-        "O motor supervised_auto ainda será implementado. Use as ações manuais da missão por enquanto.",
-        .{ .status = .bad_request },
+    if (!std.mem.eql(u8, mission.execution_mode, "supervised_auto")) {
+        return c.text(
+            "A execução automática supervisionada só está disponível para missões em modo supervised_auto.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const next_action =
+        if (!std.mem.eql(u8, mission.pilot_operational_brief_status, "captured"))
+            if (std.mem.eql(u8, mission.pilot_dispatch_status, "sent"))
+                "Capturar briefing do Piloto"
+            else
+                "Enviar missão ao Piloto"
+        else if (!std.mem.eql(u8, mission.planner_operational_plan_status, "captured"))
+            if (std.mem.eql(u8, mission.planner_dispatch_status, "sent"))
+                "Capturar plano do Planner"
+            else
+                "Enviar briefing ao Planner"
+        else if (!std.mem.eql(u8, mission.scout_report_status, "captured"))
+            if (std.mem.eql(u8, mission.scout_dispatch_status, "sent"))
+                "Capturar Scout Report"
+            else
+                "Enviar plano ao Scout"
+        else if (!std.mem.eql(u8, mission.builder_implementation_report_status, "captured"))
+            if (std.mem.eql(u8, mission.builder_dispatch_status, "sent"))
+                "Capturar Implementation Report"
+            else
+                "Enviar pacote ao Builder"
+        else if (!std.mem.eql(u8, mission.reviewer_review_report_status, "captured"))
+            if (std.mem.eql(u8, mission.reviewer_dispatch_status, "sent"))
+                "Capturar Review Report"
+            else
+                "Enviar Implementation Report ao Reviewer"
+        else if (!std.mem.eql(u8, mission.executor_verification_report_status, "captured"))
+            if (std.mem.eql(u8, mission.executor_dispatch_status, "sent"))
+                "Capturar Verification Report"
+            else
+                "Enviar Review Report ao Executor"
+        else if (!std.mem.eql(u8, mission.pilot_delivery_report_status, "captured"))
+            if (std.mem.eql(u8, mission.pilot_delivery_dispatch_status, "sent"))
+                "Capturar Final Delivery Report"
+            else
+                "Enviar Verification Report ao Piloto"
+        else
+            "Encerrar missão pelo Cockpit";
+
+    const message = try std.fmt.allocPrint(
+        c.arena,
+        "Próxima etapa detectada para a missão \"{s}\": {s}. O executor supervised_auto ainda está em modo diagnóstico e não executou a ação.",
+        .{ mission.title, next_action },
     );
+
+    return c.text(message, .{ .status = .bad_request });
 }
 
 
