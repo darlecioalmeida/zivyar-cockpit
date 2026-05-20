@@ -41,6 +41,7 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces/:id/missions/:mission_id/dispatch/pilot", workspaceMissionDispatchToPilot)
         .post("/workspaces/:id/missions/:mission_id/dispatch/planner", workspaceMissionDispatchPilotBriefToPlanner)
         .post("/missions/:id/capture/pilot-brief", missionCapturePilotOperationalBrief)
+        .post("/missions/:id/capture/planner-plan", missionCapturePlannerOperationalPlan)
         .get("/workspaces/:id", workspaceShow)
         .get("/missions", missions)
         .get("/missions/new", missionNew)
@@ -379,6 +380,9 @@ const MissionRow = struct {
     planner_dispatch_status: []const u8,
     planner_session_external_id: []const u8,
     dispatched_to_planner_at_label: []const u8,
+    planner_operational_plan: []const u8,
+    planner_operational_plan_status: []const u8,
+    planner_operational_plan_captured_at_label: []const u8,
 };
 
 
@@ -446,6 +450,10 @@ const MissionIdRow = struct {
 
 const MissionPilotDispatchTraceRow = struct {
     pilot_dispatch_user_message_id: []const u8,
+};
+
+const MissionPlannerDispatchTraceRow = struct {
+    planner_dispatch_user_message_id: []const u8,
 };
 
 
@@ -1291,7 +1299,13 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não enviado'
-        \\    ) AS dispatched_to_planner_at_label
+        \\    ) AS dispatched_to_planner_at_label,
+        \\    m.planner_operational_plan,
+        \\    m.planner_operational_plan_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.planner_operational_plan_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS planner_operational_plan_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -3334,7 +3348,13 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não enviado'
-        \\    ) AS dispatched_to_planner_at_label
+        \\    ) AS dispatched_to_planner_at_label,
+        \\    m.planner_operational_plan,
+        \\    m.planner_operational_plan_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.planner_operational_plan_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS planner_operational_plan_captured_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -3670,7 +3690,13 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
         \\    COALESCE(
         \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não enviado'
-        \\    ) AS dispatched_to_planner_at_label
+        \\    ) AS dispatched_to_planner_at_label,
+        \\    m.planner_operational_plan,
+        \\    m.planner_operational_plan_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.planner_operational_plan_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS planner_operational_plan_captured_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -3926,7 +3952,10 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
         \\SET planner_dispatch_status = 'sent',
         \\    planner_session_external_id = $1,
         \\    planner_dispatch_user_message_id = $2,
-        \\    dispatched_to_planner_at = NOW()
+        \\    dispatched_to_planner_at = NOW(),
+        \\    planner_operational_plan = '',
+        \\    planner_operational_plan_status = 'pending_capture',
+        \\    planner_operational_plan_captured_at = NULL
         \\WHERE id = $3
         ,
         .{ planner.session_external_id, planner_dispatch_user_message_id, mission_id },
@@ -4380,7 +4409,13 @@ fn missions(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não enviado'
-        \\    ) AS dispatched_to_planner_at_label
+        \\    ) AS dispatched_to_planner_at_label,
+        \\    m.planner_operational_plan,
+        \\    m.planner_operational_plan_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.planner_operational_plan_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS planner_operational_plan_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -4556,7 +4591,13 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não enviado'
-        \\    ) AS dispatched_to_planner_at_label
+        \\    ) AS dispatched_to_planner_at_label,
+        \\    m.planner_operational_plan,
+        \\    m.planner_operational_plan_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.planner_operational_plan_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS planner_operational_plan_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -4716,6 +4757,222 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
     return c.redirect(redirect_url);
 }
 
+
+fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Missão não informada.", .{ .status = .bad_request });
+
+    const mission_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Missão inválida.", .{ .status = .bad_request });
+
+    const mission_rows = try db.query(
+        MissionRow,
+        c.arena,
+        \\SELECT
+        \\    m.id,
+        \\    m.workspace_id,
+        \\    w.name AS workspace_name,
+        \\    m.squad_id,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
+        \\    m.title,
+        \\    m.objective,
+        \\    m.status,
+        \\    m.priority,
+        \\    m.pilot_operational_brief,
+        \\    m.pilot_operational_brief_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS pilot_operational_brief_captured_at_label,
+        \\    m.planner_dispatch_status,
+        \\    m.planner_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_planner_at_label,
+        \\    m.planner_operational_plan,
+        \\    m.planner_operational_plan_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.planner_operational_plan_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS planner_operational_plan_captured_at_label
+        \\FROM missions m
+        \\INNER JOIN workspaces w ON w.id = m.workspace_id
+        \\LEFT JOIN squads s ON s.id = m.squad_id
+        \\WHERE m.id = $1
+        \\LIMIT 1
+        ,
+        .{ mission_id },
+    );
+
+    if (mission_rows.len == 0) {
+        return c.text("Missão não encontrada.", .{ .status = .not_found });
+    }
+
+    const mission = mission_rows[0];
+
+    const planner_rows = try db.query(
+        WorkspaceMissionPaneDispatchRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    role_name,
+        \\    pane_state,
+        \\    session_external_id,
+        \\    context_state
+        \\FROM workspace_panes
+        \\WHERE workspace_id = $1
+        \\AND role_name = 'Planner'
+        \\LIMIT 1
+        ,
+        .{ mission.workspace_id },
+    );
+
+    if (planner_rows.len == 0 or planner_rows[0].session_external_id.len == 0) {
+        return c.text(
+            "O pane Planner não possui sessão disponível.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const planner = planner_rows[0];
+
+    const dispatch_trace_rows = try db.query(
+        MissionPlannerDispatchTraceRow,
+        c.arena,
+        \\SELECT planner_dispatch_user_message_id
+        \\FROM missions
+        \\WHERE id = $1
+        \\LIMIT 1
+        ,
+        .{ mission_id },
+    );
+
+    if (
+        dispatch_trace_rows.len == 0 or
+        dispatch_trace_rows[0].planner_dispatch_user_message_id.len == 0
+    ) {
+        return c.text(
+            "Esta missão ainda não possui rastreio do despacho ao Planner. Reenvie o briefing antes de capturar o plano.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const dispatch_trace = dispatch_trace_rows[0];
+    const runtime_rows = try loadWorkspaceRuntime(c, mission.workspace_id);
+
+    if (runtime_rows.len == 0) {
+        return c.text(
+            "Runtime do workspace não encontrado.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    try reconcileWorkspaceRuntimeState(c, runtime_rows[0]);
+
+    const refreshed_runtime_rows = try loadWorkspaceRuntime(c, mission.workspace_id);
+    if (refreshed_runtime_rows.len == 0) {
+        return c.text(
+            "Runtime indisponível após reconciliação.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const runtime = refreshed_runtime_rows[0];
+
+    if (!std.mem.eql(u8, runtime.state, "running")) {
+        return c.text(
+            "O runtime precisa estar em execução para capturar o plano do Planner.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const messages_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/session/{s}/message",
+        .{ runtime.server_url_label, planner.session_external_id },
+    );
+
+    const messages_result = runRuntimeCommand(c, &.{
+        "curl",
+        "-fsS",
+        messages_url,
+    });
+
+    try insertRuntimeCommandLog(
+        c,
+        mission.workspace_id,
+        "opencode-fetch-planner-session-messages",
+        "GET <opencode-server>/session/<session-id>/message",
+        messages_result,
+    );
+
+    if (!messages_result.ok) {
+        return c.text(
+            "Falha ao consultar mensagens da sessão do Planner.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const plan_text = try extractAssistantTextForParentMessage(
+        c.arena,
+        messages_result.stdout,
+        dispatch_trace.planner_dispatch_user_message_id,
+    ) orelse {
+        return c.text(
+            "Nenhuma resposta textual vinculada ao último despacho rastreado foi encontrada. Aguarde o Planner concluir a resposta e tente novamente.",
+            .{ .status = .bad_request },
+        );
+    };
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE missions
+        \\SET planner_operational_plan = $1,
+        \\    planner_operational_plan_status = 'captured',
+        \\    planner_operational_plan_captured_at = NOW()
+        \\WHERE id = $2
+        ,
+        .{ plan_text, mission_id },
+    );
+
+    const event_message = try std.fmt.allocPrint(
+        c.arena,
+        "O Plano Operacional do Planner foi capturado a partir da sessão {s}.",
+        .{ planner.session_external_id },
+    );
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO mission_events (
+        \\    mission_id,
+        \\    workspace_id,
+        \\    event_type,
+        \\    title,
+        \\    message
+        \\)
+        \\VALUES (
+        \\    $1,
+        \\    $2,
+        \\    'planner-operational-plan-captured',
+        \\    'Plano do Planner capturado',
+        \\    $3
+        \\)
+        ,
+        .{ mission_id, mission.workspace_id, event_message },
+    );
+
+    const redirect_url = try std.fmt.allocPrint(
+        c.arena,
+        "/missions/{d}",
+        .{ mission_id },
+    );
+
+    return c.redirect(redirect_url);
+}
+
 fn missionShow(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
         return c.text("Missão não informada.", .{ .status = .bad_request });
@@ -4747,7 +5004,13 @@ fn missionShow(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não enviado'
-        \\    ) AS dispatched_to_planner_at_label
+        \\    ) AS dispatched_to_planner_at_label,
+        \\    m.planner_operational_plan,
+        \\    m.planner_operational_plan_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.planner_operational_plan_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS planner_operational_plan_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -4816,7 +5079,13 @@ fn missionEdit(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não enviado'
-        \\    ) AS dispatched_to_planner_at_label
+        \\    ) AS dispatched_to_planner_at_label,
+        \\    m.planner_operational_plan,
+        \\    m.planner_operational_plan_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.planner_operational_plan_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS planner_operational_plan_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -4870,7 +5139,13 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não enviado'
-        \\    ) AS dispatched_to_planner_at_label
+        \\    ) AS dispatched_to_planner_at_label,
+        \\    m.planner_operational_plan,
+        \\    m.planner_operational_plan_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.planner_operational_plan_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS planner_operational_plan_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id

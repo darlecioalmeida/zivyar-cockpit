@@ -101,6 +101,41 @@ extends "layout"
   </div>
 </section>
 
+<section class="panel mission-brief-panel mission-planner-plan-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Mission Plan</span>
+      <h3>Plano Operacional do Planner</h3>
+    </div>
+
+    <span class="mini-badge">{ mission.planner_operational_plan_status }</span>
+  </div>
+
+  if (mission.planner_operational_plan) {
+    <article class="mission-brief-card">
+      <div class="mission-brief-meta">
+        <span>Capturado em</span>
+        <strong>{ mission.planner_operational_plan_captured_at_label }</strong>
+      </div>
+
+      <pre>{ mission.planner_operational_plan }</pre>
+    </article>
+  } else {
+    <div class="empty-inline-state">
+      <strong>Nenhum plano operacional capturado.</strong>
+      <p>Após o Planner responder ao briefing, capture o plano para persistir a próxima etapa da missão.</p>
+    </div>
+  }
+
+  <div class="mission-brief-actions">
+    if (mission.planner_dispatch_status == "sent") {
+      <form method="post" action="/missions/{ mission.id }/capture/planner-plan" class="inline-form">
+        <button class="primary-button compact" type="submit">Capturar plano do Planner</button>
+      </form>
+    }
+  </div>
+</section>
+
 <section class="panel mission-timeline-panel">
   <div class="panel-title-row">
     <div>
