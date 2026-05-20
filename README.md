@@ -90,3 +90,24 @@ zivyar-cockpit/
 
 **Sprint 0 iniciada.**  
 Esta base é um scaffold arquitetural consistente, ainda não é um app completo pronto para produção.
+
+
+---
+
+## Mission Engine — Estado atual
+
+A documentação atual do Mission Engine está em:
+
+```text
+docs/MISSION_ENGINE_STATUS.md
+docs/CURRENT_STATE.md
+```
+
+Resumo:
+
+- Mission Engine em modo `supervised_auto`.
+- Runtime Docker/OpenCode validado.
+- Pane Piloto ativo.
+- Dispatch ao Piloto validado.
+- Captura do briefing do Piloto validada.
+- Próxima etapa esperada: `dispatch_planner`.
