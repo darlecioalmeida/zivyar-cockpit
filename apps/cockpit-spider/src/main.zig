@@ -429,6 +429,8 @@ const MissionRow = struct {
     mission_final_verdict: []const u8,
     mission_operational_closure_status: []const u8,
     mission_operational_closed_at_label: []const u8,
+    next_step_detected_action: []const u8,
+    next_step_detected_at_label: []const u8,
 };
 
 
@@ -1588,7 +1590,12 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -3713,7 +3720,12 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -4129,7 +4141,12 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -4556,7 +4573,12 @@ fn workspaceMissionDispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -4989,7 +5011,12 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -5423,7 +5450,12 @@ fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Respo
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -5861,7 +5893,12 @@ fn workspaceMissionDispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Resp
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -6302,7 +6339,12 @@ fn workspaceMissionDispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Respons
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -6750,7 +6792,12 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -7137,7 +7184,12 @@ fn missions(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -7488,7 +7540,12 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -7760,7 +7817,12 @@ fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -8051,7 +8113,12 @@ fn missionCaptureScoutReport(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -8341,7 +8408,12 @@ fn missionCaptureBuilderImplementationReport(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -8631,7 +8703,12 @@ fn missionCaptureReviewerReviewReport(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -8922,7 +8999,12 @@ fn missionCaptureExecutorVerificationReport(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -9214,7 +9296,12 @@ fn missionCapturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -9502,6 +9589,17 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
         c.arena,
         "Próxima etapa detectada para a missão \"{s}\": {s}. O executor supervised_auto ainda está em modo diagnóstico e não executou a ação.",
         .{ mission.title, next_action },
+    );
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE missions
+        \\SET next_step_detected_action = $1,
+        \\    next_step_detected_at = NOW()
+        \\WHERE id = $2
+        ,
+        .{ next_action, mission_id },
     );
 
     try db.query(
@@ -9797,7 +9895,12 @@ fn missionShow(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -9944,7 +10047,12 @@ fn missionEdit(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -10071,7 +10179,12 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'
-        \\    ) AS mission_operational_closed_at_label
+        \\    ) AS mission_operational_closed_at_label,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id

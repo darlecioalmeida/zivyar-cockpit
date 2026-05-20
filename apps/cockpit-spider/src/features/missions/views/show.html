@@ -288,6 +288,13 @@ if (next_step_notice) {
         <small>Modo diagnóstico: o Cockpit detecta a próxima etapa, mas ainda não executa automaticamente.</small>
       </div>
     }
+    if (mission.next_step_detected_action) {
+      <div class="mission-next-step-diagnostic">
+        <span>Última próxima etapa detectada</span>
+        <strong>{ mission.next_step_detected_action }</strong>
+        <small>{ mission.next_step_detected_at_label }</small>
+      </div>
+    }
 </article>
 </section>
 

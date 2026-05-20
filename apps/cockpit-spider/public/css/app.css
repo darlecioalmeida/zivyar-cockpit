@@ -3024,3 +3024,36 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
 .execution-mode-help-panel li + li {
   margin-top: 6px;
 }
+
+
+.mission-next-step-diagnostic {
+  border: 1px solid rgba(67, 214, 255, 0.32);
+  border-radius: 18px;
+  background: rgba(67, 214, 255, 0.07);
+  padding: 14px;
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.mission-next-step-diagnostic span,
+.mission-next-step-diagnostic strong,
+.mission-next-step-diagnostic small {
+  display: block;
+}
+
+.mission-next-step-diagnostic span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.mission-next-step-diagnostic strong {
+  color: var(--text);
+}
+
+.mission-next-step-diagnostic small {
+  color: var(--cyan);
+  font-weight: 700;
+}
