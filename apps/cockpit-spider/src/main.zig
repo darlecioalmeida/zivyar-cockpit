@@ -490,6 +490,7 @@ const OpenCodePromptAsyncRequest = struct {
 
 const MissionForm = struct {
     workspace_id: []const u8,
+    context_workspace_id: []const u8,
     title: []const u8,
     objective: []const u8,
     status: []const u8,
@@ -7186,6 +7187,7 @@ fn missionNew(c: *spider.Ctx) !spider.Response {
         .error_message = "",
         .form = .{
             .workspace_id = c.query("workspace_id") orelse "",
+            .context_workspace_id = c.query("workspace_id") orelse "",
             .title = "",
             .objective = "",
             .status = "briefing",
@@ -7214,6 +7216,7 @@ fn missionCreate(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\SELECT
         \\    w.id,
+        \\    w.id::TEXT AS id_label,
         \\    w.name,
         \\    w.local_path,
         \\    w.default_squad_id,
@@ -7237,8 +7240,8 @@ fn missionCreate(c: *spider.Ctx) !spider.Response {
         }, .{ .status = .bad_request });
     }
 
-    try db.query(
-        void,
+    const created_mission_rows = try db.query(
+        MissionIdRow,
         c.arena,
         \\INSERT INTO missions (
         \\    workspace_id,
@@ -7249,6 +7252,7 @@ fn missionCreate(c: *spider.Ctx) !spider.Response {
         \\    priority
         \\)
         \\VALUES ($1, $2, $3, $4, $5, $6)
+        \\RETURNING id
         ,
         .{
             workspace_id,
@@ -7259,6 +7263,74 @@ fn missionCreate(c: *spider.Ctx) !spider.Response {
             form.priority,
         },
     );
+
+    if (created_mission_rows.len == 0) {
+        return c.text("Não foi possível confirmar a criação da missão.", .{ .status = .bad_request });
+    }
+
+    const created_mission_id = created_mission_rows[0].id;
+    const context_workspace_id = std.fmt.parseInt(i32, form.context_workspace_id, 10) catch 0;
+
+    if (context_workspace_id == workspace_id) {
+        const active_rows = try db.query(
+            MissionActivationTargetRow,
+            c.arena,
+            \\SELECT
+            \\    m.id,
+            \\    m.mission_operational_closure_status
+            \\FROM workspaces w
+            \\INNER JOIN missions m ON m.id = w.active_mission_id
+            \\WHERE w.id = $1
+            \\LIMIT 1
+            ,
+            .{ workspace_id },
+        );
+
+        const should_activate =
+            active_rows.len == 0 or
+            std.mem.eql(u8, active_rows[0].mission_operational_closure_status, "closed");
+
+        if (should_activate) {
+            try db.query(
+                void,
+                c.arena,
+                \\UPDATE workspaces
+                \\SET active_mission_id = $1
+                \\WHERE id = $2
+                ,
+                .{ created_mission_id, workspace_id },
+            );
+
+            try db.query(
+                void,
+                c.arena,
+                \\INSERT INTO mission_events (
+                \\    mission_id,
+                \\    workspace_id,
+                \\    event_type,
+                \\    title,
+                \\    message
+                \\)
+                \\VALUES (
+                \\    $1,
+                \\    $2,
+                \\    'mission-activated-in-cockpit',
+                \\    'Missão ativada no Cockpit',
+                \\    'Esta missão foi criada a partir do workspace e definida automaticamente como foco operacional ativo.'
+                \\)
+                ,
+                .{ created_mission_id, workspace_id },
+            );
+        }
+
+        const redirect_url = try std.fmt.allocPrint(
+            c.arena,
+            "/workspaces/{d}?mission_created=1",
+            .{ workspace_id },
+        );
+
+        return c.redirect(redirect_url);
+    }
 
     return c.redirect("/missions?created=1");
 }

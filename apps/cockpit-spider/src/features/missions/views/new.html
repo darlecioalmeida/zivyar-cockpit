@@ -31,6 +31,7 @@ extends "layout"
     }
 
     <form class="cockpit-form" method="post" action="/missions">
+      <input type="hidden" name="context_workspace_id" value="{ form.context_workspace_id }" />
       <label>
         <span>Workspace</span>
         <select id="mission-workspace-select" name="workspace_id" required>
