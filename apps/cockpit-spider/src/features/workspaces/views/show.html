@@ -306,7 +306,16 @@ extends "layout"
         </div>
 
         <div class="active-mission-actions">
-          <a class="primary-button compact" href="/missions/{ active_mission.id }">Abrir missão</a>
+          <a class="ghost-mini" href="/missions/{ active_mission.id }">Abrir missão</a>
+
+          <form
+            method="post"
+            action="/workspaces/{ active_mission.workspace_id }/missions/{ active_mission.id }/dispatch/pilot"
+            class="inline-form"
+            target="_blank"
+          >
+            <button class="primary-button compact" type="submit">Enviar ao Piloto</button>
+          </form>
         </div>
       </article>
     }

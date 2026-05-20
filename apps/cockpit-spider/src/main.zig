@@ -36,6 +36,7 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces/:id/panes/:pane_id/session/close", workspacePaneCloseSession)
         .post("/workspaces/:id/panes/:pane_id/session/resume", workspacePaneResumeSession)
         .post("/workspaces/:id/missions/:mission_id/activate", workspaceMissionActivate)
+        .post("/workspaces/:id/missions/:mission_id/dispatch/pilot", workspaceMissionDispatchToPilot)
         .get("/workspaces/:id", workspaceShow)
         .get("/missions", missions)
         .get("/missions/new", missionNew)
@@ -371,6 +372,19 @@ const WorkspaceMissionPreviewRow = struct {
     status: []const u8,
     priority: []const u8,
     is_active_in_cockpit: bool,
+};
+
+
+const WorkspacePilotPaneDispatchRow = struct {
+    id: i32,
+    role_name: []const u8,
+    pane_state: []const u8,
+    session_external_id: []const u8,
+    context_state: []const u8,
+};
+
+const OpenCodePromptAsyncRequest = struct {
+    parts: []const OpenCodeTextPart,
 };
 
 const MissionForm = struct {
@@ -2581,6 +2595,232 @@ fn workspaceMissionActivate(c: *spider.Ctx) !spider.Response {
     );
 
     return c.redirect(redirect_url);
+}
+
+
+fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
+    const workspace_id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const mission_id_raw = c.params.get("mission_id") orelse
+        return c.text("Missão não informada.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, workspace_id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const mission_id = std.fmt.parseInt(i32, mission_id_raw, 10) catch
+        return c.text("Missão inválida.", .{ .status = .bad_request });
+
+    const active_mission_rows = try db.query(
+        MissionRow,
+        c.arena,
+        \\SELECT
+        \\    m.id,
+        \\    m.workspace_id,
+        \\    w.name AS workspace_name,
+        \\    m.squad_id,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
+        \\    m.title,
+        \\    m.objective,
+        \\    m.status,
+        \\    m.priority
+        \\FROM workspaces w
+        \\INNER JOIN missions m ON m.id = w.active_mission_id
+        \\LEFT JOIN squads s ON s.id = m.squad_id
+        \\WHERE w.id = $1
+        \\AND m.id = $2
+        \\LIMIT 1
+        ,
+        .{ workspace_id, mission_id },
+    );
+
+    if (active_mission_rows.len == 0) {
+        return c.text(
+            "Esta missão não é a missão ativa deste workspace.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const mission = active_mission_rows[0];
+
+    const pilot_rows = try db.query(
+        WorkspacePilotPaneDispatchRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    role_name,
+        \\    pane_state,
+        \\    session_external_id,
+        \\    context_state
+        \\FROM workspace_panes
+        \\WHERE workspace_id = $1
+        \\AND role_name = 'Piloto'
+        \\LIMIT 1
+        ,
+        .{ workspace_id },
+    );
+
+    if (pilot_rows.len == 0) {
+        return c.text(
+            "O pane Piloto ainda não foi materializado neste workspace.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const pilot = pilot_rows[0];
+
+    if (!std.mem.eql(u8, pilot.pane_state, "active")) {
+        return c.text(
+            "O pane Piloto precisa estar ativo para receber a missão.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    if (!std.mem.eql(u8, pilot.context_state, "current")) {
+        return c.text(
+            "O contexto do pane Piloto está desatualizado. Recrie a sessão antes de enviar a missão.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    if (pilot.session_external_id.len == 0) {
+        return c.text(
+            "O pane Piloto não possui sessão OpenCode vinculada.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const runtime_rows = try loadWorkspaceRuntime(c, workspace_id);
+
+    if (runtime_rows.len == 0) {
+        return c.text(
+            "O runtime deste workspace ainda não foi preparado.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    try reconcileWorkspaceRuntimeState(c, runtime_rows[0]);
+
+    const refreshed_runtime_rows = try loadWorkspaceRuntime(c, workspace_id);
+
+    if (refreshed_runtime_rows.len == 0) {
+        return c.text(
+            "Runtime não encontrado após reconciliação.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const runtime = refreshed_runtime_rows[0];
+
+    if (!std.mem.eql(u8, runtime.state, "running")) {
+        return c.text(
+            "O runtime precisa estar em execução para enviar a missão ao Piloto.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const mission_prompt = try std.fmt.allocPrint(
+        c.arena,
+        "Zivyar Cockpit — Missão ativa enviada ao Piloto\n\n" ++
+            "Workspace: {s}\n" ++
+            "Squad: {s}\n\n" ++
+            "Título da missão:\n{s}\n\n" ++
+            "Objetivo:\n{s}\n\n" ++
+            "Status atual: {s}\n" ++
+            "Prioridade: {s}\n\n" ++
+            "Diretriz operacional:\n" ++
+            "Interprete esta missão como o foco ativo do Cockpit. " ++
+            "Inicie pela leitura crítica do objetivo e produza um Briefing Operacional inicial: " ++
+            "1) entendimento da missão, 2) escopo inicial, 3) dúvidas ou riscos percebidos, " ++
+            "4) sugestão da próxima delegação para Planner e/ou Scout. " ++
+            "Não implemente código diretamente neste primeiro retorno.",
+        .{
+            mission.workspace_name,
+            mission.squad_name,
+            mission.title,
+            mission.objective,
+            mission.status,
+            mission.priority,
+        },
+    );
+
+    const prompt_parts = [_]OpenCodeTextPart{
+        .{
+            .type = "text",
+            .text = mission_prompt,
+        },
+    };
+
+    const prompt_body = try std.json.Stringify.valueAlloc(
+        c.arena,
+        OpenCodePromptAsyncRequest{
+            .parts = prompt_parts[0..],
+        },
+        .{},
+    );
+
+    const prompt_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/session/{s}/prompt_async",
+        .{ runtime.server_url_label, pilot.session_external_id },
+    );
+
+    const dispatch_result = runRuntimeCommand(c, &.{
+        "curl",
+        "-fsS",
+        "-X",
+        "POST",
+        prompt_url,
+        "-H",
+        "Content-Type: application/json",
+        "-d",
+        prompt_body,
+    });
+
+    try insertRuntimeCommandLog(
+        c,
+        workspace_id,
+        "opencode-dispatch-active-mission-to-pilot",
+        "POST <opencode-server>/session/<session-id>/prompt_async",
+        dispatch_result,
+    );
+
+    if (!dispatch_result.ok) {
+        try insertRuntimeEvent(
+            c,
+            workspace_id,
+            "mission-dispatch-error",
+            "Falha ao enviar missão ao Piloto",
+            "O OpenCode Server não confirmou o envio assíncrono da missão ativa.",
+        );
+
+        return c.text(
+            "Falha ao enviar a missão ativa ao Piloto.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const event_message = try std.fmt.allocPrint(
+        c.arena,
+        "A missão ativa \"{s}\" foi enviada ao pane Piloto na sessão {s}.",
+        .{ mission.title, pilot.session_external_id },
+    );
+
+    try insertRuntimeEvent(
+        c,
+        workspace_id,
+        "mission-dispatched-to-pilot",
+        "Missão enviada ao Piloto",
+        event_message,
+    );
+
+    const pilot_session_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/Lw/session/{s}",
+        .{ runtime.server_url_label, pilot.session_external_id },
+    );
+
+    return c.redirect(pilot_session_url);
 }
 
 fn workspaceShow(c: *spider.Ctx) !spider.Response {
