@@ -205,6 +205,41 @@ extends "layout"
   </div>
 </section>
 
+<section class="panel mission-brief-panel mission-builder-report-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Execution Output</span>
+      <h3>Implementation Report do Builder</h3>
+    </div>
+
+    <span class="mini-badge">{ mission.builder_implementation_report_status }</span>
+  </div>
+
+  if (mission.builder_implementation_report) {
+    <article class="mission-brief-card">
+      <div class="mission-brief-meta">
+        <span>Capturado em</span>
+        <strong>{ mission.builder_implementation_report_captured_at_label }</strong>
+      </div>
+
+      <pre>{ mission.builder_implementation_report }</pre>
+    </article>
+  } else {
+    <div class="empty-inline-state">
+      <strong>Nenhum Implementation Report capturado.</strong>
+      <p>Após o Builder concluir a execução técnica, capture o relatório para registrar a entrega implementada.</p>
+    </div>
+  }
+
+  <div class="mission-brief-actions">
+    if (mission.builder_dispatch_status == "sent") {
+      <form method="post" action="/missions/{ mission.id }/capture/builder-report" class="inline-form">
+        <button class="primary-button compact" type="submit">Capturar Implementation Report</button>
+      </form>
+    }
+  </div>
+</section>
+
 <section class="panel mission-timeline-panel">
   <div class="panel-title-row">
     <div>
