@@ -33,6 +33,8 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces/:id/runtime/stop", workspaceRuntimeStop)
         .get("/workspaces/:id/runtime/live", workspaceRuntimeLiveStatus)
         .post("/workspaces/:id/panes/:pane_id/session/open", workspacePaneOpenSession)
+        .post("/workspaces/:id/panes/:pane_id/session/close", workspacePaneCloseSession)
+        .post("/workspaces/:id/panes/:pane_id/session/resume", workspacePaneResumeSession)
         .get("/workspaces/:id", workspaceShow)
         .get("/missions", missions)
         .get("/missions/new", missionNew)
@@ -448,6 +450,31 @@ fn loadWorkspaceSquadsForSelected(c: *spider.Ctx, selected_squad_id: i32) ![]Wor
     );
 }
 
+fn openCodeSessionExists(
+    c: *spider.Ctx,
+    server_url: []const u8,
+    session_id: []const u8,
+) RuntimeCommandResult {
+    const session_url = std.fmt.allocPrint(
+        c.arena,
+        "{s}/session/{s}",
+        .{ server_url, session_id },
+    ) catch {
+        return .{
+            .ok = false,
+            .exit_code = -1,
+            .stdout = "",
+            .stderr = "Falha ao montar URL da sessão OpenCode.",
+        };
+    };
+
+    return runRuntimeCommand(c, &.{
+        "curl",
+        "-fsS",
+        session_url,
+    });
+}
+
 fn extractOpenCodeSessionId(raw: []const u8) ?[]const u8 {
     const key = "\"id\"";
     const key_index = std.mem.indexOf(u8, raw, key) orelse return null;
@@ -607,6 +634,80 @@ fn insertRuntimeEvent(
             message,
         },
     );
+}
+
+fn reconcileWorkspacePaneSessions(
+    c: *spider.Ctx,
+    workspace_id: i32,
+    runtime: WorkspaceRuntimeRow,
+) !void {
+    if (!std.mem.eql(u8, runtime.state, "running")) {
+        return;
+    }
+
+    const panes = try db.query(
+        WorkspacePaneControlRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    workspace_id,
+        \\    role_name,
+        \\    pane_state,
+        \\    session_external_id
+        \\FROM workspace_panes
+        \\WHERE workspace_id = $1
+        \\AND session_external_id <> ''
+        \\AND pane_state IN ('active', 'closed')
+        \\ORDER BY id ASC
+        ,
+        .{ workspace_id },
+    );
+
+    for (panes) |pane| {
+        const check_result = openCodeSessionExists(
+            c,
+            runtime.server_url_label,
+            pane.session_external_id,
+        );
+
+        if (check_result.ok) {
+            continue;
+        }
+
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE workspace_panes
+            \\SET pane_state = 'stale',
+            \\    updated_at = NOW()
+            \\WHERE id = $1
+            \\AND workspace_id = $2
+            ,
+            .{ pane.id, workspace_id },
+        );
+
+        try insertRuntimeCommandLog(
+            c,
+            workspace_id,
+            "opencode-validate-session",
+            "GET <opencode-server>/session/<session-id>",
+            check_result,
+        );
+
+        const stale_message = try std.fmt.allocPrint(
+            c.arena,
+            "A sessão {s} vinculada ao pane {s} não foi localizada no OpenCode Server.",
+            .{ pane.session_external_id, pane.role_name },
+        );
+
+        try insertRuntimeEvent(
+            c,
+            workspace_id,
+            "pane-session-stale",
+            "Sessão do pane indisponível",
+            stale_message,
+        );
+    }
 }
 
 fn reconcileWorkspaceRuntimeState(
@@ -1203,6 +1304,8 @@ fn workspaceRuntimeLiveStatus(c: *spider.Ctx) !spider.Response {
 
     const runtime = refreshed_rows[0];
 
+    try reconcileWorkspacePaneSessions(c, workspace_id, runtime);
+
     const runtime_events = try db.query(
         WorkspaceRuntimeEventRow,
         c.arena,
@@ -1738,6 +1841,206 @@ fn workspaceDelete(c: *spider.Ctx) !spider.Response {
     return c.redirect("/workspaces?deleted=1");
 }
 
+fn workspacePaneCloseSession(c: *spider.Ctx) !spider.Response {
+    const workspace_id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const pane_id_raw = c.params.get("pane_id") orelse
+        return c.text("Pane não informado.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, workspace_id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const pane_id = std.fmt.parseInt(i32, pane_id_raw, 10) catch
+        return c.text("Pane inválido.", .{ .status = .bad_request });
+
+    const pane_rows = try db.query(
+        WorkspacePaneControlRow,
+        c.arena,
+        \\SELECT id, workspace_id, role_name, pane_state, session_external_id
+        \\FROM workspace_panes
+        \\WHERE id = $1
+        \\AND workspace_id = $2
+        \\LIMIT 1
+        ,
+        .{ pane_id, workspace_id },
+    );
+
+    if (pane_rows.len == 0) {
+        return c.text("Pane não encontrado.", .{ .status = .not_found });
+    }
+
+    const pane = pane_rows[0];
+
+    if (!std.mem.eql(u8, pane.pane_state, "active")) {
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        return c.redirect(redirect_url);
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE workspace_panes
+        \\SET pane_state = 'closed',
+        \\    updated_at = NOW()
+        \\WHERE id = $1
+        \\AND workspace_id = $2
+        ,
+        .{ pane_id, workspace_id },
+    );
+
+    const close_message = try std.fmt.allocPrint(
+        c.arena,
+        "O pane {s} foi encerrado no Cockpit. A sessão {s} permanece vinculada e pode ser retomada.",
+        .{ pane.role_name, pane.session_external_id },
+    );
+
+    try insertRuntimeEvent(
+        c,
+        workspace_id,
+        "pane-session-closed",
+        "Pane encerrado",
+        close_message,
+    );
+
+    const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+    return c.redirect(redirect_url);
+}
+
+fn workspacePaneResumeSession(c: *spider.Ctx) !spider.Response {
+    const workspace_id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const pane_id_raw = c.params.get("pane_id") orelse
+        return c.text("Pane não informado.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, workspace_id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const pane_id = std.fmt.parseInt(i32, pane_id_raw, 10) catch
+        return c.text("Pane inválido.", .{ .status = .bad_request });
+
+    const pane_rows = try db.query(
+        WorkspacePaneControlRow,
+        c.arena,
+        \\SELECT id, workspace_id, role_name, pane_state, session_external_id
+        \\FROM workspace_panes
+        \\WHERE id = $1
+        \\AND workspace_id = $2
+        \\LIMIT 1
+        ,
+        .{ pane_id, workspace_id },
+    );
+
+    if (pane_rows.len == 0) {
+        return c.text("Pane não encontrado.", .{ .status = .not_found });
+    }
+
+    const pane = pane_rows[0];
+
+    if (!std.mem.eql(u8, pane.pane_state, "closed") or pane.session_external_id.len == 0) {
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        return c.redirect(redirect_url);
+    }
+
+    const runtime_rows = try loadWorkspaceRuntime(c, workspace_id);
+
+    if (runtime_rows.len == 0) {
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        return c.redirect(redirect_url);
+    }
+
+    try reconcileWorkspaceRuntimeState(c, runtime_rows[0]);
+
+    const refreshed_runtime_rows = try loadWorkspaceRuntime(c, workspace_id);
+
+    if (refreshed_runtime_rows.len == 0) {
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        return c.redirect(redirect_url);
+    }
+
+    const runtime = refreshed_runtime_rows[0];
+
+    if (!std.mem.eql(u8, runtime.state, "running")) {
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        return c.redirect(redirect_url);
+    }
+
+    const validate_result = openCodeSessionExists(
+        c,
+        runtime.server_url_label,
+        pane.session_external_id,
+    );
+
+    try insertRuntimeCommandLog(
+        c,
+        workspace_id,
+        "opencode-resume-session",
+        "GET <opencode-server>/session/<session-id>",
+        validate_result,
+    );
+
+    if (!validate_result.ok) {
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE workspace_panes
+            \\SET pane_state = 'stale',
+            \\    updated_at = NOW()
+            \\WHERE id = $1
+            \\AND workspace_id = $2
+            ,
+            .{ pane_id, workspace_id },
+        );
+
+        const stale_message = try std.fmt.allocPrint(
+            c.arena,
+            "A sessão {s} do pane {s} não existe mais no OpenCode Server.",
+            .{ pane.session_external_id, pane.role_name },
+        );
+
+        try insertRuntimeEvent(
+            c,
+            workspace_id,
+            "pane-session-stale",
+            "Sessão não pode ser retomada",
+            stale_message,
+        );
+
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        return c.redirect(redirect_url);
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE workspace_panes
+        \\SET pane_state = 'active',
+        \\    updated_at = NOW()
+        \\WHERE id = $1
+        \\AND workspace_id = $2
+        ,
+        .{ pane_id, workspace_id },
+    );
+
+    const resume_message = try std.fmt.allocPrint(
+        c.arena,
+        "O pane {s} retomou a sessão {s}.",
+        .{ pane.role_name, pane.session_external_id },
+    );
+
+    try insertRuntimeEvent(
+        c,
+        workspace_id,
+        "pane-session-resumed",
+        "Sessão retomada",
+        resume_message,
+    );
+
+    const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+    return c.redirect(redirect_url);
+}
+
 fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
     const workspace_id_raw = c.params.get("id") orelse
         return c.text("Workspace não informado.", .{ .status = .bad_request });
@@ -1950,6 +2253,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
     try reconcileWorkspaceRuntimeState(c, runtime_rows[0]);
 
     const refreshed_runtime_rows = try loadWorkspaceRuntime(c, workspace.id);
+
+    try reconcileWorkspacePaneSessions(c, workspace.id, refreshed_runtime_rows[0]);
 
     const runtime_events = try db.query(
         WorkspaceRuntimeEventRow,

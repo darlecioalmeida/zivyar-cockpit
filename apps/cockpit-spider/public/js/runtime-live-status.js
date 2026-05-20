@@ -40,15 +40,14 @@
       .replaceAll("'", "&#039;");
   }
 
-  function showPaneSessionOverlay(roleName) {
+  function showPaneSessionOverlay(roleName, actionLabel, messageText) {
     if (!overlay || !overlayTitle || !overlayMessage || !overlayStep || !overlayHint) {
       return;
     }
 
-    overlayTitle.textContent = `Abrindo sessão do pane ${roleName}`;
-    overlayMessage.textContent =
-      "O Zivyar está criando uma sessão real no OpenCode Server e vinculando-a ao workspace.";
-    overlayStep.textContent = "Criando sessão no OpenCode";
+    overlayTitle.textContent = `${actionLabel} · ${roleName}`;
+    overlayMessage.textContent = messageText;
+    overlayStep.textContent = actionLabel;
     overlayHint.textContent =
       "Aguarde a conclusão. O card será atualizado automaticamente.";
 
@@ -166,8 +165,36 @@
       return;
     }
 
-    if (pane.session_external_id) {
+    if (!pane.session_external_id) {
+      if (runtimeData.is_running) {
+        actionsEl.innerHTML = `
+          <form
+            method="post"
+            action="/workspaces/${workspaceId}/panes/${pane.id}/session/open"
+            class="inline-form pane-session-open-form"
+          >
+            <button class="primary-button compact" type="submit">Abrir sessão</button>
+          </form>
+        `;
+      } else {
+        actionsEl.innerHTML = `
+          <button class="ghost-mini" type="button" disabled>Runtime parado</button>
+        `;
+      }
+
+      return;
+    }
+
+    if (pane.pane_state === "active") {
       actionsEl.innerHTML = `
+        <form
+          method="post"
+          action="/workspaces/${workspaceId}/panes/${pane.id}/session/close"
+          class="inline-form pane-session-close-form"
+        >
+          <button class="danger-button" type="submit">Encerrar pane</button>
+        </form>
+
         <a class="ghost-mini" href="${escapeHtml(runtimeData.server_url)}" target="_blank" rel="noreferrer">
           Abrir Server
         </a>
@@ -175,21 +202,25 @@
       return;
     }
 
-    if (runtimeData.is_running) {
+    if (pane.pane_state === "closed") {
       actionsEl.innerHTML = `
         <form
           method="post"
-          action="/workspaces/${workspaceId}/panes/${pane.id}/session/open"
-          class="inline-form pane-session-open-form"
+          action="/workspaces/${workspaceId}/panes/${pane.id}/session/resume"
+          class="inline-form pane-session-resume-form"
         >
-          <button class="primary-button compact" type="submit">Abrir sessão</button>
+          <button class="primary-button compact" type="submit">Retomar sessão</button>
         </form>
+
+        <a class="ghost-mini" href="${escapeHtml(runtimeData.server_url)}" target="_blank" rel="noreferrer">
+          Abrir Server
+        </a>
       `;
       return;
     }
 
     actionsEl.innerHTML = `
-      <button class="ghost-mini" type="button" disabled>Runtime parado</button>
+      <button class="ghost-mini" type="button" disabled>Sessão indisponível</button>
     `;
   }
 
@@ -311,7 +342,10 @@
   }
 
   document.addEventListener("submit", async (event) => {
-    const form = event.target.closest(".pane-session-open-form");
+    const openForm = event.target.closest(".pane-session-open-form");
+    const closeForm = event.target.closest(".pane-session-close-form");
+    const resumeForm = event.target.closest(".pane-session-resume-form");
+    const form = openForm || closeForm || resumeForm;
 
     if (!form) {
       return;
@@ -321,16 +355,33 @@
 
     const card = form.closest(".workspace-pane-card");
     const roleName =
-      card?.querySelector(".workspace-pane-head strong")?.textContent?.trim() || "agente";
+      card?.querySelector(".workspace-pane-head strong")?.textContent?.trim() || "pane";
 
     const button = form.querySelector("button[type='submit']");
+    let actionLabel = "Processando sessão";
+    let messageText = "O Zivyar está processando a sessão deste pane.";
+    let busyText = "Processando...";
+
+    if (openForm) {
+      actionLabel = "Criando sessão";
+      messageText = "O Zivyar está criando uma sessão real no OpenCode Server e vinculando-a ao workspace.";
+      busyText = "Criando sessão...";
+    } else if (closeForm) {
+      actionLabel = "Encerrando pane";
+      messageText = "O pane será encerrado no Cockpit, mantendo a sessão OpenCode disponível para retomada.";
+      busyText = "Encerrando...";
+    } else if (resumeForm) {
+      actionLabel = "Retomando sessão";
+      messageText = "O Zivyar está validando e reativando a sessão OpenCode vinculada a este pane.";
+      busyText = "Retomando...";
+    }
 
     if (button) {
       button.disabled = true;
-      button.textContent = "Criando sessão...";
+      button.textContent = busyText;
     }
 
-    showPaneSessionOverlay(roleName);
+    showPaneSessionOverlay(roleName, actionLabel, messageText);
 
     try {
       const response = await fetch(form.action, {
@@ -341,14 +392,13 @@
       });
 
       if (!response.ok) {
-        throw new Error("Falha ao abrir sessão.");
+        throw new Error("Falha ao processar ação do pane.");
       }
 
       await refreshRuntimeStatus();
     } catch (_) {
       if (button) {
         button.disabled = false;
-        button.textContent = "Abrir sessão";
       }
     } finally {
       hidePaneSessionOverlay();

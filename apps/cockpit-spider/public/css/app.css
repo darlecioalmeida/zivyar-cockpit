@@ -1868,3 +1868,24 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   word-break: break-all;
 }
 
+
+.workspace-pane-card[data-pane-state="closed"] {
+  border-color: rgba(255, 195, 77, 0.34);
+}
+
+.workspace-pane-card[data-pane-state="closed"] .workspace-pane-status-row strong {
+  color: var(--amber);
+  border-color: rgba(255, 195, 77, 0.42);
+  background: rgba(255, 195, 77, 0.12);
+}
+
+.workspace-pane-card[data-pane-state="stale"] {
+  border-color: rgba(255, 123, 138, 0.34);
+}
+
+.workspace-pane-card[data-pane-state="stale"] .workspace-pane-status-row strong {
+  color: #ff7b8a;
+  border-color: rgba(255, 123, 138, 0.42);
+  background: rgba(255, 123, 138, 0.12);
+}
+

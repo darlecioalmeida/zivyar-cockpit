@@ -274,7 +274,19 @@ extends "layout"
               </div>
 
               <div class="workspace-pane-actions">
-                <a class="ghost-mini" href="{ runtime.server_url_label }" target="_blank" rel="noreferrer">Abrir Server</a>
+                if (pane.pane_state == "active") {
+                  <form method="post" action="/workspaces/{ workspace.id }/panes/{ pane.id }/session/close" class="inline-form pane-session-close-form">
+                    <button class="danger-button" type="submit">Encerrar pane</button>
+                  </form>
+                  <a class="ghost-mini" href="{ runtime.server_url_label }" target="_blank" rel="noreferrer">Abrir Server</a>
+                } else if (pane.pane_state == "closed") {
+                  <form method="post" action="/workspaces/{ workspace.id }/panes/{ pane.id }/session/resume" class="inline-form pane-session-resume-form">
+                    <button class="primary-button compact" type="submit">Retomar sessão</button>
+                  </form>
+                  <a class="ghost-mini" href="{ runtime.server_url_label }" target="_blank" rel="noreferrer">Abrir Server</a>
+                } else {
+                  <button class="ghost-mini" type="button" disabled>Sessão indisponível</button>
+                }
               </div>
             } else {
               <div class="workspace-pane-actions">
@@ -350,4 +362,4 @@ extends "layout"
 </div>
 
 <script src="/js/runtime-actions.js?v=20260519-1"></script>
-<script src="/js/runtime-live-status.js?v=20260519-4"></script>
+<script src="/js/runtime-live-status.js?v=20260519-5"></script>
