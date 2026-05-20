@@ -3687,6 +3687,13 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
 
     const mission = active_mission_rows[0];
 
+    if (std.mem.eql(u8, mission.mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem executar novas ações do ciclo operacional.",
+            .{ .status = .bad_request },
+        );
+    }
+
     const pilot_rows = try db.query(
         WorkspaceMissionPaneDispatchRow,
         c.arena,
@@ -4094,6 +4101,13 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
     }
 
     const mission = active_mission_rows[0];
+
+    if (std.mem.eql(u8, mission.mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem executar novas ações do ciclo operacional.",
+            .{ .status = .bad_request },
+        );
+    }
 
     if (
         mission.pilot_operational_brief.len == 0 or
@@ -4513,6 +4527,13 @@ fn workspaceMissionDispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
     }
 
     const mission = active_mission_rows[0];
+
+    if (std.mem.eql(u8, mission.mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem executar novas ações do ciclo operacional.",
+            .{ .status = .bad_request },
+        );
+    }
 
     if (
         mission.planner_operational_plan.len == 0 or
@@ -4939,6 +4960,13 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
 
     const mission = active_mission_rows[0];
 
+    if (std.mem.eql(u8, mission.mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem executar novas ações do ciclo operacional.",
+            .{ .status = .bad_request },
+        );
+    }
+
     if (
         mission.scout_report.len == 0 or
         !std.mem.eql(u8, mission.scout_report_status, "captured")
@@ -5363,6 +5391,13 @@ fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Respo
     }
 
     const mission = active_mission_rows[0];
+
+    if (std.mem.eql(u8, mission.mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem executar novas ações do ciclo operacional.",
+            .{ .status = .bad_request },
+        );
+    }
 
     if (
         mission.builder_implementation_report.len == 0 or
@@ -5792,6 +5827,13 @@ fn workspaceMissionDispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Resp
     }
 
     const mission = active_mission_rows[0];
+
+    if (std.mem.eql(u8, mission.mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem executar novas ações do ciclo operacional.",
+            .{ .status = .bad_request },
+        );
+    }
 
     if (
         mission.reviewer_review_report.len == 0 or
@@ -6225,6 +6267,13 @@ fn workspaceMissionDispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Respons
     }
 
     const mission = active_mission_rows[0];
+
+    if (std.mem.eql(u8, mission.mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem executar novas ações do ciclo operacional.",
+            .{ .status = .bad_request },
+        );
+    }
 
     if (
         mission.executor_verification_report.len == 0 or
@@ -7290,6 +7339,13 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
 
     const mission = mission_rows[0];
 
+    if (std.mem.eql(u8, mission.mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem executar novas ações do ciclo operacional.",
+            .{ .status = .bad_request },
+        );
+    }
+
     const pilot_rows = try db.query(
         WorkspaceMissionPaneDispatchRow,
         c.arena,
@@ -7553,6 +7609,13 @@ fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
     }
 
     const mission = mission_rows[0];
+
+    if (std.mem.eql(u8, mission.mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem executar novas ações do ciclo operacional.",
+            .{ .status = .bad_request },
+        );
+    }
 
     const planner_rows = try db.query(
         WorkspaceMissionPaneDispatchRow,
@@ -7836,6 +7899,13 @@ fn missionCaptureScoutReport(c: *spider.Ctx) !spider.Response {
 
     const mission = mission_rows[0];
 
+    if (std.mem.eql(u8, mission.mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem executar novas ações do ciclo operacional.",
+            .{ .status = .bad_request },
+        );
+    }
+
     const scout_rows = try db.query(
         WorkspaceMissionPaneDispatchRow,
         c.arena,
@@ -8118,6 +8188,13 @@ fn missionCaptureBuilderImplementationReport(c: *spider.Ctx) !spider.Response {
 
     const mission = mission_rows[0];
 
+    if (std.mem.eql(u8, mission.mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem executar novas ações do ciclo operacional.",
+            .{ .status = .bad_request },
+        );
+    }
+
     const builder_rows = try db.query(
         WorkspaceMissionPaneDispatchRow,
         c.arena,
@@ -8399,6 +8476,13 @@ fn missionCaptureReviewerReviewReport(c: *spider.Ctx) !spider.Response {
     }
 
     const mission = mission_rows[0];
+
+    if (std.mem.eql(u8, mission.mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem executar novas ações do ciclo operacional.",
+            .{ .status = .bad_request },
+        );
+    }
 
     const reviewer_rows = try db.query(
         WorkspaceMissionPaneDispatchRow,
@@ -8683,6 +8767,13 @@ fn missionCaptureExecutorVerificationReport(c: *spider.Ctx) !spider.Response {
 
     const mission = mission_rows[0];
 
+    if (std.mem.eql(u8, mission.mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem executar novas ações do ciclo operacional.",
+            .{ .status = .bad_request },
+        );
+    }
+
     const executor_rows = try db.query(
         WorkspaceMissionPaneDispatchRow,
         c.arena,
@@ -8966,6 +9057,13 @@ fn missionCapturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
     }
 
     const mission = mission_rows[0];
+
+    if (std.mem.eql(u8, mission.mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem executar novas ações do ciclo operacional.",
+            .{ .status = .bad_request },
+        );
+    }
 
     const pilot_rows = try db.query(
         WorkspaceMissionPaneDispatchRow,
