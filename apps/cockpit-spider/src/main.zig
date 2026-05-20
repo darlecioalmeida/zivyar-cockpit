@@ -430,6 +430,7 @@ const MissionRow = struct {
     mission_operational_closure_status: []const u8,
     mission_operational_closed_at_label: []const u8,
     next_step_detected_action: []const u8,
+    next_step_detected_code: []const u8,
     next_step_detected_at_label: []const u8,
 };
 
@@ -480,6 +481,7 @@ const ActiveMissionPanelRow = struct {
     pilot_delivery_dispatch_status: []const u8,
     pilot_delivery_report_status: []const u8,
     next_step_detected_action: []const u8,
+    next_step_detected_code: []const u8,
     next_step_detected_at_label: []const u8,
 };
 
@@ -1594,6 +1596,7 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -3724,6 +3727,7 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -4145,6 +4149,7 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -4577,6 +4582,7 @@ fn workspaceMissionDispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -5015,6 +5021,7 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -5454,6 +5461,7 @@ fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Respo
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -5897,6 +5905,7 @@ fn workspaceMissionDispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Resp
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -6343,6 +6352,7 @@ fn workspaceMissionDispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Respons
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -6796,6 +6806,7 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -6845,6 +6856,7 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\    m.pilot_delivery_dispatch_status,
         \\    m.pilot_delivery_report_status,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -7193,6 +7205,7 @@ fn missions(c: *spider.Ctx) !spider.Response {
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -7549,6 +7562,7 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -7678,6 +7692,7 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
         \\SET pilot_operational_brief = $1,
         \\    pilot_operational_brief_status = 'captured',
         \\    next_step_detected_action = '',
+        \\    next_step_detected_code = '',
         \\    next_step_detected_at = NULL,
         \\    pilot_operational_brief_captured_at = NOW()
         \\WHERE id = $2
@@ -7828,6 +7843,7 @@ fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -7975,6 +7991,7 @@ fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
         \\SET planner_operational_plan = $1,
         \\    planner_operational_plan_status = 'captured',
         \\    next_step_detected_action = '',
+        \\    next_step_detected_code = '',
         \\    next_step_detected_at = NULL,
         \\    planner_operational_plan_captured_at = NOW(),
         \\    status = 'planned'
@@ -8126,6 +8143,7 @@ fn missionCaptureScoutReport(c: *spider.Ctx) !spider.Response {
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -8273,6 +8291,7 @@ fn missionCaptureScoutReport(c: *spider.Ctx) !spider.Response {
         \\SET scout_report = $1,
         \\    scout_report_status = 'captured',
         \\    next_step_detected_action = '',
+        \\    next_step_detected_code = '',
         \\    next_step_detected_at = NULL,
         \\    scout_report_captured_at = NOW()
         \\WHERE id = $2
@@ -8423,6 +8442,7 @@ fn missionCaptureBuilderImplementationReport(c: *spider.Ctx) !spider.Response {
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -8570,6 +8590,7 @@ fn missionCaptureBuilderImplementationReport(c: *spider.Ctx) !spider.Response {
         \\SET builder_implementation_report = $1,
         \\    builder_implementation_report_status = 'captured',
         \\    next_step_detected_action = '',
+        \\    next_step_detected_code = '',
         \\    next_step_detected_at = NULL,
         \\    builder_implementation_report_captured_at = NOW()
         \\WHERE id = $2
@@ -8720,6 +8741,7 @@ fn missionCaptureReviewerReviewReport(c: *spider.Ctx) !spider.Response {
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -8868,6 +8890,7 @@ fn missionCaptureReviewerReviewReport(c: *spider.Ctx) !spider.Response {
         \\SET reviewer_review_report = $1,
         \\    reviewer_review_report_status = 'captured',
         \\    next_step_detected_action = '',
+        \\    next_step_detected_code = '',
         \\    next_step_detected_at = NULL,
         \\    reviewer_review_report_captured_at = NOW()
         \\WHERE id = $2
@@ -9018,6 +9041,7 @@ fn missionCaptureExecutorVerificationReport(c: *spider.Ctx) !spider.Response {
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -9166,6 +9190,7 @@ fn missionCaptureExecutorVerificationReport(c: *spider.Ctx) !spider.Response {
         \\SET executor_verification_report = $1,
         \\    executor_verification_report_status = 'captured',
         \\    next_step_detected_action = '',
+        \\    next_step_detected_code = '',
         \\    next_step_detected_at = NULL,
         \\    executor_verification_report_captured_at = NOW()
         \\WHERE id = $2
@@ -9317,6 +9342,7 @@ fn missionCapturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -9465,6 +9491,7 @@ fn missionCapturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\SET pilot_delivery_report = $1,
         \\    pilot_delivery_report_status = 'captured',
         \\    next_step_detected_action = '',
+        \\    next_step_detected_code = '',
         \\    next_step_detected_at = NULL,
         \\    pilot_delivery_report_captured_at = NOW()
         \\WHERE id = $2
@@ -9606,6 +9633,45 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
         else
             "Encerrar missão pelo Cockpit";
 
+    const next_action_code =
+        if (!std.mem.eql(u8, mission.pilot_operational_brief_status, "captured"))
+            if (std.mem.eql(u8, mission.pilot_dispatch_status, "sent"))
+                "capture_pilot_brief"
+            else
+                "dispatch_pilot"
+        else if (!std.mem.eql(u8, mission.planner_operational_plan_status, "captured"))
+            if (std.mem.eql(u8, mission.planner_dispatch_status, "sent"))
+                "capture_planner_plan"
+            else
+                "dispatch_planner"
+        else if (!std.mem.eql(u8, mission.scout_report_status, "captured"))
+            if (std.mem.eql(u8, mission.scout_dispatch_status, "sent"))
+                "capture_scout_report"
+            else
+                "dispatch_scout"
+        else if (!std.mem.eql(u8, mission.builder_implementation_report_status, "captured"))
+            if (std.mem.eql(u8, mission.builder_dispatch_status, "sent"))
+                "capture_builder_report"
+            else
+                "dispatch_builder"
+        else if (!std.mem.eql(u8, mission.reviewer_review_report_status, "captured"))
+            if (std.mem.eql(u8, mission.reviewer_dispatch_status, "sent"))
+                "capture_reviewer_report"
+            else
+                "dispatch_reviewer"
+        else if (!std.mem.eql(u8, mission.executor_verification_report_status, "captured"))
+            if (std.mem.eql(u8, mission.executor_dispatch_status, "sent"))
+                "capture_executor_report"
+            else
+                "dispatch_executor"
+        else if (!std.mem.eql(u8, mission.pilot_delivery_report_status, "captured"))
+            if (std.mem.eql(u8, mission.pilot_delivery_dispatch_status, "sent"))
+                "capture_pilot_delivery_report"
+            else
+                "dispatch_pilot_delivery"
+        else
+            "finalize_mission";
+
     const event_message = try std.fmt.allocPrint(
         c.arena,
         "Próxima etapa detectada para a missão \"{s}\": {s}. O executor supervised_auto ainda está em modo diagnóstico e não executou a ação.",
@@ -9617,10 +9683,11 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\UPDATE missions
         \\SET next_step_detected_action = $1,
+        \\    next_step_detected_code = $2,
         \\    next_step_detected_at = NOW()
-        \\WHERE id = $2
+        \\WHERE id = $3
         ,
-        .{ next_action, mission_id },
+        .{ next_action, next_action_code, mission_id },
     );
 
     try db.query(
@@ -9731,6 +9798,7 @@ fn missionFinalizeFromPilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\SET mission_final_verdict = $1,
         \\    mission_operational_closure_status = 'closed',
         \\    next_step_detected_action = '',
+        \\    next_step_detected_code = '',
         \\    next_step_detected_at = NULL,
         \\    mission_operational_closed_at = NOW(),
         \\    status = $2
@@ -9920,6 +9988,7 @@ fn missionShow(c: *spider.Ctx) !spider.Response {
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -10072,6 +10141,7 @@ fn missionEdit(c: *spider.Ctx) !spider.Response {
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
@@ -10204,6 +10274,7 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
         \\        'Ainda não encerrada'
         \\    ) AS mission_operational_closed_at_label,
         \\    m.next_step_detected_action,
+        \\    m.next_step_detected_code,
         \\    COALESCE(
         \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não detectada'
