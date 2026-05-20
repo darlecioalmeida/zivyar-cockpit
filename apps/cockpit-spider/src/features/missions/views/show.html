@@ -127,12 +127,29 @@ extends "layout"
     </div>
   }
 
-  <div class="mission-brief-actions">
+  <div class="mission-brief-actions mission-brief-actions-expanded">
     if (mission.planner_dispatch_status == "sent") {
       <form method="post" action="/missions/{ mission.id }/capture/planner-plan" class="inline-form">
         <button class="primary-button compact" type="submit">Capturar plano do Planner</button>
       </form>
     }
+
+    if (mission.planner_operational_plan and mission.planner_operational_plan_status == "captured") {
+      <form
+        method="post"
+        action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/dispatch/scout"
+        class="inline-form"
+        target="_blank"
+      >
+        <button class="primary-button compact" type="submit">Enviar plano ao Scout</button>
+      </form>
+    }
+  </div>
+
+  <div class="mission-scout-dispatch-status">
+    <span>Dispatch ao Scout</span>
+    <strong>{ mission.scout_dispatch_status }</strong>
+    <small>{ mission.dispatched_to_scout_at_label }</small>
   </div>
 </section>
 
