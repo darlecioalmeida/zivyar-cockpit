@@ -24,6 +24,12 @@ if (next_step_notice) {
 </section>
 }
 
+if (next_step_ready_notice) {
+<section class="alert success">
+  { next_step_ready_notice }
+</section>
+}
+
 <section class="workspace-detail-grid">
   <article class="panel workspace-summary-panel">
     <span class="eyebrow">Contexto</span>
@@ -286,6 +292,26 @@ if (next_step_notice) {
           <button class="primary-button compact" type="submit">Executar próxima etapa</button>
         </form>
         <small>Modo diagnóstico: o Cockpit detecta a próxima etapa, mas ainda não executa automaticamente.</small>
+      </div>
+    }
+    if (
+      mission.execution_mode == "supervised_auto" and
+      mission.next_step_detected_code == "dispatch_pilot" and
+      mission.next_step_detected_route
+    ) {
+      <div class="mission-next-step-execute-panel">
+        <span>Execução supervisionada disponível</span>
+        <strong>Enviar missão ao Piloto</strong>
+        <p>Esta ação chama a rota operacional real de despacho ao Piloto.</p>
+
+        <form
+          method="post"
+          action="{ mission.next_step_detected_route }"
+          class="inline-form"
+          target="_blank"
+        >
+          <button class="primary-button compact" type="submit">Executar envio ao Piloto agora</button>
+        </form>
       </div>
     }
     if (mission.next_step_detected_action) {

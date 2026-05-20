@@ -3105,3 +3105,39 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
 .active-mission-next-step-diagnostic small {
   word-break: break-all;
 }
+
+
+.mission-next-step-execute-panel,
+.active-mission-next-step-execute-panel {
+  border: 1px solid rgba(61, 226, 151, 0.36);
+  border-radius: 18px;
+  background: rgba(61, 226, 151, 0.08);
+  padding: 14px;
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.mission-next-step-execute-panel span,
+.mission-next-step-execute-panel strong,
+.mission-next-step-execute-panel p,
+.active-mission-next-step-execute-panel span,
+.active-mission-next-step-execute-panel strong,
+.active-mission-next-step-execute-panel p {
+  display: block;
+}
+
+.mission-next-step-execute-panel span,
+.active-mission-next-step-execute-panel span {
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.mission-next-step-execute-panel p,
+.active-mission-next-step-execute-panel p {
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.55;
+}

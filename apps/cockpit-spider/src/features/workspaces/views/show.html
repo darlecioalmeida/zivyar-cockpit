@@ -517,6 +517,27 @@ if (notice) {
           </div>
         </div>
 
+        if (
+          active_mission.execution_mode == "supervised_auto" and
+          active_mission.next_step_detected_code == "dispatch_pilot" and
+          active_mission.next_step_detected_route
+        ) {
+          <div class="active-mission-next-step-execute-panel">
+            <span>Execução supervisionada disponível</span>
+            <strong>Enviar missão ao Piloto</strong>
+            <p>Esta ação chama a rota operacional real de despacho ao Piloto.</p>
+
+            <form
+              method="post"
+              action="{ active_mission.next_step_detected_route }"
+              class="inline-form"
+              target="_blank"
+            >
+              <button class="primary-button compact" type="submit">Executar envio ao Piloto agora</button>
+            </form>
+          </div>
+        }
+
         if (active_mission.next_step_detected_action) {
           <div class="active-mission-next-step-diagnostic">
             <span>Última próxima etapa detectada</span>

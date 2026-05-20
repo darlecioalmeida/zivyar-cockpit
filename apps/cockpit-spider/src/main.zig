@@ -9771,11 +9771,19 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
         .{ mission_id, mission.workspace_id, event_message },
     );
 
-    const redirect_url = try std.fmt.allocPrint(
-        c.arena,
-        "/missions/{d}?next_step_detected=1",
-        .{ mission_id },
-    );
+    const redirect_url =
+        if (std.mem.eql(u8, next_action_code, "dispatch_pilot"))
+            try std.fmt.allocPrint(
+                c.arena,
+                "/missions/{d}?next_step_ready=dispatch_pilot",
+                .{ mission_id },
+            )
+        else
+            try std.fmt.allocPrint(
+                c.arena,
+                "/missions/{d}?next_step_detected=1",
+                .{ mission_id },
+            );
 
     return c.redirect(redirect_url);
 }
@@ -10092,6 +10100,11 @@ fn missionShow(c: *spider.Ctx) !spider.Response {
         .next_step_notice =
             if (c.query("next_step_detected") != null)
                 "Próxima etapa detectada e registrada na timeline operacional."
+            else
+                "",
+        .next_step_ready_notice =
+            if (c.query("next_step_ready") != null)
+                "Próxima etapa pronta para execução supervisionada. Confirme a ação operacional abaixo."
             else
                 "",
     }, .{});
