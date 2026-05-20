@@ -563,6 +563,7 @@ const MissionEventRow = struct {
 
 const MissionWorkspaceOptionRow = struct {
     id: i32,
+    id_label: []const u8,
     name: []const u8,
     local_path: []const u8,
     default_squad_id: i32,
@@ -7161,6 +7162,7 @@ fn loadMissionWorkspaces(c: *spider.Ctx) ![]MissionWorkspaceOptionRow {
         c.arena,
         \\SELECT
         \\    w.id,
+        \\    w.id::TEXT AS id_label,
         \\    w.name,
         \\    w.local_path,
         \\    w.default_squad_id,
@@ -7183,7 +7185,7 @@ fn missionNew(c: *spider.Ctx) !spider.Response {
         .workspace_count = workspaces_rows.len,
         .error_message = "",
         .form = .{
-            .workspace_id = "",
+            .workspace_id = c.query("workspace_id") orelse "",
             .title = "",
             .objective = "",
             .status = "briefing",

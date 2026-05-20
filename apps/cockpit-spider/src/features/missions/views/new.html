@@ -33,10 +33,14 @@ extends "layout"
     <form class="cockpit-form" method="post" action="/missions">
       <label>
         <span>Workspace</span>
-        <select name="workspace_id" required>
+        <select id="mission-workspace-select" name="workspace_id" required>
           <option value="">Selecione um workspace</option>
           for (workspaces) |workspace| {
-            <option value="{ workspace.id }">{ workspace.name } · { workspace.squad_name }</option>
+            if (form.workspace_id == workspace.id_label) {
+              <option value="{ workspace.id }" selected>{ workspace.name } · { workspace.squad_name }</option>
+            } else {
+              <option value="{ workspace.id }">{ workspace.name } · { workspace.squad_name }</option>
+            }
           }
         </select>
       </label>
@@ -87,3 +91,15 @@ extends "layout"
     </ol>
   </article>
 </section>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const params = new URLSearchParams(window.location.search);
+    const workspaceId = params.get("workspace_id");
+    const select = document.getElementById("mission-workspace-select");
+
+    if (!workspaceId || !select) return;
+
+    select.value = workspaceId;
+  });
+</script>

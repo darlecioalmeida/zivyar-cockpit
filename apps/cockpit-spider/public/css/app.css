@@ -1387,6 +1387,14 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   gap: 12px;
 }
 
+.workspace-mission-room-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .workspace-mission-counts {
   display: inline-flex;
   align-items: center;

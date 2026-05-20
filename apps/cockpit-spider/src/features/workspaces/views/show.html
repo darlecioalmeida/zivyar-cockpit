@@ -654,10 +654,14 @@ extends "layout"
         <span class="eyebrow">Mission Room</span>
         <h3>Missões do workspace</h3>
       </div>
-      <div class="workspace-mission-counts">
+      <div class="workspace-mission-room-head-actions">
+        <a class="primary-button compact" href="/missions/new?workspace_id={ workspace.id }">Nova missão neste workspace</a>
+
+        <div class="workspace-mission-counts">
         <span class="mini-badge">{ mission_count } total</span>
         <span class="mini-badge">{ open_mission_count } abertas</span>
         <span class="mini-badge">{ closed_mission_count } encerradas</span>
+      </div>
       </div>
     </div>
 
