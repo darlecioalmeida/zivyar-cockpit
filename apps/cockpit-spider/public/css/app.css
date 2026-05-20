@@ -624,6 +624,18 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   color: var(--text);
 }
 
+.mission-next-step-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.mission-next-step-actions .inline-form {
+  margin: 0;
+}
+
 .mission-next-step-panel[data-mission-status="active"] {
   border-color: rgba(61, 226, 151, 0.34);
   background: linear-gradient(135deg, rgba(61, 226, 151, 0.10), rgba(67, 214, 255, 0.04));

@@ -61,6 +61,12 @@ extends "layout"
         O ciclo ainda depende da captura do Briefing Operacional do Piloto.
         Após o despacho inicial ao Piloto, capture o briefing nesta missão.
       </p>
+
+      <div class="mission-next-step-actions">
+        <form method="post" action="/missions/{ mission.id }/capture/pilot-brief" class="inline-form">
+          <button class="primary-button compact" type="submit">Capturar briefing do Piloto</button>
+        </form>
+      </div>
     } else if (mission.planner_operational_plan_status != "captured") {
       if (mission.planner_dispatch_status == "sent") {
         <h3>Capturar plano do Planner</h3>
@@ -68,12 +74,29 @@ extends "layout"
           O Briefing já foi enviado ao Planner. Aguarde a conclusão da resposta
           e capture o Plano Operacional.
         </p>
+
+        <div class="mission-next-step-actions">
+          <form method="post" action="/missions/{ mission.id }/capture/planner-plan" class="inline-form">
+            <button class="primary-button compact" type="submit">Capturar plano do Planner</button>
+          </form>
+        </div>
       } else {
         <h3>Enviar briefing ao Planner</h3>
         <p>
           O briefing foi capturado. A próxima etapa é despachá-lo ao Planner
           para produção do plano operacional.
         </p>
+
+        <div class="mission-next-step-actions">
+          <form
+            method="post"
+            action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/dispatch/planner"
+            class="inline-form"
+            target="_blank"
+          >
+            <button class="primary-button compact" type="submit">Enviar briefing ao Planner</button>
+          </form>
+        </div>
       }
     } else if (mission.scout_report_status != "captured") {
       if (mission.scout_dispatch_status == "sent") {
@@ -82,12 +105,29 @@ extends "layout"
           O plano foi enviado ao Scout. Aguarde a leitura do workspace e capture
           o relatório técnico de reconhecimento.
         </p>
+
+        <div class="mission-next-step-actions">
+          <form method="post" action="/missions/{ mission.id }/capture/scout-report" class="inline-form">
+            <button class="primary-button compact" type="submit">Capturar Scout Report</button>
+          </form>
+        </div>
       } else {
         <h3>Enviar plano ao Scout</h3>
         <p>
           O Plano Operacional foi capturado. A próxima etapa é enviá-lo ao Scout
           para reconhecimento técnico do workspace.
         </p>
+
+        <div class="mission-next-step-actions">
+          <form
+            method="post"
+            action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/dispatch/scout"
+            class="inline-form"
+            target="_blank"
+          >
+            <button class="primary-button compact" type="submit">Enviar plano ao Scout</button>
+          </form>
+        </div>
       }
     } else if (mission.builder_implementation_report_status != "captured") {
       if (mission.builder_dispatch_status == "sent") {
@@ -96,12 +136,29 @@ extends "layout"
           O pacote de execução já chegou ao Builder. Aguarde a resposta e capture
           o relatório de implementação.
         </p>
+
+        <div class="mission-next-step-actions">
+          <form method="post" action="/missions/{ mission.id }/capture/builder-report" class="inline-form">
+            <button class="primary-button compact" type="submit">Capturar Implementation Report</button>
+          </form>
+        </div>
       } else {
         <h3>Enviar Scout Report ao Builder</h3>
         <p>
           O reconhecimento técnico foi capturado. A próxima etapa é liberar o
           pacote de execução para o Builder.
         </p>
+
+        <div class="mission-next-step-actions">
+          <form
+            method="post"
+            action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/dispatch/builder"
+            class="inline-form"
+            target="_blank"
+          >
+            <button class="primary-button compact" type="submit">Enviar pacote ao Builder</button>
+          </form>
+        </div>
       }
     } else if (mission.reviewer_review_report_status != "captured") {
       if (mission.reviewer_dispatch_status == "sent") {
@@ -110,12 +167,29 @@ extends "layout"
           O Implementation Report já está com o Reviewer. Capture o parecer
           técnico assim que ele concluir a revisão.
         </p>
+
+        <div class="mission-next-step-actions">
+          <form method="post" action="/missions/{ mission.id }/capture/reviewer-report" class="inline-form">
+            <button class="primary-button compact" type="submit">Capturar Review Report</button>
+          </form>
+        </div>
       } else {
         <h3>Enviar Implementation Report ao Reviewer</h3>
         <p>
           A execução foi documentada pelo Builder. A próxima etapa é acionar
           o Quality Gate com o Reviewer.
         </p>
+
+        <div class="mission-next-step-actions">
+          <form
+            method="post"
+            action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/dispatch/reviewer"
+            class="inline-form"
+            target="_blank"
+          >
+            <button class="primary-button compact" type="submit">Enviar report ao Reviewer</button>
+          </form>
+        </div>
       }
     } else if (mission.executor_verification_report_status != "captured") {
       if (mission.executor_dispatch_status == "sent") {
@@ -124,12 +198,29 @@ extends "layout"
           O pacote de verificação já foi enviado ao Executor. Aguarde os checks
           e capture o relatório técnico de validação.
         </p>
+
+        <div class="mission-next-step-actions">
+          <form method="post" action="/missions/{ mission.id }/capture/executor-report" class="inline-form">
+            <button class="primary-button compact" type="submit">Capturar Verification Report</button>
+          </form>
+        </div>
       } else {
         <h3>Enviar Review Report ao Executor</h3>
         <p>
           O Quality Gate foi capturado. A próxima etapa é validar tecnicamente
           o resultado com o Executor.
         </p>
+
+        <div class="mission-next-step-actions">
+          <form
+            method="post"
+            action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/dispatch/executor"
+            class="inline-form"
+            target="_blank"
+          >
+            <button class="primary-button compact" type="submit">Enviar pacote ao Executor</button>
+          </form>
+        </div>
       }
     } else if (mission.pilot_delivery_report_status != "captured") {
       if (mission.pilot_delivery_dispatch_status == "sent") {
@@ -138,12 +229,29 @@ extends "layout"
           O Verification Report foi enviado ao Piloto. Capture a consolidação
           final da missão assim que a resposta estiver pronta.
         </p>
+
+        <div class="mission-next-step-actions">
+          <form method="post" action="/missions/{ mission.id }/capture/pilot-delivery-report" class="inline-form">
+            <button class="primary-button compact" type="submit">Capturar Final Delivery Report</button>
+          </form>
+        </div>
       } else {
         <h3>Enviar Verification Report ao Piloto</h3>
         <p>
           A verificação técnica foi concluída. A próxima etapa é devolver o ciclo
           ao Piloto para consolidação do Final Delivery Report.
         </p>
+
+        <div class="mission-next-step-actions">
+          <form
+            method="post"
+            action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/dispatch/pilot-delivery"
+            class="inline-form"
+            target="_blank"
+          >
+            <button class="primary-button compact" type="submit">Enviar Verification Report ao Piloto</button>
+          </form>
+        </div>
       }
     } else {
       <h3>Encerrar missão pelo Cockpit</h3>
@@ -151,6 +259,12 @@ extends "layout"
         O Final Delivery Report já foi capturado. Falta formalizar o encerramento
         operacional da missão e liberar o foco ativo do workspace.
       </p>
+
+      <div class="mission-next-step-actions">
+        <form method="post" action="/missions/{ mission.id }/finalize" class="inline-form">
+          <button class="primary-button compact" type="submit">Encerrar missão pelo Cockpit</button>
+        </form>
+      </div>
     }
   </article>
 </section>
