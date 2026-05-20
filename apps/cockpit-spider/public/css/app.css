@@ -2330,6 +2330,9 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
 .active-mission-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 @media (min-width: 900px) {

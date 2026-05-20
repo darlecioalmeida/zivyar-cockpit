@@ -332,7 +332,11 @@ extends "layout"
             <span>Próxima ação</span>
 
             if (active_mission.pilot_operational_brief_status != "captured") {
-              <strong>Capturar briefing do Piloto</strong>
+              if (active_mission.pilot_dispatch_status == "sent") {
+                <strong>Capturar briefing do Piloto</strong>
+              } else {
+                <strong>Enviar missão ao Piloto</strong>
+              }
             } else if (active_mission.planner_operational_plan_status != "captured") {
               if (active_mission.planner_dispatch_status == "sent") {
                 <strong>Capturar plano do Planner</strong>
@@ -395,18 +399,116 @@ extends "layout"
         <div class="active-mission-actions">
           <a class="ghost-mini" href="/missions/{ active_mission.id }">Abrir missão</a>
 
-          <form
-            method="post"
-            action="/workspaces/{ active_mission.workspace_id }/missions/{ active_mission.id }/dispatch/pilot"
-            class="inline-form"
-            target="_blank"
-          >
+          if (active_mission.pilot_operational_brief_status != "captured") {
             if (active_mission.pilot_dispatch_status == "sent") {
-              <button class="primary-button compact" type="submit">Reenviar ao Piloto</button>
+              <form method="post" action="/missions/{ active_mission.id }/capture/pilot-brief" class="inline-form">
+                <button class="primary-button compact" type="submit">Capturar briefing do Piloto</button>
+              </form>
             } else {
-              <button class="primary-button compact" type="submit">Enviar ao Piloto</button>
+              <form
+                method="post"
+                action="/workspaces/{ active_mission.workspace_id }/missions/{ active_mission.id }/dispatch/pilot"
+                class="inline-form"
+                target="_blank"
+              >
+                <button class="primary-button compact" type="submit">Enviar missão ao Piloto</button>
+              </form>
             }
-          </form>
+          } else if (active_mission.planner_operational_plan_status != "captured") {
+            if (active_mission.planner_dispatch_status == "sent") {
+              <form method="post" action="/missions/{ active_mission.id }/capture/planner-plan" class="inline-form">
+                <button class="primary-button compact" type="submit">Capturar plano do Planner</button>
+              </form>
+            } else {
+              <form
+                method="post"
+                action="/workspaces/{ active_mission.workspace_id }/missions/{ active_mission.id }/dispatch/planner"
+                class="inline-form"
+                target="_blank"
+              >
+                <button class="primary-button compact" type="submit">Enviar briefing ao Planner</button>
+              </form>
+            }
+          } else if (active_mission.scout_report_status != "captured") {
+            if (active_mission.scout_dispatch_status == "sent") {
+              <form method="post" action="/missions/{ active_mission.id }/capture/scout-report" class="inline-form">
+                <button class="primary-button compact" type="submit">Capturar Scout Report</button>
+              </form>
+            } else {
+              <form
+                method="post"
+                action="/workspaces/{ active_mission.workspace_id }/missions/{ active_mission.id }/dispatch/scout"
+                class="inline-form"
+                target="_blank"
+              >
+                <button class="primary-button compact" type="submit">Enviar plano ao Scout</button>
+              </form>
+            }
+          } else if (active_mission.builder_implementation_report_status != "captured") {
+            if (active_mission.builder_dispatch_status == "sent") {
+              <form method="post" action="/missions/{ active_mission.id }/capture/builder-report" class="inline-form">
+                <button class="primary-button compact" type="submit">Capturar Implementation Report</button>
+              </form>
+            } else {
+              <form
+                method="post"
+                action="/workspaces/{ active_mission.workspace_id }/missions/{ active_mission.id }/dispatch/builder"
+                class="inline-form"
+                target="_blank"
+              >
+                <button class="primary-button compact" type="submit">Enviar pacote ao Builder</button>
+              </form>
+            }
+          } else if (active_mission.reviewer_review_report_status != "captured") {
+            if (active_mission.reviewer_dispatch_status == "sent") {
+              <form method="post" action="/missions/{ active_mission.id }/capture/reviewer-report" class="inline-form">
+                <button class="primary-button compact" type="submit">Capturar Review Report</button>
+              </form>
+            } else {
+              <form
+                method="post"
+                action="/workspaces/{ active_mission.workspace_id }/missions/{ active_mission.id }/dispatch/reviewer"
+                class="inline-form"
+                target="_blank"
+              >
+                <button class="primary-button compact" type="submit">Enviar report ao Reviewer</button>
+              </form>
+            }
+          } else if (active_mission.executor_verification_report_status != "captured") {
+            if (active_mission.executor_dispatch_status == "sent") {
+              <form method="post" action="/missions/{ active_mission.id }/capture/executor-report" class="inline-form">
+                <button class="primary-button compact" type="submit">Capturar Verification Report</button>
+              </form>
+            } else {
+              <form
+                method="post"
+                action="/workspaces/{ active_mission.workspace_id }/missions/{ active_mission.id }/dispatch/executor"
+                class="inline-form"
+                target="_blank"
+              >
+                <button class="primary-button compact" type="submit">Enviar pacote ao Executor</button>
+              </form>
+            }
+          } else if (active_mission.pilot_delivery_report_status != "captured") {
+            if (active_mission.pilot_delivery_dispatch_status == "sent") {
+              <form method="post" action="/missions/{ active_mission.id }/capture/pilot-delivery-report" class="inline-form">
+                <button class="primary-button compact" type="submit">Capturar Final Delivery Report</button>
+              </form>
+            } else {
+              <form
+                method="post"
+                action="/workspaces/{ active_mission.workspace_id }/missions/{ active_mission.id }/dispatch/pilot-delivery"
+                class="inline-form"
+                target="_blank"
+              >
+                <button class="primary-button compact" type="submit">Enviar Verification Report ao Piloto</button>
+              </form>
+            }
+          } else {
+            <form method="post" action="/missions/{ active_mission.id }/finalize" class="inline-form">
+              <button class="primary-button compact" type="submit">Encerrar missão pelo Cockpit</button>
+            </form>
+          }
         </div>
       </article>
     }
