@@ -39,6 +39,7 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces/:id/panes/:pane_id/session/recreate", workspacePaneRecreateSession)
         .post("/workspaces/:id/missions/:mission_id/activate", workspaceMissionActivate)
         .post("/workspaces/:id/missions/:mission_id/dispatch/pilot", workspaceMissionDispatchToPilot)
+        .post("/workspaces/:id/missions/:mission_id/dispatch/planner", workspaceMissionDispatchPilotBriefToPlanner)
         .post("/missions/:id/capture/pilot-brief", missionCapturePilotOperationalBrief)
         .get("/workspaces/:id", workspaceShow)
         .get("/missions", missions)
@@ -375,6 +376,9 @@ const MissionRow = struct {
     pilot_operational_brief: []const u8,
     pilot_operational_brief_status: []const u8,
     pilot_operational_brief_captured_at_label: []const u8,
+    planner_dispatch_status: []const u8,
+    planner_session_external_id: []const u8,
+    dispatched_to_planner_at_label: []const u8,
 };
 
 
@@ -408,7 +412,7 @@ const ActiveMissionPanelRow = struct {
 };
 
 
-const WorkspacePilotPaneDispatchRow = struct {
+const WorkspaceMissionPaneDispatchRow = struct {
     id: i32,
     role_name: []const u8,
     pane_state: []const u8,
@@ -1281,7 +1285,13 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_operational_brief_captured_at_label
+        \\    ) AS pilot_operational_brief_captured_at_label,
+        \\    m.planner_dispatch_status,
+        \\    m.planner_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_planner_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -3318,7 +3328,13 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_operational_brief_captured_at_label
+        \\    ) AS pilot_operational_brief_captured_at_label,
+        \\    m.planner_dispatch_status,
+        \\    m.planner_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_planner_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -3339,7 +3355,7 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
     const mission = active_mission_rows[0];
 
     const pilot_rows = try db.query(
-        WorkspacePilotPaneDispatchRow,
+        WorkspaceMissionPaneDispatchRow,
         c.arena,
         \\SELECT
         \\    id,
@@ -3614,6 +3630,350 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
     );
 
     return c.redirect(pilot_session_url);
+}
+
+
+fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response {
+    const workspace_id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const mission_id_raw = c.params.get("mission_id") orelse
+        return c.text("Missão não informada.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, workspace_id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const mission_id = std.fmt.parseInt(i32, mission_id_raw, 10) catch
+        return c.text("Missão inválida.", .{ .status = .bad_request });
+
+    const active_mission_rows = try db.query(
+        MissionRow,
+        c.arena,
+        \\SELECT
+        \\    m.id,
+        \\    m.workspace_id,
+        \\    w.name AS workspace_name,
+        \\    m.squad_id,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
+        \\    m.title,
+        \\    m.objective,
+        \\    m.status,
+        \\    m.priority,
+        \\    m.pilot_operational_brief,
+        \\    m.pilot_operational_brief_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS pilot_operational_brief_captured_at_label,
+        \\    m.planner_dispatch_status,
+        \\    m.planner_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_planner_at_label
+        \\FROM workspaces w
+        \\INNER JOIN missions m ON m.id = w.active_mission_id
+        \\LEFT JOIN squads s ON s.id = m.squad_id
+        \\WHERE w.id = $1
+        \\AND m.id = $2
+        \\LIMIT 1
+        ,
+        .{ workspace_id, mission_id },
+    );
+
+    if (active_mission_rows.len == 0) {
+        return c.text(
+            "Esta missão não é a missão ativa deste workspace.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const mission = active_mission_rows[0];
+
+    if (
+        mission.pilot_operational_brief.len == 0 or
+        !std.mem.eql(u8, mission.pilot_operational_brief_status, "captured")
+    ) {
+        return c.text(
+            "Capture o Briefing Operacional do Piloto antes de enviá-lo ao Planner.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const planner_rows = try db.query(
+        WorkspaceMissionPaneDispatchRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    role_name,
+        \\    pane_state,
+        \\    session_external_id,
+        \\    context_state
+        \\FROM workspace_panes
+        \\WHERE workspace_id = $1
+        \\AND role_name = 'Planner'
+        \\LIMIT 1
+        ,
+        .{ workspace_id },
+    );
+
+    if (planner_rows.len == 0) {
+        return c.text(
+            "O pane Planner ainda não foi materializado neste workspace.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const planner = planner_rows[0];
+
+    if (!std.mem.eql(u8, planner.pane_state, "active")) {
+        return c.text(
+            "O pane Planner precisa estar ativo para receber o briefing.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    if (!std.mem.eql(u8, planner.context_state, "current")) {
+        return c.text(
+            "O contexto do pane Planner está desatualizado. Recrie a sessão antes de enviar o briefing.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    if (planner.session_external_id.len == 0) {
+        return c.text(
+            "O pane Planner não possui sessão OpenCode vinculada.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const runtime_rows = try loadWorkspaceRuntime(c, workspace_id);
+
+    if (runtime_rows.len == 0) {
+        return c.text(
+            "O runtime deste workspace ainda não foi preparado.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    try reconcileWorkspaceRuntimeState(c, runtime_rows[0]);
+
+    const refreshed_runtime_rows = try loadWorkspaceRuntime(c, workspace_id);
+
+    if (refreshed_runtime_rows.len == 0) {
+        return c.text(
+            "Runtime não encontrado após reconciliação.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const runtime = refreshed_runtime_rows[0];
+
+    if (!std.mem.eql(u8, runtime.state, "running")) {
+        return c.text(
+            "O runtime precisa estar em execução para enviar o briefing ao Planner.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const planner_prompt = try std.fmt.allocPrint(
+        c.arena,
+        "Zivyar Cockpit — Briefing do Piloto enviado ao Planner\n\n" ++
+            "Workspace: {s}\n" ++
+            "Squad: {s}\n\n" ++
+            "Missão ativa:\n{s}\n\n" ++
+            "Objetivo da missão:\n{s}\n\n" ++
+            "Status atual: {s}\n" ++
+            "Prioridade: {s}\n\n" ++
+            "Briefing Operacional do Piloto:\n{s}\n\n" ++
+            "Diretriz operacional:\n" ++
+            "Transforme este briefing em um Plano Operacional da missão. " ++
+            "Produza: 1) leitura consolidada do problema, 2) plano de execução em fases, " ++
+            "3) tarefas recomendadas, 4) dependências e riscos, 5) indicação clara do que deve seguir para Scout e/ou Builder. " ++
+            "Não implemente código neste retorno.",
+        .{
+            mission.workspace_name,
+            mission.squad_name,
+            mission.title,
+            mission.objective,
+            mission.status,
+            mission.priority,
+            mission.pilot_operational_brief,
+        },
+    );
+
+    const prompt_parts = [_]OpenCodeTextPart{
+        .{
+            .type = "text",
+            .text = planner_prompt,
+        },
+    };
+
+    const prompt_body = try std.json.Stringify.valueAlloc(
+        c.arena,
+        OpenCodePromptAsyncRequest{
+            .parts = prompt_parts[0..],
+        },
+        .{},
+    );
+
+    const prompt_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/session/{s}/prompt_async",
+        .{ runtime.server_url_label, planner.session_external_id },
+    );
+
+    const dispatch_result = runRuntimeCommand(c, &.{
+        "curl",
+        "-fsS",
+        "-X",
+        "POST",
+        prompt_url,
+        "-H",
+        "Content-Type: application/json",
+        "-d",
+        prompt_body,
+    });
+
+    try insertRuntimeCommandLog(
+        c,
+        workspace_id,
+        "opencode-dispatch-pilot-brief-to-planner",
+        "POST <opencode-server>/session/<session-id>/prompt_async",
+        dispatch_result,
+    );
+
+    if (!dispatch_result.ok) {
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE missions
+            \\SET planner_dispatch_status = 'error'
+            \\WHERE id = $1
+            ,
+            .{ mission_id },
+        );
+
+        try insertRuntimeEvent(
+            c,
+            workspace_id,
+            "planner-dispatch-error",
+            "Falha ao enviar briefing ao Planner",
+            "O OpenCode Server não confirmou o envio assíncrono do briefing ao pane Planner.",
+        );
+
+        try db.query(
+            void,
+            c.arena,
+            \\INSERT INTO mission_events (
+            \\    mission_id,
+            \\    workspace_id,
+            \\    event_type,
+            \\    title,
+            \\    message
+            \\)
+            \\VALUES (
+            \\    $1,
+            \\    $2,
+            \\    'pilot-brief-dispatch-to-planner-error',
+            \\    'Falha ao enviar briefing ao Planner',
+            \\    'O despacho assíncrono do briefing ao pane Planner não foi confirmado pelo OpenCode Server.'
+            \\)
+            ,
+            .{ mission_id, workspace_id },
+        );
+
+        return c.text(
+            "Falha ao enviar o briefing do Piloto ao Planner.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const dispatch_messages_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/session/{s}/message",
+        .{ runtime.server_url_label, planner.session_external_id },
+    );
+
+    var planner_dispatch_user_message_id: []const u8 = "";
+    var dispatch_trace_attempt: usize = 0;
+
+    while (dispatch_trace_attempt < 6 and planner_dispatch_user_message_id.len == 0) : (dispatch_trace_attempt += 1) {
+        const dispatch_messages_result = runRuntimeCommand(c, &.{
+            "curl",
+            "-fsS",
+            dispatch_messages_url,
+        });
+
+        if (dispatch_messages_result.ok) {
+            if (try extractLatestUserMessageIdMatchingText(
+                c.arena,
+                dispatch_messages_result.stdout,
+                planner_prompt,
+            )) |message_id| {
+                planner_dispatch_user_message_id = message_id;
+                break;
+            }
+        }
+
+        std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE missions
+        \\SET planner_dispatch_status = 'sent',
+        \\    planner_session_external_id = $1,
+        \\    planner_dispatch_user_message_id = $2,
+        \\    dispatched_to_planner_at = NOW()
+        \\WHERE id = $3
+        ,
+        .{ planner.session_external_id, planner_dispatch_user_message_id, mission_id },
+    );
+
+    const event_message = try std.fmt.allocPrint(
+        c.arena,
+        "O Briefing Operacional do Piloto da missão \"{s}\" foi enviado ao pane Planner na sessão {s}.",
+        .{ mission.title, planner.session_external_id },
+    );
+
+    try insertRuntimeEvent(
+        c,
+        workspace_id,
+        "pilot-brief-dispatched-to-planner",
+        "Briefing enviado ao Planner",
+        event_message,
+    );
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO mission_events (
+        \\    mission_id,
+        \\    workspace_id,
+        \\    event_type,
+        \\    title,
+        \\    message
+        \\)
+        \\VALUES (
+        \\    $1,
+        \\    $2,
+        \\    'pilot-brief-dispatched-to-planner',
+        \\    'Briefing enviado ao Planner',
+        \\    $3
+        \\)
+        ,
+        .{ mission_id, workspace_id, event_message },
+    );
+
+    const planner_session_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/Lw/session/{s}",
+        .{ runtime.server_url_label, planner.session_external_id },
+    );
+
+    return c.redirect(planner_session_url);
 }
 
 fn workspaceShow(c: *spider.Ctx) !spider.Response {
@@ -4014,7 +4374,13 @@ fn missions(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_operational_brief_captured_at_label
+        \\    ) AS pilot_operational_brief_captured_at_label,
+        \\    m.planner_dispatch_status,
+        \\    m.planner_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_planner_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -4184,7 +4550,13 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_operational_brief_captured_at_label
+        \\    ) AS pilot_operational_brief_captured_at_label,
+        \\    m.planner_dispatch_status,
+        \\    m.planner_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_planner_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -4201,7 +4573,7 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
     const mission = mission_rows[0];
 
     const pilot_rows = try db.query(
-        WorkspacePilotPaneDispatchRow,
+        WorkspaceMissionPaneDispatchRow,
         c.arena,
         \\SELECT
         \\    id,
@@ -4369,7 +4741,13 @@ fn missionShow(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_operational_brief_captured_at_label
+        \\    ) AS pilot_operational_brief_captured_at_label,
+        \\    m.planner_dispatch_status,
+        \\    m.planner_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_planner_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -4432,7 +4810,13 @@ fn missionEdit(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_operational_brief_captured_at_label
+        \\    ) AS pilot_operational_brief_captured_at_label,
+        \\    m.planner_dispatch_status,
+        \\    m.planner_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_planner_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -4480,7 +4864,13 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_operational_brief_captured_at_label
+        \\    ) AS pilot_operational_brief_captured_at_label,
+        \\    m.planner_dispatch_status,
+        \\    m.planner_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_planner_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id

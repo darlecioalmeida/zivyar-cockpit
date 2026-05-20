@@ -2379,3 +2379,36 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   line-height: 1.5;
 }
 
+
+.mission-brief-actions-expanded {
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mission-planner-dispatch-status {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(7, 13, 24, 0.68);
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.mission-planner-dispatch-status span,
+.mission-planner-dispatch-status strong,
+.mission-planner-dispatch-status small {
+  display: block;
+}
+
+.mission-planner-dispatch-status span,
+.mission-planner-dispatch-status small {
+  color: var(--muted);
+}
+
+.mission-planner-dispatch-status strong {
+  color: var(--cyan);
+  text-transform: uppercase;
+  font-size: 13px;
+}
+

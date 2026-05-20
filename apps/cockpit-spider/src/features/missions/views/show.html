@@ -77,10 +77,27 @@ extends "layout"
     </div>
   }
 
-  <div class="mission-brief-actions">
+  <div class="mission-brief-actions mission-brief-actions-expanded">
     <form method="post" action="/missions/{ mission.id }/capture/pilot-brief" class="inline-form">
       <button class="primary-button compact" type="submit">Capturar briefing do Piloto</button>
     </form>
+
+    if (mission.pilot_operational_brief and mission.pilot_operational_brief_status == "captured") {
+      <form
+        method="post"
+        action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/dispatch/planner"
+        class="inline-form"
+        target="_blank"
+      >
+        <button class="primary-button compact" type="submit">Enviar briefing ao Planner</button>
+      </form>
+    }
+  </div>
+
+  <div class="mission-planner-dispatch-status">
+    <span>Dispatch ao Planner</span>
+    <strong>{ mission.planner_dispatch_status }</strong>
+    <small>{ mission.dispatched_to_planner_at_label }</small>
   </div>
 </section>
 
