@@ -29,7 +29,7 @@ if (notice) {
   </article>
   <article class="metric-card">
     <span>Runtimes em execução</span>
-    <strong>{ runtime_count }</strong>
+    <strong id="workspace-runtime-running-count">{ runtime_count }</strong>
     <small>Containers ativos no Runtime Manager</small>
   </article>
   <article class="metric-card">
@@ -42,7 +42,7 @@ if (notice) {
 if (workspace_count > 0) {
 <section class="grid workspace-cards">
   for (workspaces) |workspace| {
-    <article class="panel workspace-card">
+    <article class="panel workspace-card workspace-live-card" data-workspace-id="{ workspace.id }">
       <div class="workspace-card-head">
         <div class="workspace-avatar">W</div>
         <div>
@@ -73,28 +73,28 @@ if (workspace_count > 0) {
       <section class="workspace-runtime-summary">
         <div class="workspace-runtime-head">
           <span>Runtime</span>
-          <strong class="workspace-runtime-badge">{ workspace.runtime_state }</strong>
+          <strong class="workspace-runtime-badge workspace-live-runtime-state">{ workspace.runtime_state }</strong>
         </div>
 
         <div class="workspace-runtime-meta">
           <div>
             <span>Container</span>
-            <strong>{ workspace.runtime_container_name }</strong>
+            <strong class="workspace-live-runtime-container">{ workspace.runtime_container_name }</strong>
           </div>
 
           <div>
             <span>Porta</span>
-            <strong>{ workspace.runtime_port_label }</strong>
+            <strong class="workspace-live-runtime-port">{ workspace.runtime_port_label }</strong>
           </div>
 
           <div>
             <span>Servidor</span>
-            <strong>{ workspace.runtime_server_url_label }</strong>
+            <strong class="workspace-live-runtime-server">{ workspace.runtime_server_url_label }</strong>
           </div>
         </div>
       </section>
 
-      <div class="workspace-card-actions workspace-card-actions-expanded">
+      <div class="workspace-card-actions workspace-card-actions-expanded workspace-live-runtime-actions">
         <a class="ghost-mini" href="/workspaces/{ workspace.id }">Abrir cockpit</a>
         <a class="ghost-mini" href="/workspaces/{ workspace.id }/edit">Editar</a>
 
@@ -204,4 +204,4 @@ if (workspace_count > 0) {
 </div>
 
 <script src="/js/runtime-actions.js?v=20260519-1"></script>
-
+<script src="/js/runtime-workspaces-live.js?v=20260519-1"></script>
