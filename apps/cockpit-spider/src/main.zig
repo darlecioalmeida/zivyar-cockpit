@@ -310,6 +310,34 @@ const WorkspacePaneControlRow = struct {
     session_external_id: []const u8,
 };
 
+const WorkspacePaneBootstrapRow = struct {
+    pane_id: i32,
+    workspace_id: i32,
+    role_name: []const u8,
+    workspace_name: []const u8,
+    local_path: []const u8,
+    agent_name: []const u8,
+    agent_handle: []const u8,
+    agent_role: []const u8,
+    agent_summary: []const u8,
+    system_prompt: []const u8,
+    operating_rules: []const u8,
+    stack_name: []const u8,
+    runtime_tool: []const u8,
+    model_name: []const u8,
+};
+
+const OpenCodeTextPart = struct {
+    type: []const u8,
+    text: []const u8,
+};
+
+const OpenCodeBootstrapMessageRequest = struct {
+    noReply: bool,
+    parts: []const OpenCodeTextPart,
+};
+
+
 
 const MissionRow = struct {
     id: i32,
@@ -2185,6 +2213,146 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
         const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
         return c.redirect(redirect_url);
     };
+
+    const bootstrap_rows = try db.query(
+        WorkspacePaneBootstrapRow,
+        c.arena,
+        \\SELECT
+        \\    wp.id AS pane_id,
+        \\    wp.workspace_id,
+        \\    wp.role_name,
+        \\    w.name AS workspace_name,
+        \\    w.local_path,
+        \\    a.name AS agent_name,
+        \\    a.handle AS agent_handle,
+        \\    a.agent_role,
+        \\    a.summary AS agent_summary,
+        \\    a.system_prompt,
+        \\    a.operating_rules,
+        \\    s.name AS stack_name,
+        \\    s.runtime_tool,
+        \\    pm.model_name
+        \\FROM workspace_panes wp
+        \\INNER JOIN workspaces w ON w.id = wp.workspace_id
+        \\INNER JOIN agents a ON a.id = wp.agent_id
+        \\INNER JOIN stacks s ON s.id = a.default_stack_id
+        \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
+        \\WHERE wp.id = $1
+        \\AND wp.workspace_id = $2
+        \\LIMIT 1
+        ,
+        .{ pane_id, workspace_id },
+    );
+
+    if (bootstrap_rows.len > 0) {
+        const bootstrap = bootstrap_rows[0];
+
+        const bootstrap_prompt = try std.fmt.allocPrint(
+            c.arena,
+            "Zivyar Cockpit — Contexto inicial do pane\n\n" ++
+                "Workspace: {s}\n" ++
+                "Caminho local: {s}\n" ++
+                "Papel do pane: {s}\n\n" ++
+                "Agente: {s}\n" ++
+                "Handle: {s}\n" ++
+                "Função: {s}\n\n" ++
+                "Stack: {s}\n" ++
+                "Runtime Tool: {s}\n" ++
+                "Modelo associado: {s}\n\n" ++
+                "Resumo do agente:\n{s}\n\n" ++
+                "System prompt cadastrado no Zivyar:\n{s}\n\n" ++
+                "Regras operacionais:\n{s}\n\n" ++
+                "Diretriz de bootstrap:\n" ++
+                "Considere este contexto como a configuração inicial deste pane dentro do Zivyar Cockpit. " ++
+                "Aguarde a primeira missão ou instrução direta do usuário antes de executar ações.",
+            .{
+                bootstrap.workspace_name,
+                bootstrap.local_path,
+                bootstrap.role_name,
+                bootstrap.agent_name,
+                bootstrap.agent_handle,
+                bootstrap.agent_role,
+                bootstrap.stack_name,
+                bootstrap.runtime_tool,
+                bootstrap.model_name,
+                bootstrap.agent_summary,
+                bootstrap.system_prompt,
+                bootstrap.operating_rules,
+            },
+        );
+
+        const bootstrap_parts = [_]OpenCodeTextPart{
+            .{
+                .type = "text",
+                .text = bootstrap_prompt,
+            },
+        };
+
+        const bootstrap_body = try std.json.Stringify.valueAlloc(
+            c.arena,
+            OpenCodeBootstrapMessageRequest{
+                .noReply = true,
+                .parts = bootstrap_parts[0..],
+            },
+            .{},
+        );
+
+        const bootstrap_url = try std.fmt.allocPrint(
+            c.arena,
+            "{s}/session/{s}/message",
+            .{ runtime.server_url_label, session_id },
+        );
+
+        const bootstrap_result = runRuntimeCommand(c, &.{
+            "curl",
+            "-fsS",
+            "-X",
+            "POST",
+            bootstrap_url,
+            "-H",
+            "Content-Type: application/json",
+            "-d",
+            bootstrap_body,
+        });
+
+        try insertRuntimeCommandLog(
+            c,
+            workspace_id,
+            "opencode-bootstrap-session",
+            "POST <opencode-server>/session/<session-id>/message",
+            bootstrap_result,
+        );
+
+        if (bootstrap_result.ok) {
+            const bootstrap_event_message = try std.fmt.allocPrint(
+                c.arena,
+                "O contexto inicial do agente {s} foi injetado na sessão {s}.",
+                .{ bootstrap.agent_name, session_id },
+            );
+
+            try insertRuntimeEvent(
+                c,
+                workspace_id,
+                "pane-session-bootstrapped",
+                "Contexto inicial do pane injetado",
+                bootstrap_event_message,
+            );
+        } else {
+            const bootstrap_warning_message = try std.fmt.allocPrint(
+                c.arena,
+                "A sessão {s} foi criada, mas o contexto inicial do pane {s} não pôde ser injetado automaticamente.",
+                .{ session_id, bootstrap.role_name },
+            );
+
+            try insertRuntimeEvent(
+                c,
+                workspace_id,
+                "pane-session-bootstrap-warning",
+                "Sessão criada sem contexto inicial",
+                bootstrap_warning_message,
+            );
+        }
+    }
 
     try db.query(
         void,
