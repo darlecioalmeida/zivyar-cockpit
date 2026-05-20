@@ -305,6 +305,23 @@ extends "layout"
           </div>
         </div>
 
+        <div class="active-mission-dispatch-panel" data-dispatch-status="{ active_mission.pilot_dispatch_status }">
+          <div>
+            <span>Status do envio ao Piloto</span>
+            <strong>{ active_mission.pilot_dispatch_status }</strong>
+          </div>
+
+          <div>
+            <span>Último despacho</span>
+            <strong>{ active_mission.dispatched_to_pilot_at_label }</strong>
+          </div>
+
+          <div>
+            <span>Sessão do Piloto</span>
+            <strong>{ active_mission.pilot_session_external_id }</strong>
+          </div>
+        </div>
+
         <div class="active-mission-actions">
           <a class="ghost-mini" href="/missions/{ active_mission.id }">Abrir missão</a>
 
@@ -314,7 +331,11 @@ extends "layout"
             class="inline-form"
             target="_blank"
           >
-            <button class="primary-button compact" type="submit">Enviar ao Piloto</button>
+            if (active_mission.pilot_dispatch_status == "sent") {
+              <button class="primary-button compact" type="submit">Reenviar ao Piloto</button>
+            } else {
+              <button class="primary-button compact" type="submit">Enviar ao Piloto</button>
+            }
           </form>
         </div>
       </article>

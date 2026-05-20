@@ -375,6 +375,22 @@ const WorkspaceMissionPreviewRow = struct {
 };
 
 
+const ActiveMissionPanelRow = struct {
+    id: i32,
+    workspace_id: i32,
+    workspace_name: []const u8,
+    squad_id: i32,
+    squad_name: []const u8,
+    title: []const u8,
+    objective: []const u8,
+    status: []const u8,
+    priority: []const u8,
+    pilot_dispatch_status: []const u8,
+    pilot_session_external_id: []const u8,
+    dispatched_to_pilot_at_label: []const u8,
+};
+
+
 const WorkspacePilotPaneDispatchRow = struct {
     id: i32,
     role_name: []const u8,
@@ -2786,6 +2802,16 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
     );
 
     if (!dispatch_result.ok) {
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE missions
+            \\SET pilot_dispatch_status = 'error'
+            \\WHERE id = $1
+            ,
+            .{ mission_id },
+        );
+
         try insertRuntimeEvent(
             c,
             workspace_id,
@@ -2799,6 +2825,18 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
             .{ .status = .bad_request },
         );
     }
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE missions
+        \\SET pilot_dispatch_status = 'sent',
+        \\    pilot_session_external_id = $1,
+        \\    dispatched_to_pilot_at = NOW()
+        \\WHERE id = $2
+        ,
+        .{ pilot.session_external_id, mission_id },
+    );
 
     const event_message = try std.fmt.allocPrint(
         c.arena,
@@ -2947,7 +2985,7 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
     );
 
     const active_missions = try db.query(
-        MissionRow,
+        ActiveMissionPanelRow,
         c.arena,
         \\SELECT
         \\    m.id,
@@ -2958,7 +2996,13 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\    m.title,
         \\    m.objective,
         \\    m.status,
-        \\    m.priority
+        \\    m.priority,
+        \\    m.pilot_dispatch_status,
+        \\    m.pilot_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_pilot_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_pilot_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id

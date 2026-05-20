@@ -2101,3 +2101,51 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   }
 }
 
+
+.active-mission-dispatch-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: rgba(7, 13, 24, 0.68);
+  padding: 14px;
+}
+
+.active-mission-dispatch-panel > div {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(10, 15, 22, 0.62);
+  padding: 12px;
+}
+
+.active-mission-dispatch-panel span,
+.active-mission-dispatch-panel strong {
+  display: block;
+}
+
+.active-mission-dispatch-panel span {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.active-mission-dispatch-panel strong {
+  word-break: break-all;
+}
+
+.active-mission-dispatch-panel[data-dispatch-status="sent"] {
+  border-color: rgba(61, 226, 151, 0.42);
+  background: rgba(61, 226, 151, 0.08);
+}
+
+.active-mission-dispatch-panel[data-dispatch-status="error"] {
+  border-color: rgba(255, 123, 138, 0.42);
+  background: rgba(255, 123, 138, 0.08);
+}
+
+@media (min-width: 900px) {
+  .active-mission-dispatch-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
