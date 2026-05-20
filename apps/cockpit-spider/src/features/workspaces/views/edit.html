@@ -24,6 +24,52 @@ extends "layout"
       </div>
     }
 
+    if (path_change_confirmation_required) {
+      <section class="workspace-path-critical-confirmation">
+        <span class="eyebrow">Operação Crítica</span>
+        <h4>Confirmar alteração do caminho local</h4>
+
+        <p>
+          Você está prestes a trocar a pasta montada neste workspace. Esta operação afeta diretamente o runtime Docker e as sessões abertas.
+        </p>
+
+        <div class="workspace-path-change-grid">
+          <div>
+            <span>Caminho atual</span>
+            <strong>{ workspace.local_path }</strong>
+          </div>
+
+          <div>
+            <span>Novo caminho</span>
+            <strong>{ pending_local_path }</strong>
+          </div>
+        </div>
+
+        <ul class="workspace-path-impact-list">
+          <li>O container atual será removido para evitar montagem incorreta.</li>
+          <li>O runtime precisará ser iniciado novamente.</li>
+          <li>Sessões de panes vinculadas ao runtime anterior serão marcadas como obsoletas.</li>
+        </ul>
+
+        <form method="post" action="/workspaces/{ workspace.id }/local-path/confirm" class="workspace-path-confirm-form">
+          <input type="hidden" name="name" value="{ pending_name }" />
+          <input type="hidden" name="local_path" value="{ pending_local_path }" />
+          <input type="hidden" name="stack_name" value="{ pending_stack_name }" />
+          <input type="hidden" name="default_squad_id" value="{ pending_default_squad_id }" />
+
+          <label class="critical-confirm-check">
+            <input type="checkbox" name="confirm_local_path_change" value="yes" required />
+            <span>Entendo que o runtime/container será invalidado e confirmo a troca do caminho local.</span>
+          </label>
+
+          <div class="form-actions">
+            <button type="submit" class="danger-button">Confirmar alteração crítica</button>
+            <a href="/workspaces/{ workspace.id }/edit" class="ghost-link">Cancelar</a>
+          </div>
+        </form>
+      </section>
+    }
+
     <form class="cockpit-form" method="post" action="/workspaces/{ workspace.id }/update">
       <label>
         <span>Nome do workspace</span>
@@ -36,6 +82,9 @@ extends "layout"
           <input id="workspace-local-path" type="text" name="local_path" value="{ workspace.local_path }" required />
           <button id="select-workspace-folder" type="button" class="ghost-mini">Selecionar</button>
         </div>
+        <small class="workspace-path-warning-hint">
+          Alterar este caminho muda a pasta montada no runtime. O Cockpit exigirá confirmação explícita antes de aplicar a troca.
+        </small>
       </label>
 
       <label>

@@ -27,6 +27,7 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces", workspaceCreate)
         .get("/workspaces/:id/edit", workspaceEdit)
         .post("/workspaces/:id/update", workspaceUpdate)
+        .post("/workspaces/:id/local-path/confirm", workspaceConfirmLocalPathChange)
         .post("/workspaces/:id/delete", workspaceDelete)
         .post("/workspaces/:id/runtime/prepare", workspaceRuntimePrepare)
         .post("/workspaces/:id/runtime/start", workspaceRuntimeStart)
@@ -114,6 +115,15 @@ const WorkspaceForm = struct {
     local_path: []const u8,
     stack_name: []const u8,
     default_squad_id: []const u8,
+};
+
+
+const WorkspaceLocalPathConfirmForm = struct {
+    name: []const u8,
+    local_path: []const u8,
+    stack_name: []const u8,
+    default_squad_id: []const u8,
+    confirm_local_path_change: []const u8,
 };
 
 const WorkspaceIdRow = struct {
@@ -1478,6 +1488,11 @@ fn workspaceEdit(c: *spider.Ctx) !spider.Response {
         .squads = squads_rows,
         .squad_count = squads_rows.len,
         .error_message = "",
+        .path_change_confirmation_required = false,
+        .pending_name = "",
+        .pending_local_path = "",
+        .pending_stack_name = "",
+        .pending_default_squad_id = "",
     }, .{});
 }
 
@@ -1534,6 +1549,11 @@ fn workspaceUpdate(c: *spider.Ctx) !spider.Response {
             .squads = squads_rows,
             .squad_count = squads_rows.len,
             .error_message = "Outro workspace já utiliza este caminho local.",
+            .path_change_confirmation_required = false,
+            .pending_name = "",
+            .pending_local_path = "",
+            .pending_stack_name = "",
+            .pending_default_squad_id = "",
         }, .{ .status = .bad_request });
     }
 
@@ -1544,6 +1564,11 @@ fn workspaceUpdate(c: *spider.Ctx) !spider.Response {
             .squads = squads_rows,
             .squad_count = squads_rows.len,
             .error_message = "Selecione uma squad padrão válida.",
+            .path_change_confirmation_required = false,
+            .pending_name = "",
+            .pending_local_path = "",
+            .pending_stack_name = "",
+            .pending_default_squad_id = "",
         }, .{ .status = .bad_request });
     }
 
@@ -1566,6 +1591,32 @@ fn workspaceUpdate(c: *spider.Ctx) !spider.Response {
             .squads = squads_rows,
             .squad_count = squads_rows.len,
             .error_message = "A squad selecionada não está disponível.",
+            .path_change_confirmation_required = false,
+            .pending_name = "",
+            .pending_local_path = "",
+            .pending_stack_name = "",
+            .pending_default_squad_id = "",
+        }, .{ .status = .bad_request });
+    }
+
+    const local_path_changed = !std.mem.eql(
+        u8,
+        form.local_path,
+        current_rows[0].local_path,
+    );
+
+    if (local_path_changed) {
+        return c.view("workspaces/edit", .{
+            .title = "Editar Workspace",
+            .workspace = current_rows[0],
+            .squads = squads_rows,
+            .squad_count = squads_rows.len,
+            .error_message = "",
+            .path_change_confirmation_required = true,
+            .pending_name = form.name,
+            .pending_local_path = form.local_path,
+            .pending_stack_name = form.stack_name,
+            .pending_default_squad_id = form.default_squad_id,
         }, .{ .status = .bad_request });
     }
 
@@ -1576,6 +1627,11 @@ fn workspaceUpdate(c: *spider.Ctx) !spider.Response {
             .squads = squads_rows,
             .squad_count = squads_rows.len,
             .error_message = "Não foi possível criar ou acessar o novo caminho local informado para o workspace.",
+            .path_change_confirmation_required = false,
+            .pending_name = "",
+            .pending_local_path = "",
+            .pending_stack_name = "",
+            .pending_default_squad_id = "",
         }, .{ .status = .bad_request });
     }
 
@@ -2196,6 +2252,267 @@ fn workspaceRuntimePrepare(c: *spider.Ctx) !spider.Response {
         "prepared",
         "Runtime preparado",
         "O workspace foi registrado no Runtime Manager e está pronto para iniciar o OpenCode Server.",
+    );
+
+    const redirect_url = try std.fmt.allocPrint(
+        c.arena,
+        "/workspaces/{d}",
+        .{ workspace_id },
+    );
+
+    return c.redirect(redirect_url);
+}
+
+
+fn workspaceConfirmLocalPathChange(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const form = try c.parseForm(WorkspaceLocalPathConfirmForm);
+    const squads_rows = try loadWorkspaceSquads(c);
+    const default_squad_id = std.fmt.parseInt(i32, form.default_squad_id, 10) catch 0;
+
+    if (!std.mem.eql(u8, form.confirm_local_path_change, "yes")) {
+        return c.text(
+            "Confirmação explícita obrigatória para alterar o caminho local do workspace.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const current_rows = try db.query(
+        WorkspaceRow,
+        c.arena,
+        \\SELECT
+        \\    w.id,
+        \\    w.name,
+        \\    w.local_path,
+        \\    w.stack_name,
+        \\    w.default_squad_id,
+        \\    COALESCE(s.name, 'Sem squad vinculada') AS squad_name,
+        \\    w.status
+        \\FROM workspaces w
+        \\LEFT JOIN squads s ON s.id = w.default_squad_id
+        \\WHERE w.id = $1
+        \\LIMIT 1
+        ,
+        .{ workspace_id },
+    );
+
+    if (current_rows.len == 0) {
+        return c.text("Workspace não encontrado.", .{ .status = .not_found });
+    }
+
+    const current_workspace = current_rows[0];
+
+    const duplicated = try db.query(
+        WorkspaceIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM workspaces
+        \\WHERE local_path = $1
+        \\AND id <> $2
+        \\LIMIT 1
+        ,
+        .{ form.local_path, workspace_id },
+    );
+
+    if (duplicated.len > 0) {
+        return c.view("workspaces/edit", .{
+            .title = "Editar Workspace",
+            .workspace = current_workspace,
+            .squads = squads_rows,
+            .squad_count = squads_rows.len,
+            .error_message = "Outro workspace já utiliza este caminho local.",
+            .path_change_confirmation_required = true,
+            .pending_name = form.name,
+            .pending_local_path = form.local_path,
+            .pending_stack_name = form.stack_name,
+            .pending_default_squad_id = form.default_squad_id,
+        }, .{ .status = .bad_request });
+    }
+
+    if (default_squad_id <= 0) {
+        return c.view("workspaces/edit", .{
+            .title = "Editar Workspace",
+            .workspace = current_workspace,
+            .squads = squads_rows,
+            .squad_count = squads_rows.len,
+            .error_message = "Selecione uma squad padrão válida.",
+            .path_change_confirmation_required = true,
+            .pending_name = form.name,
+            .pending_local_path = form.local_path,
+            .pending_stack_name = form.stack_name,
+            .pending_default_squad_id = form.default_squad_id,
+        }, .{ .status = .bad_request });
+    }
+
+    const selected_squad_rows = try db.query(
+        WorkspaceSquadOptionRow,
+        c.arena,
+        \\SELECT id, name, slug
+        \\FROM squads
+        \\WHERE id = $1
+        \\AND is_active = TRUE
+        \\LIMIT 1
+        ,
+        .{ default_squad_id },
+    );
+
+    if (selected_squad_rows.len == 0) {
+        return c.view("workspaces/edit", .{
+            .title = "Editar Workspace",
+            .workspace = current_workspace,
+            .squads = squads_rows,
+            .squad_count = squads_rows.len,
+            .error_message = "A squad selecionada não está disponível.",
+            .path_change_confirmation_required = true,
+            .pending_name = form.name,
+            .pending_local_path = form.local_path,
+            .pending_stack_name = form.stack_name,
+            .pending_default_squad_id = form.default_squad_id,
+        }, .{ .status = .bad_request });
+    }
+
+    if (!ensureWorkspaceLocalPath(c, form.local_path)) {
+        return c.view("workspaces/edit", .{
+            .title = "Editar Workspace",
+            .workspace = current_workspace,
+            .squads = squads_rows,
+            .squad_count = squads_rows.len,
+            .error_message = "Não foi possível criar ou acessar o caminho local confirmado para o workspace.",
+            .path_change_confirmation_required = true,
+            .pending_name = form.name,
+            .pending_local_path = form.local_path,
+            .pending_stack_name = form.stack_name,
+            .pending_default_squad_id = form.default_squad_id,
+        }, .{ .status = .bad_request });
+    }
+
+    const runtime_rows = try db.query(
+        WorkspaceRuntimeControlRow,
+        c.arena,
+        \\SELECT
+        \\    w.id AS workspace_id,
+        \\    w.local_path,
+        \\    r.container_name,
+        \\    r.state
+        \\FROM workspaces w
+        \\INNER JOIN workspace_runtimes r ON r.workspace_id = w.id
+        \\WHERE w.id = $1
+        \\LIMIT 1
+        ,
+        .{ workspace_id },
+    );
+
+    if (runtime_rows.len > 0) {
+        const runtime = runtime_rows[0];
+
+        const container_exists = commandSucceeded(c, &.{
+            "docker",
+            "container",
+            "inspect",
+            runtime.container_name,
+        });
+
+        if (container_exists) {
+            const remove_result = runRuntimeCommand(c, &.{
+                "docker",
+                "rm",
+                "-f",
+                runtime.container_name,
+            });
+
+            try insertRuntimeCommandLog(
+                c,
+                workspace_id,
+                "remove-container-after-local-path-change",
+                "docker rm -f <workspace-container>",
+                remove_result,
+            );
+
+            if (!remove_result.ok) {
+                return c.view("workspaces/edit", .{
+                    .title = "Editar Workspace",
+                    .workspace = current_workspace,
+                    .squads = squads_rows,
+                    .squad_count = squads_rows.len,
+                    .error_message = "Não foi possível remover com segurança o container atual. A alteração do caminho foi cancelada.",
+                    .path_change_confirmation_required = true,
+                    .pending_name = form.name,
+                    .pending_local_path = form.local_path,
+                    .pending_stack_name = form.stack_name,
+                    .pending_default_squad_id = form.default_squad_id,
+                }, .{ .status = .bad_request });
+            }
+        }
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE workspaces
+        \\SET name = $1,
+        \\    local_path = $2,
+        \\    stack_name = $3,
+        \\    default_squad = $4,
+        \\    default_squad_id = $5
+        \\WHERE id = $6
+        ,
+        .{
+            form.name,
+            form.local_path,
+            form.stack_name,
+            selected_squad_rows[0].name,
+            default_squad_id,
+            workspace_id,
+        },
+    );
+
+    if (runtime_rows.len > 0) {
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE workspace_runtimes
+            \\SET state = 'stopped',
+            \\    opencode_port = 0,
+            \\    server_url = '',
+            \\    status_message = 'Caminho local alterado. O runtime precisa ser iniciado novamente para montar a nova pasta.',
+            \\    updated_at = NOW()
+            \\WHERE workspace_id = $1
+            ,
+            .{ workspace_id },
+        );
+
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE workspace_panes
+            \\SET pane_state = CASE
+            \\        WHEN session_external_id <> '' THEN 'stale'
+            \\        ELSE pane_state
+            \\    END,
+            \\    updated_at = NOW()
+            \\WHERE workspace_id = $1
+            ,
+            .{ workspace_id },
+        );
+    }
+
+    const path_change_message = try std.fmt.allocPrint(
+        c.arena,
+        "O caminho local do workspace foi alterado de {s} para {s}. O runtime anterior foi invalidado para evitar montagem incorreta.",
+        .{ current_workspace.local_path, form.local_path },
+    );
+
+    try insertRuntimeEvent(
+        c,
+        workspace_id,
+        "workspace-local-path-changed",
+        "Caminho local alterado",
+        path_change_message,
     );
 
     const redirect_url = try std.fmt.allocPrint(
