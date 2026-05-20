@@ -6887,7 +6887,7 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .panes = panes,
         .pane_count = panes.len,
         .missions = workspace_missions,
-        .mission_count = countOpenWorkspaceMissions(workspace_missions),
+        .mission_count = workspace_missions.len,
         .open_mission_count = countOpenWorkspaceMissions(workspace_missions),
         .active_missions = active_missions,
         .active_mission_count = active_missions.len,
