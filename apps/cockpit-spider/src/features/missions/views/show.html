@@ -335,10 +335,62 @@ extends "layout"
     </div>
   }
 
-  <div class="mission-brief-actions">
+  <div class="mission-brief-actions mission-brief-actions-expanded">
     if (mission.executor_dispatch_status == "sent") {
       <form method="post" action="/missions/{ mission.id }/capture/executor-report" class="inline-form">
         <button class="primary-button compact" type="submit">Capturar Verification Report</button>
+      </form>
+    }
+
+    if (mission.executor_verification_report and mission.executor_verification_report_status == "captured") {
+      <form
+        method="post"
+        action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/dispatch/pilot-delivery"
+        class="inline-form"
+        target="_blank"
+      >
+        <button class="primary-button compact" type="submit">Enviar Verification Report ao Piloto</button>
+      </form>
+    }
+  </div>
+
+  <div class="mission-pilot-delivery-dispatch-status">
+    <span>Dispatch final ao Piloto</span>
+    <strong>{ mission.pilot_delivery_dispatch_status }</strong>
+    <small>{ mission.dispatched_to_pilot_delivery_at_label }</small>
+  </div>
+</section>
+
+<section class="panel mission-brief-panel mission-pilot-delivery-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Final Delivery</span>
+      <h3>Final Delivery Report do Piloto</h3>
+    </div>
+
+    <span class="mini-badge">{ mission.pilot_delivery_report_status }</span>
+  </div>
+
+  if (mission.pilot_delivery_report) {
+    <article class="mission-brief-card">
+      <div class="mission-brief-meta">
+        <span>Capturado em</span>
+        <strong>{ mission.pilot_delivery_report_captured_at_label }</strong>
+      </div>
+
+      <pre>{ mission.pilot_delivery_report }</pre>
+    </article>
+  } else {
+    <div class="empty-inline-state">
+      <strong>Nenhum Final Delivery Report capturado.</strong>
+      <p>Após o Piloto consolidar a verificação final, capture a entrega oficial da missão.</p>
+    </div>
+  }
+
+  <div class="mission-brief-actions">
+    if (mission.pilot_delivery_dispatch_status == "sent") {
+      <form method="post" action="/missions/{ mission.id }/capture/pilot-delivery-report" class="inline-form">
+        <button class="primary-button compact" type="submit">Capturar Final Delivery Report</button>
       </form>
     }
   </div>
