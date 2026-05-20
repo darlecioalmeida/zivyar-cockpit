@@ -5212,7 +5212,8 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
         \\    dispatched_to_builder_at = NOW(),
         \\    builder_implementation_report = '',
         \\    builder_implementation_report_status = 'pending_capture',
-        \\    builder_implementation_report_captured_at = NULL
+        \\    builder_implementation_report_captured_at = NULL,
+        \\    status = 'active'
         \\WHERE id = $3
         ,
         .{ builder.session_external_id, builder_dispatch_user_message_id, mission_id },
@@ -5648,7 +5649,8 @@ fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Respo
         \\    dispatched_to_reviewer_at = NOW(),
         \\    reviewer_review_report = '',
         \\    reviewer_review_report_status = 'pending_capture',
-        \\    reviewer_review_report_captured_at = NULL
+        \\    reviewer_review_report_captured_at = NULL,
+        \\    status = 'review'
         \\WHERE id = $3
         ,
         .{ reviewer.session_external_id, reviewer_dispatch_user_message_id, mission_id },
@@ -7737,7 +7739,8 @@ fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
         \\UPDATE missions
         \\SET planner_operational_plan = $1,
         \\    planner_operational_plan_status = 'captured',
-        \\    planner_operational_plan_captured_at = NOW()
+        \\    planner_operational_plan_captured_at = NOW(),
+        \\    status = 'planned'
         \\WHERE id = $2
         ,
         .{ plan_text, mission_id },
