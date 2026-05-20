@@ -3985,6 +3985,10 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\UPDATE missions
         \\SET pilot_dispatch_status = 'sent',
+        \\    next_step_detected_action = '',
+        \\    next_step_detected_code = '',
+        \\    next_step_detected_route = '',
+        \\    next_step_detected_at = NULL,
         \\    pilot_session_external_id = $1,
         \\    pilot_dispatch_user_message_id = $2,
         \\    dispatched_to_pilot_at = NOW(),

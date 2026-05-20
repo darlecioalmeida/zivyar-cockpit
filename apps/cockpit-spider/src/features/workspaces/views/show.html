@@ -56,7 +56,7 @@ if (notice) {
     </div>
   </article>
 
-  <article class="panel runtime-status-panel" id="workspace-runtime-panel" data-workspace-id="{ workspace.id }">
+  <article class="panel runtime-status-panel" id="workspace-runtime-panel" data-workspace-id="{ pane.workspace_id }">
     <span class="eyebrow">Runtime</span>
     <h3>Docker + OpenCode Server</h3>
 
@@ -793,7 +793,7 @@ if (notice) {
     if (pane_count > 0) {
       <div class="workspace-pane-grid">
         for (panes) |pane| {
-          <article class="workspace-pane-card" data-pane-state="{ pane.pane_state }" data-context-state="{ pane.context_state }" data-pane-id="{ pane.id }" data-workspace-id="{ workspace.id }" data-session-id="{ pane.session_external_id }">
+          <article class="workspace-pane-card" data-pane-state="{ pane.pane_state }" data-context-state="{ pane.context_state }" data-pane-id="{ pane.id }" data-workspace-id="{ pane.workspace_id }" data-session-id="{ pane.session_external_id }">
             <div class="workspace-pane-head">
               <div class="provider-avatar compact">P</div>
               <div>
@@ -841,15 +841,15 @@ if (notice) {
                   }
                   <a class="ghost-mini" href="{ runtime.server_url_label }/Lw/session/{ pane.session_external_id }" target="_blank" rel="noreferrer">Ver sessão antiga</a>
                 } else if (pane.pane_state == "active") {
-                  <form method="post" action="/workspaces/{ workspace.id }/panes/{ pane.id }/session/close" class="inline-form pane-session-close-form">
+                  <form method="post" action="/workspaces/{ pane.workspace_id }/panes/{ pane.id }/session/close" class="inline-form pane-session-close-form">
                     <button class="danger-button" type="submit">Encerrar pane</button>
                   </form>
-                  <form method="post" action="/workspaces/{ workspace.id }/panes/{ pane.id }/session/recreate" class="inline-form pane-session-recreate-current-form">
+                  <form method="post" action="/workspaces/{ pane.workspace_id }/panes/{ pane.id }/session/recreate" class="inline-form pane-session-recreate-current-form">
                     <button class="ghost-mini" type="submit">Recriar sessão</button>
                   </form>
                   <a class="ghost-mini" href="{ runtime.server_url_label }/Lw/session/{ pane.session_external_id }" target="_blank" rel="noreferrer">Abrir sessão</a>
                 } else if (pane.pane_state == "closed") {
-                  <form method="post" action="/workspaces/{ workspace.id }/panes/{ pane.id }/session/resume" class="inline-form pane-session-resume-form">
+                  <form method="post" action="/workspaces/{ pane.workspace_id }/panes/{ pane.id }/session/resume" class="inline-form pane-session-resume-form">
                     <button class="primary-button compact" type="submit">Retomar sessão</button>
                   </form>
                   <a class="ghost-mini" href="{ runtime.server_url_label }/Lw/session/{ pane.session_external_id }" target="_blank" rel="noreferrer">Abrir sessão</a>
