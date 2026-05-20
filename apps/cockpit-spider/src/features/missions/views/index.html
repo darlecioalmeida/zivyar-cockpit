@@ -85,11 +85,16 @@ if (mission_count > 0) {
 
       <div class="workspace-card-actions">
         <a class="ghost-mini" href="/missions/{ mission.id }">Abrir</a>
-        <a class="ghost-mini" href="/missions/{ mission.id }/edit">Editar</a>
 
-        <form method="post" action="/missions/{ mission.id }/delete" class="inline-form" onsubmit="return confirm('Remover esta missão?');">
-          <button class="danger-button" type="submit">Excluir</button>
-        </form>
+        if (mission.mission_operational_closure_status == "closed") {
+          <button class="ghost-mini" type="button" disabled>Encerrada</button>
+        } else {
+          <a class="ghost-mini" href="/missions/{ mission.id }/edit">Editar</a>
+
+          <form method="post" action="/missions/{ mission.id }/delete" class="inline-form" onsubmit="return confirm('Remover esta missão?');">
+            <button class="danger-button" type="submit">Excluir</button>
+          </form>
+        }
       </div>
     </article>
   }

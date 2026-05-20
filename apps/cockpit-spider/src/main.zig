@@ -9673,6 +9673,13 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
         return c.text("Missão não encontrada.", .{ .status = .not_found });
     }
 
+    if (std.mem.eql(u8, current_rows[0].mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem ser editadas.",
+            .{ .status = .bad_request },
+        );
+    }
+
     try db.query(
         void,
         c.arena,
@@ -9701,6 +9708,35 @@ fn missionDelete(c: *spider.Ctx) !spider.Response {
 
     const mission_id = std.fmt.parseInt(i32, id_raw, 10) catch
         return c.text("Missão inválida.", .{ .status = .bad_request });
+
+    const mission_rows = try db.query(
+        MissionClosureFinalizeRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    workspace_id,
+        \\    title,
+        \\    pilot_delivery_report,
+        \\    pilot_delivery_report_status,
+        \\    mission_final_verdict,
+        \\    mission_operational_closure_status
+        \\FROM missions
+        \\WHERE id = $1
+        \\LIMIT 1
+        ,
+        .{ mission_id },
+    );
+
+    if (mission_rows.len == 0) {
+        return c.text("Missão não encontrada.", .{ .status = .not_found });
+    }
+
+    if (std.mem.eql(u8, mission_rows[0].mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem ser excluídas.",
+            .{ .status = .bad_request },
+        );
+    }
 
     try db.query(
         void,

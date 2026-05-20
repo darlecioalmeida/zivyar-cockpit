@@ -7,6 +7,12 @@ extends "layout"
     <p>
       Atualize objetivo, status e prioridade. Workspace e squad permanecem preservados.
     </p>
+
+    if (mission.mission_operational_closure_status == "closed") {
+      <div class="alert danger">
+        Esta missão foi encerrada operacionalmente e está disponível apenas para consulta.
+      </div>
+    }
   </div>
 
   <div class="page-actions">
@@ -36,7 +42,11 @@ extends "layout"
       </div>
     </div>
 
-    <form class="cockpit-form" method="post" action="/missions/{ mission.id }/update">
+    if (mission.mission_operational_closure_status == "closed") {
+      <form class="cockpit-form">
+    } else {
+      <form class="cockpit-form" method="post" action="/missions/{ mission.id }/update">
+    }
       <label>
         <span>Título</span>
         <input type="text" name="title" value="{ mission.title }" required />
@@ -118,8 +128,12 @@ extends "layout"
       </label>
 
       <div class="form-actions">
-        <button type="submit" class="primary-button">Salvar alterações</button>
-        <a href="/missions" class="ghost-link">Cancelar</a>
+        if (mission.mission_operational_closure_status == "closed") {
+          <a href="/missions/{ mission.id }" class="ghost-link">Voltar para a missão</a>
+        } else {
+          <button type="submit" class="primary-button">Salvar alterações</button>
+          <a href="/missions" class="ghost-link">Cancelar</a>
+        }
       </div>
     </form>
   </article>
