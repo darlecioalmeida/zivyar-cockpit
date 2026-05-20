@@ -1889,3 +1889,31 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   background: rgba(255, 123, 138, 0.12);
 }
 
+
+.workspace-pane-card[data-context-state="outdated"] {
+  border-color: rgba(255, 195, 77, 0.44);
+}
+
+.workspace-pane-context-warning {
+  border: 1px solid rgba(255, 195, 77, 0.42);
+  border-radius: 16px;
+  background: rgba(255, 195, 77, 0.12);
+  padding: 12px;
+}
+
+.workspace-pane-context-warning strong,
+.workspace-pane-context-warning p {
+  display: block;
+}
+
+.workspace-pane-context-warning strong {
+  color: var(--amber);
+  margin-bottom: 6px;
+}
+
+.workspace-pane-context-warning p {
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+

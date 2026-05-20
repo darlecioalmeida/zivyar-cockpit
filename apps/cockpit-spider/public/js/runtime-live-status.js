@@ -185,6 +185,30 @@
       return;
     }
 
+    if (pane.context_state === "outdated") {
+      if (runtimeData.is_running) {
+        actionsEl.innerHTML = `
+          <form
+            method="post"
+            action="/workspaces/${workspaceId}/panes/${pane.id}/session/open"
+            class="inline-form pane-session-open-form pane-session-context-refresh-form"
+          >
+            <button class="primary-button compact" type="submit">Recriar com contexto atual</button>
+          </form>
+
+          <a class="ghost-mini" href="${escapeHtml(runtimeData.server_url)}/Lw/session/${escapeHtml(pane.session_external_id)}" target="_blank" rel="noreferrer">
+            Ver sessão antiga
+          </a>
+        `;
+      } else {
+        actionsEl.innerHTML = `
+          <button class="ghost-mini" type="button" disabled>Runtime parado</button>
+        `;
+      }
+
+      return;
+    }
+
     if (pane.pane_state === "active") {
       actionsEl.innerHTML = `
         <form
@@ -253,6 +277,7 @@
       }
 
       card.dataset.paneState = pane.pane_state;
+      card.dataset.contextState = pane.context_state || "";
       card.dataset.sessionId = pane.session_external_id || "";
 
       const statusEl = card.querySelector(".workspace-pane-status-row strong");
@@ -261,6 +286,7 @@
       }
 
       let sessionBox = card.querySelector(".workspace-pane-session");
+      let contextWarning = card.querySelector(".workspace-pane-context-warning");
 
       if (pane.session_external_id) {
         if (!sessionBox) {
@@ -279,6 +305,25 @@
         `;
       } else if (sessionBox) {
         sessionBox.remove();
+      }
+
+      if (pane.context_state === "outdated") {
+        if (!contextWarning) {
+          contextWarning = document.createElement("div");
+          contextWarning.className = "workspace-pane-context-warning";
+
+          const actionsEl = card.querySelector(".workspace-pane-actions");
+          if (actionsEl) {
+            card.insertBefore(contextWarning, actionsEl);
+          }
+        }
+
+        contextWarning.innerHTML = `
+          <strong>Contexto desatualizado</strong>
+          <p>Esta sessão foi criada antes da configuração atual do agente ou perdeu rastreabilidade segura.</p>
+        `;
+      } else if (contextWarning) {
+        contextWarning.remove();
       }
 
       renderPaneAction(card, pane, runtimeData);
@@ -384,8 +429,13 @@
 
     if (openForm) {
       const isRecreate = openForm.classList.contains("pane-session-recreate-form");
+      const isContextRefresh = openForm.classList.contains("pane-session-context-refresh-form");
 
-      if (isRecreate) {
+      if (isContextRefresh) {
+        actionLabel = "Atualizando contexto";
+        messageText = "O Zivyar está criando uma nova sessão com o agente atual vinculado a este pane.";
+        busyText = "Recriando contexto...";
+      } else if (isRecreate) {
         actionLabel = "Recriando sessão";
         messageText = "A sessão anterior ficou indisponível. O Zivyar está criando uma nova sessão real no OpenCode Server.";
         busyText = "Criando nova sessão...";

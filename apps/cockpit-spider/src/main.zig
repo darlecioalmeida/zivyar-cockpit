@@ -294,6 +294,9 @@ const WorkspacePaneRow = struct {
     agent_id: i32,
     pane_state: []const u8,
     session_external_id: []const u8,
+    session_agent_id: ?i32,
+    session_agent_handle: []const u8,
+    context_state: []const u8,
     display_order: i32,
     agent_name: []const u8,
     agent_handle: []const u8,
@@ -306,8 +309,12 @@ const WorkspacePaneControlRow = struct {
     id: i32,
     workspace_id: i32,
     role_name: []const u8,
+    agent_id: i32,
     pane_state: []const u8,
     session_external_id: []const u8,
+    session_agent_id: ?i32,
+    session_agent_handle: []const u8,
+    context_state: []const u8,
 };
 
 const WorkspacePaneBootstrapRow = struct {
@@ -680,8 +687,12 @@ fn reconcileWorkspacePaneSessions(
         \\    id,
         \\    workspace_id,
         \\    role_name,
+        \\    agent_id,
         \\    pane_state,
-        \\    session_external_id
+        \\    session_external_id,
+        \\    session_agent_id,
+        \\    session_agent_handle,
+        \\    context_state
         \\FROM workspace_panes
         \\WHERE workspace_id = $1
         \\AND session_external_id <> ''
@@ -1380,6 +1391,9 @@ fn workspaceRuntimeLiveStatus(c: *spider.Ctx) !spider.Response {
         \\    wp.agent_id,
         \\    wp.pane_state,
         \\    wp.session_external_id,
+        \\    wp.session_agent_id,
+        \\    wp.session_agent_handle,
+        \\    wp.context_state,
         \\    wp.display_order,
         \\    a.name AS agent_name,
         \\    a.handle AS agent_handle,
@@ -1885,7 +1899,7 @@ fn workspacePaneCloseSession(c: *spider.Ctx) !spider.Response {
     const pane_rows = try db.query(
         WorkspacePaneControlRow,
         c.arena,
-        \\SELECT id, workspace_id, role_name, pane_state, session_external_id
+        \\SELECT id, workspace_id, role_name, agent_id, pane_state, session_external_id, session_agent_id, session_agent_handle, context_state
         \\FROM workspace_panes
         \\WHERE id = $1
         \\AND workspace_id = $2
@@ -1951,7 +1965,7 @@ fn workspacePaneResumeSession(c: *spider.Ctx) !spider.Response {
     const pane_rows = try db.query(
         WorkspacePaneControlRow,
         c.arena,
-        \\SELECT id, workspace_id, role_name, pane_state, session_external_id
+        \\SELECT id, workspace_id, role_name, agent_id, pane_state, session_external_id, session_agent_id, session_agent_handle, context_state
         \\FROM workspace_panes
         \\WHERE id = $1
         \\AND workspace_id = $2
@@ -2089,8 +2103,12 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
         \\    id,
         \\    workspace_id,
         \\    role_name,
+        \\    agent_id,
         \\    pane_state,
-        \\    session_external_id
+        \\    session_external_id,
+        \\    session_agent_id,
+        \\    session_agent_handle,
+        \\    context_state
         \\FROM workspace_panes
         \\WHERE id = $1
         \\AND workspace_id = $2
@@ -2105,8 +2123,13 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
 
     const pane = pane_rows[0];
     const is_recreating_stale_session = std.mem.eql(u8, pane.pane_state, "stale");
+    const is_recreating_outdated_context = std.mem.eql(u8, pane.context_state, "outdated");
 
-    if (pane.session_external_id.len > 0 and !is_recreating_stale_session) {
+    if (
+        pane.session_external_id.len > 0 and
+        !is_recreating_stale_session and
+        !is_recreating_outdated_context
+    ) {
         const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
         return c.redirect(redirect_url);
     }
@@ -2354,17 +2377,26 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
         }
     }
 
+    const session_agent_handle =
+        if (bootstrap_rows.len > 0)
+            bootstrap_rows[0].agent_handle
+        else
+            "";
+
     try db.query(
         void,
         c.arena,
         \\UPDATE workspace_panes
         \\SET pane_state = 'active',
         \\    session_external_id = $1,
+        \\    session_agent_id = $2,
+        \\    session_agent_handle = $3,
+        \\    context_state = 'current',
         \\    updated_at = NOW()
-        \\WHERE id = $2
-        \\AND workspace_id = $3
+        \\WHERE id = $4
+        \\AND workspace_id = $5
         ,
-        .{ session_id, pane_id, workspace_id },
+        .{ session_id, pane.agent_id, session_agent_handle, pane_id, workspace_id },
     );
 
     const event_message =
@@ -2372,6 +2404,12 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
             try std.fmt.allocPrint(
                 c.arena,
                 "A sessão antiga do pane {s} estava indisponível. O Zivyar criou a nova sessão {s} no OpenCode Server.",
+                .{ pane.role_name, session_id },
+            )
+        else if (is_recreating_outdated_context)
+            try std.fmt.allocPrint(
+                c.arena,
+                "A sessão do pane {s} foi recriada com o contexto atual do agente vinculado. Nova sessão: {s}.",
                 .{ pane.role_name, session_id },
             )
         else
@@ -2384,8 +2422,18 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
     try insertRuntimeEvent(
         c,
         workspace_id,
-        if (is_recreating_stale_session) "pane-session-recreated" else "pane-session-opened",
-        if (is_recreating_stale_session) "Sessão de pane recriada" else "Sessão de pane criada",
+        if (is_recreating_stale_session)
+            "pane-session-recreated"
+        else if (is_recreating_outdated_context)
+            "pane-session-context-refreshed"
+        else
+            "pane-session-opened",
+        if (is_recreating_stale_session)
+            "Sessão de pane recriada"
+        else if (is_recreating_outdated_context)
+            "Sessão recriada com contexto atual"
+        else
+            "Sessão de pane criada",
         event_message,
     );
 
@@ -2555,6 +2603,12 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
                 \\DO UPDATE SET
                 \\    squad_member_id = EXCLUDED.squad_member_id,
                 \\    agent_id = EXCLUDED.agent_id,
+                \\    context_state = CASE
+                \\        WHEN workspace_panes.session_external_id = '' THEN 'unbound'
+                \\        WHEN workspace_panes.session_agent_id IS NULL THEN 'outdated'
+                \\        WHEN workspace_panes.session_agent_id = EXCLUDED.agent_id THEN 'current'
+                \\        ELSE 'outdated'
+                \\    END,
                 \\    display_order = EXCLUDED.display_order,
                 \\    updated_at = NOW()
                 ,
@@ -2580,6 +2634,9 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\    wp.agent_id,
         \\    wp.pane_state,
         \\    wp.session_external_id,
+        \\    wp.session_agent_id,
+        \\    wp.session_agent_handle,
+        \\    wp.context_state,
         \\    wp.display_order,
         \\    a.name AS agent_name,
         \\    a.handle AS agent_handle,
