@@ -231,10 +231,114 @@ extends "layout"
     </div>
   }
 
-  <div class="mission-brief-actions">
+  <div class="mission-brief-actions mission-brief-actions-expanded">
     if (mission.builder_dispatch_status == "sent") {
       <form method="post" action="/missions/{ mission.id }/capture/builder-report" class="inline-form">
         <button class="primary-button compact" type="submit">Capturar Implementation Report</button>
+      </form>
+    }
+
+    if (mission.builder_implementation_report and mission.builder_implementation_report_status == "captured") {
+      <form
+        method="post"
+        action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/dispatch/reviewer"
+        class="inline-form"
+        target="_blank"
+      >
+        <button class="primary-button compact" type="submit">Enviar report ao Reviewer</button>
+      </form>
+    }
+  </div>
+
+  <div class="mission-reviewer-dispatch-status">
+    <span>Dispatch ao Reviewer</span>
+    <strong>{ mission.reviewer_dispatch_status }</strong>
+    <small>{ mission.dispatched_to_reviewer_at_label }</small>
+  </div>
+</section>
+
+<section class="panel mission-brief-panel mission-reviewer-report-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Quality Gate</span>
+      <h3>Review Report do Reviewer</h3>
+    </div>
+
+    <span class="mini-badge">{ mission.reviewer_review_report_status }</span>
+  </div>
+
+  if (mission.reviewer_review_report) {
+    <article class="mission-brief-card">
+      <div class="mission-brief-meta">
+        <span>Capturado em</span>
+        <strong>{ mission.reviewer_review_report_captured_at_label }</strong>
+      </div>
+
+      <pre>{ mission.reviewer_review_report }</pre>
+    </article>
+  } else {
+    <div class="empty-inline-state">
+      <strong>Nenhum Review Report capturado.</strong>
+      <p>Após o Reviewer responder ao Implementation Report, capture a revisão para persistir o gate técnico da missão.</p>
+    </div>
+  }
+
+  <div class="mission-brief-actions mission-brief-actions-expanded">
+    if (mission.reviewer_dispatch_status == "sent") {
+      <form method="post" action="/missions/{ mission.id }/capture/reviewer-report" class="inline-form">
+        <button class="primary-button compact" type="submit">Capturar Review Report</button>
+      </form>
+    }
+
+    if (mission.reviewer_review_report and mission.reviewer_review_report_status == "captured") {
+      <form
+        method="post"
+        action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/dispatch/executor"
+        class="inline-form"
+        target="_blank"
+      >
+        <button class="primary-button compact" type="submit">Enviar pacote ao Executor</button>
+      </form>
+    }
+  </div>
+
+  <div class="mission-executor-dispatch-status">
+    <span>Dispatch ao Executor</span>
+    <strong>{ mission.executor_dispatch_status }</strong>
+    <small>{ mission.dispatched_to_executor_at_label }</small>
+  </div>
+</section>
+
+<section class="panel mission-brief-panel mission-executor-report-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Verification Gate</span>
+      <h3>Verification Report do Executor</h3>
+    </div>
+
+    <span class="mini-badge">{ mission.executor_verification_report_status }</span>
+  </div>
+
+  if (mission.executor_verification_report) {
+    <article class="mission-brief-card">
+      <div class="mission-brief-meta">
+        <span>Capturado em</span>
+        <strong>{ mission.executor_verification_report_captured_at_label }</strong>
+      </div>
+
+      <pre>{ mission.executor_verification_report }</pre>
+    </article>
+  } else {
+    <div class="empty-inline-state">
+      <strong>Nenhum Verification Report capturado.</strong>
+      <p>Após o Executor responder ao pacote de verificação, capture o relatório para registrar a validação final da etapa técnica.</p>
+    </div>
+  }
+
+  <div class="mission-brief-actions">
+    if (mission.executor_dispatch_status == "sent") {
+      <form method="post" action="/missions/{ mission.id }/capture/executor-report" class="inline-form">
+        <button class="primary-button compact" type="submit">Capturar Verification Report</button>
       </form>
     }
   </div>

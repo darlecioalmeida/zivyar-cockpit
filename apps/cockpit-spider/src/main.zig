@@ -42,10 +42,14 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces/:id/missions/:mission_id/dispatch/planner", workspaceMissionDispatchPilotBriefToPlanner)
         .post("/workspaces/:id/missions/:mission_id/dispatch/scout", workspaceMissionDispatchPlannerPlanToScout)
         .post("/workspaces/:id/missions/:mission_id/dispatch/builder", workspaceMissionDispatchScoutReportToBuilder)
+        .post("/workspaces/:id/missions/:mission_id/dispatch/reviewer", workspaceMissionDispatchBuilderReportToReviewer)
+        .post("/workspaces/:id/missions/:mission_id/dispatch/executor", workspaceMissionDispatchReviewerReportToExecutor)
         .post("/missions/:id/capture/pilot-brief", missionCapturePilotOperationalBrief)
         .post("/missions/:id/capture/planner-plan", missionCapturePlannerOperationalPlan)
         .post("/missions/:id/capture/scout-report", missionCaptureScoutReport)
         .post("/missions/:id/capture/builder-report", missionCaptureBuilderImplementationReport)
+        .post("/missions/:id/capture/reviewer-report", missionCaptureReviewerReviewReport)
+        .post("/missions/:id/capture/executor-report", missionCaptureExecutorVerificationReport)
         .get("/workspaces/:id", workspaceShow)
         .get("/missions", missions)
         .get("/missions/new", missionNew)
@@ -399,6 +403,18 @@ const MissionRow = struct {
     builder_implementation_report: []const u8,
     builder_implementation_report_status: []const u8,
     builder_implementation_report_captured_at_label: []const u8,
+    reviewer_dispatch_status: []const u8,
+    reviewer_session_external_id: []const u8,
+    dispatched_to_reviewer_at_label: []const u8,
+    reviewer_review_report: []const u8,
+    reviewer_review_report_status: []const u8,
+    reviewer_review_report_captured_at_label: []const u8,
+    executor_dispatch_status: []const u8,
+    executor_session_external_id: []const u8,
+    dispatched_to_executor_at_label: []const u8,
+    executor_verification_report: []const u8,
+    executor_verification_report_status: []const u8,
+    executor_verification_report_captured_at_label: []const u8,
 };
 
 
@@ -472,6 +488,10 @@ const MissionPlannerDispatchTraceRow = struct {
     planner_dispatch_user_message_id: []const u8,
 };
 
+const MissionReviewerDispatchTraceRow = struct {
+    reviewer_dispatch_user_message_id: []const u8,
+};
+
 const MissionScoutDispatchTraceRow = struct {
     scout_dispatch_user_message_id: []const u8,
 };
@@ -480,6 +500,10 @@ const MissionBuilderDispatchTraceRow = struct {
     builder_dispatch_user_message_id: []const u8,
 };
 
+
+const MissionExecutorDispatchTraceRow = struct {
+    executor_dispatch_user_message_id: []const u8,
+};
 
 const MissionEventRow = struct {
     id: i32,
@@ -1353,7 +1377,31 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS builder_implementation_report_captured_at_label
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -3426,7 +3474,31 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS builder_implementation_report_captured_at_label
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -3792,7 +3864,31 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
         \\    COALESCE(
         \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS builder_implementation_report_captured_at_label
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -4169,7 +4265,31 @@ fn workspaceMissionDispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS builder_implementation_report_captured_at_label
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -4552,7 +4672,31 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
         \\    COALESCE(
         \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS builder_implementation_report_captured_at_label
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -4865,6 +5009,831 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
     );
 
     return c.redirect(builder_session_url);
+}
+
+
+fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Response {
+    const workspace_id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const mission_id_raw = c.params.get("mission_id") orelse
+        return c.text("Missão não informada.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, workspace_id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const mission_id = std.fmt.parseInt(i32, mission_id_raw, 10) catch
+        return c.text("Missão inválida.", .{ .status = .bad_request });
+
+    const active_mission_rows = try db.query(
+        MissionRow,
+        c.arena,
+        \\SELECT
+        \\    m.id,
+        \\    m.workspace_id,
+        \\    w.name AS workspace_name,
+        \\    m.squad_id,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
+        \\    m.title,
+        \\    m.objective,
+        \\    m.status,
+        \\    m.priority,
+        \\    m.pilot_operational_brief,
+        \\    m.pilot_operational_brief_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS pilot_operational_brief_captured_at_label,
+        \\    m.planner_dispatch_status,
+        \\    m.planner_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_planner_at_label,
+        \\    m.planner_operational_plan,
+        \\    m.planner_operational_plan_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.planner_operational_plan_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS planner_operational_plan_captured_at_label,
+        \\    m.scout_dispatch_status,
+        \\    m.scout_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_scout_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_scout_at_label,
+        \\    m.scout_report,
+        \\    m.scout_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.scout_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS scout_report_captured_at_label,
+        \\    m.builder_dispatch_status,
+        \\    m.builder_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_builder_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_builder_at_label,
+        \\    m.builder_implementation_report,
+        \\    m.builder_implementation_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
+        \\FROM workspaces w
+        \\INNER JOIN missions m ON m.id = w.active_mission_id
+        \\LEFT JOIN squads s ON s.id = m.squad_id
+        \\WHERE w.id = $1
+        \\AND m.id = $2
+        \\LIMIT 1
+        ,
+        .{ workspace_id, mission_id },
+    );
+
+    if (active_mission_rows.len == 0) {
+        return c.text(
+            "Esta missão não é a missão ativa deste workspace.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const mission = active_mission_rows[0];
+
+    if (
+        mission.builder_implementation_report.len == 0 or
+        !std.mem.eql(u8, mission.builder_implementation_report_status, "captured")
+    ) {
+        return c.text(
+            "Capture o Implementation Report do Builder antes de enviá-lo ao Reviewer.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const reviewer_rows = try db.query(
+        WorkspaceMissionPaneDispatchRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    role_name,
+        \\    pane_state,
+        \\    session_external_id,
+        \\    context_state
+        \\FROM workspace_panes
+        \\WHERE workspace_id = $1
+        \\AND role_name = 'Reviewer'
+        \\LIMIT 1
+        ,
+        .{ workspace_id },
+    );
+
+    if (reviewer_rows.len == 0) {
+        return c.text(
+            "O pane Reviewer ainda não foi materializado neste workspace.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const reviewer = reviewer_rows[0];
+
+    if (!std.mem.eql(u8, reviewer.pane_state, "active")) {
+        return c.text(
+            "O pane Reviewer precisa estar ativo para receber o relatório de implementação.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    if (!std.mem.eql(u8, reviewer.context_state, "current")) {
+        return c.text(
+            "O contexto do pane Reviewer está desatualizado. Recrie a sessão antes de enviar o relatório.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    if (reviewer.session_external_id.len == 0) {
+        return c.text(
+            "O pane Reviewer não possui sessão OpenCode vinculada.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const runtime_rows = try loadWorkspaceRuntime(c, workspace_id);
+
+    if (runtime_rows.len == 0) {
+        return c.text(
+            "O runtime deste workspace ainda não foi preparado.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    try reconcileWorkspaceRuntimeState(c, runtime_rows[0]);
+
+    const refreshed_runtime_rows = try loadWorkspaceRuntime(c, workspace_id);
+
+    if (refreshed_runtime_rows.len == 0) {
+        return c.text(
+            "Runtime não encontrado após reconciliação.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const runtime = refreshed_runtime_rows[0];
+
+    if (!std.mem.eql(u8, runtime.state, "running")) {
+        return c.text(
+            "O runtime precisa estar em execução para enviar o relatório ao Reviewer.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const reviewer_prompt = try std.fmt.allocPrint(
+        c.arena,
+        "Zivyar Cockpit — Implementation Report enviado ao Reviewer\n\n" ++
+            "Workspace: {s}\n" ++
+            "Squad: {s}\n\n" ++
+            "Missão ativa:\n{s}\n\n" ++
+            "Objetivo da missão:\n{s}\n\n" ++
+            "Status atual: {s}\n" ++
+            "Prioridade: {s}\n\n" ++
+            "Briefing Operacional do Piloto:\n{s}\n\n" ++
+            "Plano Operacional do Planner:\n{s}\n\n" ++
+            "Scout Report:\n{s}\n\n" ++
+            "Implementation Report do Builder:\n{s}\n\n" ++
+            "Diretriz operacional:\n" ++
+            "Revise tecnicamente a execução descrita pelo Builder. " ++
+            "Produza um Review Report contendo: " ++
+            "1) avaliação de aderência ao plano, " ++
+            "2) riscos de arquitetura, regressão ou qualidade, " ++
+            "3) inconsistências, omissões ou pontos frágeis, " ++
+            "4) recomendações objetivas de correção ou validação, " ++
+            "5) veredito final: approved, needs_adjustments ou blocked. " ++
+            "Não implemente código neste retorno.",
+        .{
+            mission.workspace_name,
+            mission.squad_name,
+            mission.title,
+            mission.objective,
+            mission.status,
+            mission.priority,
+            mission.pilot_operational_brief,
+            mission.planner_operational_plan,
+            mission.scout_report,
+            mission.builder_implementation_report,
+        },
+    );
+
+    const prompt_parts = [_]OpenCodeTextPart{
+        .{
+            .type = "text",
+            .text = reviewer_prompt,
+        },
+    };
+
+    const prompt_body = try std.json.Stringify.valueAlloc(
+        c.arena,
+        OpenCodePromptAsyncRequest{
+            .parts = prompt_parts[0..],
+        },
+        .{},
+    );
+
+    const prompt_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/session/{s}/prompt_async",
+        .{ runtime.server_url_label, reviewer.session_external_id },
+    );
+
+    const dispatch_result = runRuntimeCommand(c, &.{
+        "curl",
+        "-fsS",
+        "-X",
+        "POST",
+        prompt_url,
+        "-H",
+        "Content-Type: application/json",
+        "-d",
+        prompt_body,
+    });
+
+    try insertRuntimeCommandLog(
+        c,
+        workspace_id,
+        "opencode-dispatch-builder-report-to-reviewer",
+        "POST <opencode-server>/session/<session-id>/prompt_async",
+        dispatch_result,
+    );
+
+    if (!dispatch_result.ok) {
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE missions
+            \\SET reviewer_dispatch_status = 'error'
+            \\WHERE id = $1
+            ,
+            .{ mission_id },
+        );
+
+        try insertRuntimeEvent(
+            c,
+            workspace_id,
+            "reviewer-dispatch-error",
+            "Falha ao enviar relatório ao Reviewer",
+            "O OpenCode Server não confirmou o envio assíncrono do Implementation Report ao pane Reviewer.",
+        );
+
+        try db.query(
+            void,
+            c.arena,
+            \\INSERT INTO mission_events (
+            \\    mission_id,
+            \\    workspace_id,
+            \\    event_type,
+            \\    title,
+            \\    message
+            \\)
+            \\VALUES (
+            \\    $1,
+            \\    $2,
+            \\    'builder-report-dispatch-to-reviewer-error',
+            \\    'Falha ao enviar relatório ao Reviewer',
+            \\    'O despacho assíncrono do Implementation Report ao pane Reviewer não foi confirmado pelo OpenCode Server.'
+            \\)
+            ,
+            .{ mission_id, workspace_id },
+        );
+
+        return c.text(
+            "Falha ao enviar o Implementation Report do Builder ao Reviewer.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const dispatch_messages_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/session/{s}/message",
+        .{ runtime.server_url_label, reviewer.session_external_id },
+    );
+
+    var reviewer_dispatch_user_message_id: []const u8 = "";
+    var dispatch_trace_attempt: usize = 0;
+
+    while (dispatch_trace_attempt < 6 and reviewer_dispatch_user_message_id.len == 0) : (dispatch_trace_attempt += 1) {
+        const dispatch_messages_result = runRuntimeCommand(c, &.{
+            "curl",
+            "-fsS",
+            dispatch_messages_url,
+        });
+
+        if (dispatch_messages_result.ok) {
+            if (try extractLatestUserMessageIdMatchingText(
+                c.arena,
+                dispatch_messages_result.stdout,
+                reviewer_prompt,
+            )) |message_id| {
+                reviewer_dispatch_user_message_id = message_id;
+                break;
+            }
+        }
+
+        std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE missions
+        \\SET reviewer_dispatch_status = 'sent',
+        \\    reviewer_session_external_id = $1,
+        \\    reviewer_dispatch_user_message_id = $2,
+        \\    dispatched_to_reviewer_at = NOW(),
+        \\    reviewer_review_report = '',
+        \\    reviewer_review_report_status = 'pending_capture',
+        \\    reviewer_review_report_captured_at = NULL
+        \\WHERE id = $3
+        ,
+        .{ reviewer.session_external_id, reviewer_dispatch_user_message_id, mission_id },
+    );
+
+    const event_message = try std.fmt.allocPrint(
+        c.arena,
+        "O Implementation Report do Builder da missão \"{s}\" foi enviado ao pane Reviewer na sessão {s}.",
+        .{ mission.title, reviewer.session_external_id },
+    );
+
+    try insertRuntimeEvent(
+        c,
+        workspace_id,
+        "builder-report-dispatched-to-reviewer",
+        "Implementation Report enviado ao Reviewer",
+        event_message,
+    );
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO mission_events (
+        \\    mission_id,
+        \\    workspace_id,
+        \\    event_type,
+        \\    title,
+        \\    message
+        \\)
+        \\VALUES (
+        \\    $1,
+        \\    $2,
+        \\    'builder-report-dispatched-to-reviewer',
+        \\    'Implementation Report enviado ao Reviewer',
+        \\    $3
+        \\)
+        ,
+        .{ mission_id, workspace_id, event_message },
+    );
+
+    const reviewer_session_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/Lw/session/{s}",
+        .{ runtime.server_url_label, reviewer.session_external_id },
+    );
+
+    return c.redirect(reviewer_session_url);
+}
+
+
+fn workspaceMissionDispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Response {
+    const workspace_id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const mission_id_raw = c.params.get("mission_id") orelse
+        return c.text("Missão não informada.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, workspace_id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const mission_id = std.fmt.parseInt(i32, mission_id_raw, 10) catch
+        return c.text("Missão inválida.", .{ .status = .bad_request });
+
+    const active_mission_rows = try db.query(
+        MissionRow,
+        c.arena,
+        \\SELECT
+        \\    m.id,
+        \\    m.workspace_id,
+        \\    w.name AS workspace_name,
+        \\    m.squad_id,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
+        \\    m.title,
+        \\    m.objective,
+        \\    m.status,
+        \\    m.priority,
+        \\    m.pilot_operational_brief,
+        \\    m.pilot_operational_brief_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS pilot_operational_brief_captured_at_label,
+        \\    m.planner_dispatch_status,
+        \\    m.planner_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_planner_at_label,
+        \\    m.planner_operational_plan,
+        \\    m.planner_operational_plan_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.planner_operational_plan_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS planner_operational_plan_captured_at_label,
+        \\    m.scout_dispatch_status,
+        \\    m.scout_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_scout_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_scout_at_label,
+        \\    m.scout_report,
+        \\    m.scout_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.scout_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS scout_report_captured_at_label,
+        \\    m.builder_dispatch_status,
+        \\    m.builder_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_builder_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_builder_at_label,
+        \\    m.builder_implementation_report,
+        \\    m.builder_implementation_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
+        \\FROM workspaces w
+        \\INNER JOIN missions m ON m.id = w.active_mission_id
+        \\LEFT JOIN squads s ON s.id = m.squad_id
+        \\WHERE w.id = $1
+        \\AND m.id = $2
+        \\LIMIT 1
+        ,
+        .{ workspace_id, mission_id },
+    );
+
+    if (active_mission_rows.len == 0) {
+        return c.text(
+            "Esta missão não é a missão ativa deste workspace.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const mission = active_mission_rows[0];
+
+    if (
+        mission.reviewer_review_report.len == 0 or
+        !std.mem.eql(u8, mission.reviewer_review_report_status, "captured")
+    ) {
+        return c.text(
+            "Capture o Review Report do Reviewer antes de enviá-lo ao Executor.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const executor_rows = try db.query(
+        WorkspaceMissionPaneDispatchRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    role_name,
+        \\    pane_state,
+        \\    session_external_id,
+        \\    context_state
+        \\FROM workspace_panes
+        \\WHERE workspace_id = $1
+        \\AND role_name = 'Executor'
+        \\LIMIT 1
+        ,
+        .{ workspace_id },
+    );
+
+    if (executor_rows.len == 0) {
+        return c.text(
+            "O pane Executor ainda não foi materializado neste workspace.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const executor = executor_rows[0];
+
+    if (!std.mem.eql(u8, executor.pane_state, "active")) {
+        return c.text(
+            "O pane Executor precisa estar ativo para receber o pacote de verificação.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    if (!std.mem.eql(u8, executor.context_state, "current")) {
+        return c.text(
+            "O contexto do pane Executor está desatualizado. Recrie a sessão antes de enviar o pacote.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    if (executor.session_external_id.len == 0) {
+        return c.text(
+            "O pane Executor não possui sessão OpenCode vinculada.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const runtime_rows = try loadWorkspaceRuntime(c, workspace_id);
+
+    if (runtime_rows.len == 0) {
+        return c.text(
+            "O runtime deste workspace ainda não foi preparado.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    try reconcileWorkspaceRuntimeState(c, runtime_rows[0]);
+
+    const refreshed_runtime_rows = try loadWorkspaceRuntime(c, workspace_id);
+
+    if (refreshed_runtime_rows.len == 0) {
+        return c.text(
+            "Runtime não encontrado após reconciliação.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const runtime = refreshed_runtime_rows[0];
+
+    if (!std.mem.eql(u8, runtime.state, "running")) {
+        return c.text(
+            "O runtime precisa estar em execução para enviar o pacote ao Executor.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const executor_prompt = try std.fmt.allocPrint(
+        c.arena,
+        "Zivyar Cockpit — Pacote de verificação enviado ao Executor\n\n" ++
+            "Workspace: {s}\n" ++
+            "Squad: {s}\n\n" ++
+            "Missão ativa:\n{s}\n\n" ++
+            "Objetivo da missão:\n{s}\n\n" ++
+            "Status atual: {s}\n" ++
+            "Prioridade: {s}\n\n" ++
+            "Briefing Operacional do Piloto:\n{s}\n\n" ++
+            "Plano Operacional do Planner:\n{s}\n\n" ++
+            "Scout Report:\n{s}\n\n" ++
+            "Implementation Report do Builder:\n{s}\n\n" ++
+            "Review Report do Reviewer:\n{s}\n\n" ++
+            "Diretriz operacional:\n" ++
+            "Execute a verificação técnica possível no workspace atual. " ++
+            "Rode comandos, builds, checks ou testes quando existirem e forem apropriados. " ++
+            "Produza um Verification Report contendo: " ++
+            "1) comandos executados, " ++
+            "2) resultados observados, " ++
+            "3) validações concluídas, " ++
+            "4) bloqueios, riscos ou ausências de material para testar, " ++
+            "5) veredito final: verified, failed ou blocked. " ++
+            "Não implemente código neste retorno.",
+        .{
+            mission.workspace_name,
+            mission.squad_name,
+            mission.title,
+            mission.objective,
+            mission.status,
+            mission.priority,
+            mission.pilot_operational_brief,
+            mission.planner_operational_plan,
+            mission.scout_report,
+            mission.builder_implementation_report,
+            mission.reviewer_review_report,
+        },
+    );
+
+    const prompt_parts = [_]OpenCodeTextPart{
+        .{
+            .type = "text",
+            .text = executor_prompt,
+        },
+    };
+
+    const prompt_body = try std.json.Stringify.valueAlloc(
+        c.arena,
+        OpenCodePromptAsyncRequest{
+            .parts = prompt_parts[0..],
+        },
+        .{},
+    );
+
+    const prompt_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/session/{s}/prompt_async",
+        .{ runtime.server_url_label, executor.session_external_id },
+    );
+
+    const dispatch_result = runRuntimeCommand(c, &.{
+        "curl",
+        "-fsS",
+        "-X",
+        "POST",
+        prompt_url,
+        "-H",
+        "Content-Type: application/json",
+        "-d",
+        prompt_body,
+    });
+
+    try insertRuntimeCommandLog(
+        c,
+        workspace_id,
+        "opencode-dispatch-reviewer-report-to-executor",
+        "POST <opencode-server>/session/<session-id>/prompt_async",
+        dispatch_result,
+    );
+
+    if (!dispatch_result.ok) {
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE missions
+            \\SET executor_dispatch_status = 'error'
+            \\WHERE id = $1
+            ,
+            .{ mission_id },
+        );
+
+        try insertRuntimeEvent(
+            c,
+            workspace_id,
+            "executor-dispatch-error",
+            "Falha ao enviar pacote ao Executor",
+            "O OpenCode Server não confirmou o envio assíncrono do pacote de verificação ao pane Executor.",
+        );
+
+        try db.query(
+            void,
+            c.arena,
+            \\INSERT INTO mission_events (
+            \\    mission_id,
+            \\    workspace_id,
+            \\    event_type,
+            \\    title,
+            \\    message
+            \\)
+            \\VALUES (
+            \\    $1,
+            \\    $2,
+            \\    'reviewer-report-dispatch-to-executor-error',
+            \\    'Falha ao enviar pacote ao Executor',
+            \\    'O despacho assíncrono do Review Report ao pane Executor não foi confirmado pelo OpenCode Server.'
+            \\)
+            ,
+            .{ mission_id, workspace_id },
+        );
+
+        return c.text(
+            "Falha ao enviar o pacote de verificação ao Executor.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const dispatch_messages_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/session/{s}/message",
+        .{ runtime.server_url_label, executor.session_external_id },
+    );
+
+    var executor_dispatch_user_message_id: []const u8 = "";
+    var dispatch_trace_attempt: usize = 0;
+
+    while (dispatch_trace_attempt < 6 and executor_dispatch_user_message_id.len == 0) : (dispatch_trace_attempt += 1) {
+        const dispatch_messages_result = runRuntimeCommand(c, &.{
+            "curl",
+            "-fsS",
+            dispatch_messages_url,
+        });
+
+        if (dispatch_messages_result.ok) {
+            if (try extractLatestUserMessageIdMatchingText(
+                c.arena,
+                dispatch_messages_result.stdout,
+                executor_prompt,
+            )) |message_id| {
+                executor_dispatch_user_message_id = message_id;
+                break;
+            }
+        }
+
+        std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE missions
+        \\SET executor_dispatch_status = 'sent',
+        \\    executor_session_external_id = $1,
+        \\    executor_dispatch_user_message_id = $2,
+        \\    dispatched_to_executor_at = NOW(),
+        \\    executor_verification_report = '',
+        \\    executor_verification_report_status = 'pending_capture',
+        \\    executor_verification_report_captured_at = NULL
+        \\WHERE id = $3
+        ,
+        .{ executor.session_external_id, executor_dispatch_user_message_id, mission_id },
+    );
+
+    const event_message = try std.fmt.allocPrint(
+        c.arena,
+        "O Review Report da missão \"{s}\" foi enviado ao pane Executor na sessão {s}.",
+        .{ mission.title, executor.session_external_id },
+    );
+
+    try insertRuntimeEvent(
+        c,
+        workspace_id,
+        "reviewer-report-dispatched-to-executor",
+        "Review Report enviado ao Executor",
+        event_message,
+    );
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO mission_events (
+        \\    mission_id,
+        \\    workspace_id,
+        \\    event_type,
+        \\    title,
+        \\    message
+        \\)
+        \\VALUES (
+        \\    $1,
+        \\    $2,
+        \\    'reviewer-report-dispatched-to-executor',
+        \\    'Review Report enviado ao Executor',
+        \\    $3
+        \\)
+        ,
+        .{ mission_id, workspace_id, event_message },
+    );
+
+    const executor_session_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/Lw/session/{s}",
+        .{ runtime.server_url_label, executor.session_external_id },
+    );
+
+    return c.redirect(executor_session_url);
 }
 
 fn workspaceShow(c: *spider.Ctx) !spider.Response {
@@ -5301,7 +6270,31 @@ fn missions(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS builder_implementation_report_captured_at_label
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -5507,7 +6500,31 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS builder_implementation_report_captured_at_label
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -5729,7 +6746,31 @@ fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS builder_implementation_report_captured_at_label
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -5969,7 +7010,31 @@ fn missionCaptureScoutReport(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS builder_implementation_report_captured_at_label
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -6209,7 +7274,31 @@ fn missionCaptureBuilderImplementationReport(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS builder_implementation_report_captured_at_label
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -6387,6 +7476,536 @@ fn missionCaptureBuilderImplementationReport(c: *spider.Ctx) !spider.Response {
     return c.redirect(redirect_url);
 }
 
+
+fn missionCaptureReviewerReviewReport(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Missão não informada.", .{ .status = .bad_request });
+
+    const mission_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Missão inválida.", .{ .status = .bad_request });
+
+    const mission_rows = try db.query(
+        MissionRow,
+        c.arena,
+        \\SELECT
+        \\    m.id,
+        \\    m.workspace_id,
+        \\    w.name AS workspace_name,
+        \\    m.squad_id,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
+        \\    m.title,
+        \\    m.objective,
+        \\    m.status,
+        \\    m.priority,
+        \\    m.pilot_operational_brief,
+        \\    m.pilot_operational_brief_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS pilot_operational_brief_captured_at_label,
+        \\    m.planner_dispatch_status,
+        \\    m.planner_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_planner_at_label,
+        \\    m.planner_operational_plan,
+        \\    m.planner_operational_plan_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.planner_operational_plan_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS planner_operational_plan_captured_at_label,
+        \\    m.scout_dispatch_status,
+        \\    m.scout_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_scout_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_scout_at_label,
+        \\    m.scout_report,
+        \\    m.scout_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.scout_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS scout_report_captured_at_label,
+        \\    m.builder_dispatch_status,
+        \\    m.builder_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_builder_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_builder_at_label,
+        \\    m.builder_implementation_report,
+        \\    m.builder_implementation_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
+        \\FROM missions m
+        \\INNER JOIN workspaces w ON w.id = m.workspace_id
+        \\LEFT JOIN squads s ON s.id = m.squad_id
+        \\WHERE m.id = $1
+        \\LIMIT 1
+        ,
+        .{ mission_id },
+    );
+
+    if (mission_rows.len == 0) {
+        return c.text("Missão não encontrada.", .{ .status = .not_found });
+    }
+
+    const mission = mission_rows[0];
+
+    const reviewer_rows = try db.query(
+        WorkspaceMissionPaneDispatchRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    role_name,
+        \\    pane_state,
+        \\    session_external_id,
+        \\    context_state
+        \\FROM workspace_panes
+        \\WHERE workspace_id = $1
+        \\AND role_name = 'Reviewer'
+        \\LIMIT 1
+        ,
+        .{ mission.workspace_id },
+    );
+
+    if (reviewer_rows.len == 0 or reviewer_rows[0].session_external_id.len == 0) {
+        return c.text(
+            "O pane Reviewer não possui sessão disponível.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const reviewer = reviewer_rows[0];
+
+    const dispatch_trace_rows = try db.query(
+        MissionReviewerDispatchTraceRow,
+        c.arena,
+        \\SELECT reviewer_dispatch_user_message_id
+        \\FROM missions
+        \\WHERE id = $1
+        \\LIMIT 1
+        ,
+        .{ mission_id },
+    );
+
+    if (
+        dispatch_trace_rows.len == 0 or
+        dispatch_trace_rows[0].reviewer_dispatch_user_message_id.len == 0
+    ) {
+        return c.text(
+            "Esta missão ainda não possui rastreio do despacho ao Reviewer. Reenvie o relatório antes de capturar o review.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const dispatch_trace = dispatch_trace_rows[0];
+    const runtime_rows = try loadWorkspaceRuntime(c, mission.workspace_id);
+
+    if (runtime_rows.len == 0) {
+        return c.text(
+            "Runtime do workspace não encontrado.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    try reconcileWorkspaceRuntimeState(c, runtime_rows[0]);
+
+    const refreshed_runtime_rows = try loadWorkspaceRuntime(c, mission.workspace_id);
+
+    if (refreshed_runtime_rows.len == 0) {
+        return c.text(
+            "Runtime indisponível após reconciliação.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const runtime = refreshed_runtime_rows[0];
+
+    if (!std.mem.eql(u8, runtime.state, "running")) {
+        return c.text(
+            "O runtime precisa estar em execução para capturar o Review Report.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const messages_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/session/{s}/message",
+        .{ runtime.server_url_label, reviewer.session_external_id },
+    );
+
+    const messages_result = runRuntimeCommand(c, &.{
+        "curl",
+        "-fsS",
+        messages_url,
+    });
+
+    try insertRuntimeCommandLog(
+        c,
+        mission.workspace_id,
+        "opencode-fetch-reviewer-session-messages",
+        "GET <opencode-server>/session/<session-id>/message",
+        messages_result,
+    );
+
+    if (!messages_result.ok) {
+        return c.text(
+            "Falha ao consultar mensagens da sessão do Reviewer.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const review_text = try extractAssistantTextForParentMessage(
+        c.arena,
+        messages_result.stdout,
+        dispatch_trace.reviewer_dispatch_user_message_id,
+    ) orelse {
+        return c.text(
+            "Nenhuma resposta textual vinculada ao último despacho rastreado foi encontrada. Aguarde o Reviewer concluir a resposta e tente novamente.",
+            .{ .status = .bad_request },
+        );
+    };
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE missions
+        \\SET reviewer_review_report = $1,
+        \\    reviewer_review_report_status = 'captured',
+        \\    reviewer_review_report_captured_at = NOW()
+        \\WHERE id = $2
+        ,
+        .{ review_text, mission_id },
+    );
+
+    const event_message = try std.fmt.allocPrint(
+        c.arena,
+        "O Review Report do Reviewer foi capturado a partir da sessão {s}.",
+        .{ reviewer.session_external_id },
+    );
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO mission_events (
+        \\    mission_id,
+        \\    workspace_id,
+        \\    event_type,
+        \\    title,
+        \\    message
+        \\)
+        \\VALUES (
+        \\    $1,
+        \\    $2,
+        \\    'reviewer-review-report-captured',
+        \\    'Review Report do Reviewer capturado',
+        \\    $3
+        \\)
+        ,
+        .{ mission_id, mission.workspace_id, event_message },
+    );
+
+    const redirect_url = try std.fmt.allocPrint(
+        c.arena,
+        "/missions/{d}",
+        .{ mission_id },
+    );
+
+    return c.redirect(redirect_url);
+}
+
+
+fn missionCaptureExecutorVerificationReport(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Missão não informada.", .{ .status = .bad_request });
+
+    const mission_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Missão inválida.", .{ .status = .bad_request });
+
+    const mission_rows = try db.query(
+        MissionRow,
+        c.arena,
+        \\SELECT
+        \\    m.id,
+        \\    m.workspace_id,
+        \\    w.name AS workspace_name,
+        \\    m.squad_id,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
+        \\    m.title,
+        \\    m.objective,
+        \\    m.status,
+        \\    m.priority,
+        \\    m.pilot_operational_brief,
+        \\    m.pilot_operational_brief_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS pilot_operational_brief_captured_at_label,
+        \\    m.planner_dispatch_status,
+        \\    m.planner_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_planner_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_planner_at_label,
+        \\    m.planner_operational_plan,
+        \\    m.planner_operational_plan_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.planner_operational_plan_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS planner_operational_plan_captured_at_label,
+        \\    m.scout_dispatch_status,
+        \\    m.scout_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_scout_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_scout_at_label,
+        \\    m.scout_report,
+        \\    m.scout_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.scout_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS scout_report_captured_at_label,
+        \\    m.builder_dispatch_status,
+        \\    m.builder_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_builder_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_builder_at_label,
+        \\    m.builder_implementation_report,
+        \\    m.builder_implementation_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
+        \\FROM missions m
+        \\INNER JOIN workspaces w ON w.id = m.workspace_id
+        \\LEFT JOIN squads s ON s.id = m.squad_id
+        \\WHERE m.id = $1
+        \\LIMIT 1
+        ,
+        .{ mission_id },
+    );
+
+    if (mission_rows.len == 0) {
+        return c.text("Missão não encontrada.", .{ .status = .not_found });
+    }
+
+    const mission = mission_rows[0];
+
+    const executor_rows = try db.query(
+        WorkspaceMissionPaneDispatchRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    role_name,
+        \\    pane_state,
+        \\    session_external_id,
+        \\    context_state
+        \\FROM workspace_panes
+        \\WHERE workspace_id = $1
+        \\AND role_name = 'Executor'
+        \\LIMIT 1
+        ,
+        .{ mission.workspace_id },
+    );
+
+    if (executor_rows.len == 0 or executor_rows[0].session_external_id.len == 0) {
+        return c.text(
+            "O pane Executor não possui sessão disponível.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const executor = executor_rows[0];
+
+    const dispatch_trace_rows = try db.query(
+        MissionExecutorDispatchTraceRow,
+        c.arena,
+        \\SELECT executor_dispatch_user_message_id
+        \\FROM missions
+        \\WHERE id = $1
+        \\LIMIT 1
+        ,
+        .{ mission_id },
+    );
+
+    if (
+        dispatch_trace_rows.len == 0 or
+        dispatch_trace_rows[0].executor_dispatch_user_message_id.len == 0
+    ) {
+        return c.text(
+            "Esta missão ainda não possui rastreio do despacho ao Executor. Reenvie o Review Report antes de capturar a verificação.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const dispatch_trace = dispatch_trace_rows[0];
+    const runtime_rows = try loadWorkspaceRuntime(c, mission.workspace_id);
+
+    if (runtime_rows.len == 0) {
+        return c.text(
+            "Runtime do workspace não encontrado.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    try reconcileWorkspaceRuntimeState(c, runtime_rows[0]);
+
+    const refreshed_runtime_rows = try loadWorkspaceRuntime(c, mission.workspace_id);
+
+    if (refreshed_runtime_rows.len == 0) {
+        return c.text(
+            "Runtime indisponível após reconciliação.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const runtime = refreshed_runtime_rows[0];
+
+    if (!std.mem.eql(u8, runtime.state, "running")) {
+        return c.text(
+            "O runtime precisa estar em execução para capturar o Verification Report do Executor.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const messages_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/session/{s}/message",
+        .{ runtime.server_url_label, executor.session_external_id },
+    );
+
+    const messages_result = runRuntimeCommand(c, &.{
+        "curl",
+        "-fsS",
+        messages_url,
+    });
+
+    try insertRuntimeCommandLog(
+        c,
+        mission.workspace_id,
+        "opencode-fetch-executor-session-messages",
+        "GET <opencode-server>/session/<session-id>/message",
+        messages_result,
+    );
+
+    if (!messages_result.ok) {
+        return c.text(
+            "Falha ao consultar mensagens da sessão do Executor.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const verification_report_text = try extractAssistantTextForParentMessage(
+        c.arena,
+        messages_result.stdout,
+        dispatch_trace.executor_dispatch_user_message_id,
+    ) orelse {
+        return c.text(
+            "Nenhuma resposta textual vinculada ao último despacho rastreado foi encontrada. Aguarde o Executor concluir a resposta e tente novamente.",
+            .{ .status = .bad_request },
+        );
+    };
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE missions
+        \\SET executor_verification_report = $1,
+        \\    executor_verification_report_status = 'captured',
+        \\    executor_verification_report_captured_at = NOW()
+        \\WHERE id = $2
+        ,
+        .{ verification_report_text, mission_id },
+    );
+
+    const event_message = try std.fmt.allocPrint(
+        c.arena,
+        "O Verification Report do Executor foi capturado a partir da sessão {s}.",
+        .{ executor.session_external_id },
+    );
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO mission_events (
+        \\    mission_id,
+        \\    workspace_id,
+        \\    event_type,
+        \\    title,
+        \\    message
+        \\)
+        \\VALUES (
+        \\    $1,
+        \\    $2,
+        \\    'executor-verification-report-captured',
+        \\    'Verification Report do Executor capturado',
+        \\    $3
+        \\)
+        ,
+        .{ mission_id, mission.workspace_id, event_message },
+    );
+
+    const redirect_url = try std.fmt.allocPrint(
+        c.arena,
+        "/missions/{d}",
+        .{ mission_id },
+    );
+
+    return c.redirect(redirect_url);
+}
+
 fn missionShow(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
         return c.text("Missão não informada.", .{ .status = .bad_request });
@@ -6448,7 +8067,31 @@ fn missionShow(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS builder_implementation_report_captured_at_label
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -6547,7 +8190,31 @@ fn missionEdit(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS builder_implementation_report_captured_at_label
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -6631,7 +8298,31 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.builder_implementation_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS builder_implementation_report_captured_at_label
+        \\    ) AS builder_implementation_report_captured_at_label,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_reviewer_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_reviewer_at_label,
+        \\    m.reviewer_review_report,
+        \\    m.reviewer_review_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.reviewer_review_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS reviewer_review_report_captured_at_label,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_session_external_id,
+        \\    COALESCE(
+        \\        TO_CHAR(m.dispatched_to_executor_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não enviado'
+        \\    ) AS dispatched_to_executor_at_label,
+        \\    m.executor_verification_report,
+        \\    m.executor_verification_report_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.executor_verification_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS executor_verification_report_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
