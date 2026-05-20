@@ -153,6 +153,41 @@ extends "layout"
   </div>
 </section>
 
+<section class="panel mission-brief-panel mission-scout-report-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Workspace Mapping</span>
+      <h3>Scout Report</h3>
+    </div>
+
+    <span class="mini-badge">{ mission.scout_report_status }</span>
+  </div>
+
+  if (mission.scout_report) {
+    <article class="mission-brief-card">
+      <div class="mission-brief-meta">
+        <span>Capturado em</span>
+        <strong>{ mission.scout_report_captured_at_label }</strong>
+      </div>
+
+      <pre>{ mission.scout_report }</pre>
+    </article>
+  } else {
+    <div class="empty-inline-state">
+      <strong>Nenhum Scout Report capturado.</strong>
+      <p>Após o Scout responder ao plano do Planner, capture o relatório técnico para persistir o mapeamento do workspace.</p>
+    </div>
+  }
+
+  <div class="mission-brief-actions">
+    if (mission.scout_dispatch_status == "sent") {
+      <form method="post" action="/missions/{ mission.id }/capture/scout-report" class="inline-form">
+        <button class="primary-button compact" type="submit">Capturar Scout Report</button>
+      </form>
+    }
+  </div>
+</section>
+
 <section class="panel mission-timeline-panel">
   <div class="panel-title-row">
     <div>

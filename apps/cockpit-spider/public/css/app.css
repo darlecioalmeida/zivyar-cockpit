@@ -2445,3 +2445,8 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   font-size: 13px;
 }
 
+
+.mission-scout-report-panel {
+  margin-top: 18px;
+}
+
