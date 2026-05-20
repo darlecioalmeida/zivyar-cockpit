@@ -261,6 +261,63 @@ extends "layout"
   </div>
 </section>
 
+<section class="panel active-mission-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Mission Engine</span>
+      <h3>Missão Ativa no Cockpit</h3>
+    </div>
+
+    if (active_mission_count > 0) {
+      <span class="mini-badge active-mission-badge">Em foco</span>
+    } else {
+      <span class="mini-badge">Nenhuma ativa</span>
+    }
+  </div>
+
+  if (active_mission_count > 0) {
+    for (active_missions) |active_mission| {
+      <article class="active-mission-card">
+        <div class="active-mission-copy">
+          <strong>{ active_mission.title }</strong>
+          <p>{ active_mission.objective }</p>
+        </div>
+
+        <div class="active-mission-meta-grid">
+          <div>
+            <span>Status</span>
+            <strong>{ active_mission.status }</strong>
+          </div>
+
+          <div>
+            <span>Prioridade</span>
+            <strong>{ active_mission.priority }</strong>
+          </div>
+
+          <div>
+            <span>Squad</span>
+            <strong>{ active_mission.squad_name }</strong>
+          </div>
+
+          <div>
+            <span>Workspace</span>
+            <strong>{ active_mission.workspace_name }</strong>
+          </div>
+        </div>
+
+        <div class="active-mission-actions">
+          <a class="primary-button compact" href="/missions/{ active_mission.id }">Abrir missão</a>
+        </div>
+      </article>
+    }
+  } else {
+    <div class="empty-inline-state">
+      <strong>Nenhuma missão ativa neste workspace.</strong>
+      <p>Ative uma missão na Mission Room para transformá-la no foco operacional do Cockpit.</p>
+    </div>
+  }
+</section>
+
 <section class="grid cockpit-preview-grid">
   <article class="panel mission-preview-panel">
     <div class="panel-title-row">

@@ -2706,6 +2706,28 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .{ workspace.id },
     );
 
+    const active_missions = try db.query(
+        MissionRow,
+        c.arena,
+        \\SELECT
+        \\    m.id,
+        \\    m.workspace_id,
+        \\    w.name AS workspace_name,
+        \\    m.squad_id,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
+        \\    m.title,
+        \\    m.objective,
+        \\    m.status,
+        \\    m.priority
+        \\FROM workspaces w
+        \\INNER JOIN missions m ON m.id = w.active_mission_id
+        \\LEFT JOIN squads s ON s.id = m.squad_id
+        \\WHERE w.id = $1
+        \\LIMIT 1
+        ,
+        .{ workspace.id },
+    );
+
     const members = try db.query(
         SquadMemberRow,
         c.arena,
@@ -2828,6 +2850,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .pane_count = panes.len,
         .missions = workspace_missions,
         .mission_count = workspace_missions.len,
+        .active_missions = active_missions,
+        .active_mission_count = active_missions.len,
         .runtime = refreshed_runtime_rows[0],
         .runtime_events = runtime_events,
         .runtime_event_count = runtime_events.len,
