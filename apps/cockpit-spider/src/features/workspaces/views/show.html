@@ -517,6 +517,14 @@ if (notice) {
           </div>
         </div>
 
+        if (active_mission.next_step_detected_action) {
+          <div class="active-mission-next-step-diagnostic">
+            <span>Última próxima etapa detectada</span>
+            <strong>{ active_mission.next_step_detected_action }</strong>
+            <small>{ active_mission.next_step_detected_at_label }</small>
+          </div>
+        }
+
         <div class="active-mission-dispatch-panel" data-dispatch-status="{ active_mission.pilot_dispatch_status }">
           <div>
             <span>Status do envio ao Piloto</span>

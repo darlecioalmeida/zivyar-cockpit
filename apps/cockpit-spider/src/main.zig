@@ -479,6 +479,8 @@ const ActiveMissionPanelRow = struct {
     executor_verification_report_status: []const u8,
     pilot_delivery_dispatch_status: []const u8,
     pilot_delivery_report_status: []const u8,
+    next_step_detected_action: []const u8,
+    next_step_detected_at_label: []const u8,
 };
 
 
@@ -6841,7 +6843,12 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\    m.executor_dispatch_status,
         \\    m.executor_verification_report_status,
         \\    m.pilot_delivery_dispatch_status,
-        \\    m.pilot_delivery_report_status
+        \\    m.pilot_delivery_report_status,
+        \\    m.next_step_detected_action,
+        \\    COALESCE(
+        \\        TO_CHAR(m.next_step_detected_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não detectada'
+        \\    ) AS next_step_detected_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -7670,6 +7677,8 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
         \\UPDATE missions
         \\SET pilot_operational_brief = $1,
         \\    pilot_operational_brief_status = 'captured',
+        \\    next_step_detected_action = '',
+        \\    next_step_detected_at = NULL,
         \\    pilot_operational_brief_captured_at = NOW()
         \\WHERE id = $2
         ,
@@ -7965,6 +7974,8 @@ fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
         \\UPDATE missions
         \\SET planner_operational_plan = $1,
         \\    planner_operational_plan_status = 'captured',
+        \\    next_step_detected_action = '',
+        \\    next_step_detected_at = NULL,
         \\    planner_operational_plan_captured_at = NOW(),
         \\    status = 'planned'
         \\WHERE id = $2
@@ -8261,6 +8272,8 @@ fn missionCaptureScoutReport(c: *spider.Ctx) !spider.Response {
         \\UPDATE missions
         \\SET scout_report = $1,
         \\    scout_report_status = 'captured',
+        \\    next_step_detected_action = '',
+        \\    next_step_detected_at = NULL,
         \\    scout_report_captured_at = NOW()
         \\WHERE id = $2
         ,
@@ -8556,6 +8569,8 @@ fn missionCaptureBuilderImplementationReport(c: *spider.Ctx) !spider.Response {
         \\UPDATE missions
         \\SET builder_implementation_report = $1,
         \\    builder_implementation_report_status = 'captured',
+        \\    next_step_detected_action = '',
+        \\    next_step_detected_at = NULL,
         \\    builder_implementation_report_captured_at = NOW()
         \\WHERE id = $2
         ,
@@ -8852,6 +8867,8 @@ fn missionCaptureReviewerReviewReport(c: *spider.Ctx) !spider.Response {
         \\UPDATE missions
         \\SET reviewer_review_report = $1,
         \\    reviewer_review_report_status = 'captured',
+        \\    next_step_detected_action = '',
+        \\    next_step_detected_at = NULL,
         \\    reviewer_review_report_captured_at = NOW()
         \\WHERE id = $2
         ,
@@ -9148,6 +9165,8 @@ fn missionCaptureExecutorVerificationReport(c: *spider.Ctx) !spider.Response {
         \\UPDATE missions
         \\SET executor_verification_report = $1,
         \\    executor_verification_report_status = 'captured',
+        \\    next_step_detected_action = '',
+        \\    next_step_detected_at = NULL,
         \\    executor_verification_report_captured_at = NOW()
         \\WHERE id = $2
         ,
@@ -9445,6 +9464,8 @@ fn missionCapturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\UPDATE missions
         \\SET pilot_delivery_report = $1,
         \\    pilot_delivery_report_status = 'captured',
+        \\    next_step_detected_action = '',
+        \\    next_step_detected_at = NULL,
         \\    pilot_delivery_report_captured_at = NOW()
         \\WHERE id = $2
         ,
@@ -9709,6 +9730,8 @@ fn missionFinalizeFromPilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\UPDATE missions
         \\SET mission_final_verdict = $1,
         \\    mission_operational_closure_status = 'closed',
+        \\    next_step_detected_action = '',
+        \\    next_step_detected_at = NULL,
         \\    mission_operational_closed_at = NOW(),
         \\    status = $2
         \\WHERE id = $3
