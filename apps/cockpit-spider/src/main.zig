@@ -9941,6 +9941,13 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
         );
     }
 
+    if (std.mem.eql(u8, form.execution_mode, "autopilot")) {
+        return c.text(
+            "O modo autopilot ainda não está habilitado. Use manual ou supervised_auto.",
+            .{ .status = .bad_request },
+        );
+    }
+
     try db.query(
         void,
         c.arena,

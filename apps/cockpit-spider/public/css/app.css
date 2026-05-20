@@ -2999,3 +2999,28 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   background: rgba(61, 226, 151, 0.12);
   color: var(--green);
 }
+
+
+.execution-mode-help-panel {
+  border: 1px solid rgba(67, 214, 255, 0.28);
+  border-radius: 18px;
+  background: rgba(67, 214, 255, 0.06);
+  padding: 14px;
+  margin-top: -4px;
+}
+
+.execution-mode-help-panel strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.execution-mode-help-panel ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.execution-mode-help-panel li + li {
+  margin-top: 6px;
+}

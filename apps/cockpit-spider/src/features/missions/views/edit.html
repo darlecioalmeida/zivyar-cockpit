@@ -109,13 +109,22 @@ extends "layout"
           }
 
           if (mission.execution_mode == "autopilot") {
-            <option value="autopilot" selected>Autopilot</option>
+            <option value="autopilot" selected disabled>Autopilot — em breve</option>
           } else {
-            <option value="autopilot">Autopilot</option>
+            <option value="autopilot" disabled>Autopilot — em breve</option>
           }
         </select>
-        <small>Manual exige confirmação etapa por etapa. Os modos automáticos serão habilitados gradualmente pelo Mission Engine.</small>
+        <small>Manual exige confirmação etapa por etapa. Supervisionado automático executará a próxima etapa com confirmação humana. Autopilot será liberado futuramente para execução automática completa.</small>
       </label>
+
+      <div class="execution-mode-help-panel">
+        <strong>Como usar os modos</strong>
+        <ul>
+          <li><b>manual</b>: você controla cada envio, captura e encerramento por botão.</li>
+          <li><b>supervised_auto</b>: o Cockpit prepara a próxima ação e pede sua confirmação.</li>
+          <li><b>autopilot</b>: modo futuro para rodar a missão automaticamente com pausas em erro, bloqueio ou baixa confiança.</li>
+        </ul>
+      </div>
 
       <div class="form-actions">
         if (mission.mission_operational_closure_status == "closed") {
