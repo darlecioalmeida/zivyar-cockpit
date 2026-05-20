@@ -882,6 +882,19 @@ fn commandSucceeded(c: *spider.Ctx, argv: []const []const u8) bool {
     };
 }
 
+
+fn ensureWorkspaceLocalPath(c: *spider.Ctx, local_path: []const u8) bool {
+    if (local_path.len == 0) {
+        return false;
+    }
+
+    return commandSucceeded(c, &.{
+        "mkdir",
+        "-p",
+        local_path,
+    });
+}
+
 fn runtimeHostPort(workspace_id: i32) i32 {
     const base_port = spider.env.getInt(i32, "ZIVYAR_RUNTIME_HOST_PORT_BASE", 43000);
     return base_port + workspace_id;
@@ -1556,6 +1569,16 @@ fn workspaceUpdate(c: *spider.Ctx) !spider.Response {
         }, .{ .status = .bad_request });
     }
 
+    if (!ensureWorkspaceLocalPath(c, form.local_path)) {
+        return c.view("workspaces/edit", .{
+            .title = "Editar Workspace",
+            .workspace = current_rows[0],
+            .squads = squads_rows,
+            .squad_count = squads_rows.len,
+            .error_message = "Não foi possível criar ou acessar o novo caminho local informado para o workspace.",
+        }, .{ .status = .bad_request });
+    }
+
     try db.query(
         void,
         c.arena,
@@ -1749,6 +1772,32 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
     }
 
     const runtime = runtime_rows[0];
+
+    if (!ensureWorkspaceLocalPath(c, runtime.local_path)) {
+        try db.query(
+            void,
+            c.arena,
+            \\UPDATE workspace_runtimes
+            \\SET state = 'error',
+            \\    status_message = 'Falha ao criar ou acessar o diretório local do workspace.',
+            \\    updated_at = NOW()
+            \\WHERE workspace_id = $1
+            ,
+            .{ workspace_id },
+        );
+
+        try insertRuntimeEvent(
+            c,
+            workspace_id,
+            "error",
+            "Diretório do workspace indisponível",
+            "O Zivyar não conseguiu criar ou acessar o caminho local configurado para este workspace.",
+        );
+
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        return c.redirect(redirect_url);
+    }
+
     const image_name = spider.env.getOr("ZIVYAR_RUNTIME_IMAGE", "zivyar-opencode-runtime:latest");
     const runtime_context = spider.env.getOr("ZIVYAR_RUNTIME_CONTEXT", "../../infra/docker/opencode-runtime");
     const internal_port = spider.env.getInt(i32, "ZIVYAR_RUNTIME_INTERNAL_PORT", 4096);
@@ -3580,6 +3629,16 @@ fn workspaceCreate(c: *spider.Ctx) !spider.Response {
             .squads = squads_rows,
             .squad_count = squads_rows.len,
             .error_message = "A squad selecionada não está disponível.",
+            .form = form,
+        }, .{ .status = .bad_request });
+    }
+
+    if (!ensureWorkspaceLocalPath(c, form.local_path)) {
+        return c.view("workspaces/new", .{
+            .title = "Novo Workspace",
+            .squads = squads_rows,
+            .squad_count = squads_rows.len,
+            .error_message = "Não foi possível criar ou acessar o caminho local informado para o workspace.",
             .form = form,
         }, .{ .status = .bad_request });
     }
