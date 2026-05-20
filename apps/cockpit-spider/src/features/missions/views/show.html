@@ -396,6 +396,53 @@ extends "layout"
   </div>
 </section>
 
+<section class="panel mission-brief-panel mission-closure-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Mission Closure</span>
+      <h3>Encerramento Operacional</h3>
+    </div>
+
+    <span class="mini-badge">{ mission.mission_operational_closure_status }</span>
+  </div>
+
+  <article class="mission-brief-card">
+    <div class="detail-meta-grid">
+      <div>
+        <span>Veredito final</span>
+        <strong>{ mission.mission_final_verdict }</strong>
+      </div>
+
+      <div>
+        <span>Encerramento</span>
+        <strong>{ mission.mission_operational_closure_status }</strong>
+      </div>
+
+      <div>
+        <span>Encerrada em</span>
+        <strong>{ mission.mission_operational_closed_at_label }</strong>
+      </div>
+
+      <div>
+        <span>Status formal da missão</span>
+        <strong>{ mission.status }</strong>
+      </div>
+    </div>
+  </article>
+
+  <div class="mission-brief-actions">
+    if (
+      mission.pilot_delivery_report and
+      mission.pilot_delivery_report_status == "captured" and
+      mission.mission_operational_closure_status != "closed"
+    ) {
+      <form method="post" action="/missions/{ mission.id }/finalize" class="inline-form">
+        <button class="primary-button compact" type="submit">Encerrar missão pelo Cockpit</button>
+      </form>
+    }
+  </div>
+</section>
+
 <section class="panel mission-timeline-panel">
   <div class="panel-title-row">
     <div>
