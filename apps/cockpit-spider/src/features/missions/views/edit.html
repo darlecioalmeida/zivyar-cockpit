@@ -5,7 +5,7 @@ extends "layout"
     <span class="eyebrow">Editar Missão</span>
     <h2>{ mission.title }</h2>
     <p>
-      Atualize objetivo, status e prioridade. Workspace e squad permanecem preservados.
+      Atualize objetivo e prioridade. O status é governado automaticamente pelo Mission Engine.
     </p>
 
     if (mission.mission_operational_closure_status == "closed") {
@@ -59,43 +59,9 @@ extends "layout"
 
       <label>
         <span>Status</span>
-        <select name="status">
-          if (mission.status == "briefing") {
-            <option value="briefing" selected>Briefing</option>
-          } else {
-            <option value="briefing">Briefing</option>
-          }
-
-          if (mission.status == "planned") {
-            <option value="planned" selected>Planejada</option>
-          } else {
-            <option value="planned">Planejada</option>
-          }
-
-          if (mission.status == "active") {
-            <option value="active" selected>Ativa</option>
-          } else {
-            <option value="active">Ativa</option>
-          }
-
-          if (mission.status == "review") {
-            <option value="review" selected>Em revisão</option>
-          } else {
-            <option value="review">Em revisão</option>
-          }
-
-          if (mission.status == "completed") {
-            <option value="completed" selected>Concluída</option>
-          } else {
-            <option value="completed">Concluída</option>
-          }
-
-          if (mission.status == "paused") {
-            <option value="paused" selected>Pausada</option>
-          } else {
-            <option value="paused">Pausada</option>
-          }
-        </select>
+        <input type="hidden" name="status" value="{ mission.status }" />
+        <strong class="readonly-field">{ mission.status }</strong>
+        <small>O status da missão é controlado pelo ciclo operacional do Mission Engine.</small>
       </label>
 
       <label>
@@ -145,7 +111,7 @@ extends "layout"
     <ol class="numbered-list">
       <li>Workspace permanece fixo.</li>
       <li>Squad é snapshot da criação.</li>
-      <li>Status evolui no ciclo de trabalho.</li>
+      <li>Status evolui exclusivamente pelo ciclo operacional.</li>
       <li>Prioridade ajuda a ordenar execução.</li>
     </ol>
   </article>

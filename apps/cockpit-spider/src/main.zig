@@ -9791,7 +9791,7 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
         .{
             form.title,
             form.objective,
-            form.status,
+            current_rows[0].status,
             form.priority,
             mission_id,
         },
