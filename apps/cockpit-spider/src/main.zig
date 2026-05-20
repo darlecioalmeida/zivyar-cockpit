@@ -7211,7 +7211,7 @@ fn missionCreate(c: *spider.Ctx) !spider.Response {
             selected_workspace[0].default_squad_id,
             form.title,
             form.objective,
-            form.status,
+            "briefing",
             form.priority,
         },
     );

@@ -53,14 +53,9 @@ extends "layout"
 
       <label>
         <span>Status inicial</span>
-        <select name="status">
-          <option value="briefing">Briefing</option>
-          <option value="planned">Planejada</option>
-          <option value="active">Ativa</option>
-          <option value="review">Em revisão</option>
-          <option value="completed">Concluída</option>
-          <option value="paused">Pausada</option>
-        </select>
+        <input type="hidden" name="status" value="briefing" />
+        <strong class="readonly-field">Briefing</strong>
+        <small>A missão sempre inicia em briefing. O avanço do ciclo é controlado pelo Mission Engine.</small>
       </label>
 
       <label>
@@ -87,7 +82,7 @@ extends "layout"
     <ol class="numbered-list">
       <li>Escolha o workspace.</li>
       <li>A squad é herdada automaticamente.</li>
-      <li>Defina objetivo, status e prioridade.</li>
+      <li>Defina objetivo e prioridade; o status inicial será briefing.</li>
       <li>Depois entraremos em fases e eventos.</li>
     </ol>
   </article>
