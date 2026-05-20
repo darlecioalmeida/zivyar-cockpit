@@ -458,6 +458,19 @@ const ActiveMissionPanelRow = struct {
     pilot_dispatch_status: []const u8,
     pilot_session_external_id: []const u8,
     dispatched_to_pilot_at_label: []const u8,
+    pilot_operational_brief_status: []const u8,
+    planner_dispatch_status: []const u8,
+    planner_operational_plan_status: []const u8,
+    scout_dispatch_status: []const u8,
+    scout_report_status: []const u8,
+    builder_dispatch_status: []const u8,
+    builder_implementation_report_status: []const u8,
+    reviewer_dispatch_status: []const u8,
+    reviewer_review_report_status: []const u8,
+    executor_dispatch_status: []const u8,
+    executor_verification_report_status: []const u8,
+    pilot_delivery_dispatch_status: []const u8,
+    pilot_delivery_report_status: []const u8,
 };
 
 
@@ -6728,7 +6741,20 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.dispatched_to_pilot_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não enviado'
-        \\    ) AS dispatched_to_pilot_at_label
+        \\    ) AS dispatched_to_pilot_at_label,
+        \\    m.pilot_operational_brief_status,
+        \\    m.planner_dispatch_status,
+        \\    m.planner_operational_plan_status,
+        \\    m.scout_dispatch_status,
+        \\    m.scout_report_status,
+        \\    m.builder_dispatch_status,
+        \\    m.builder_implementation_report_status,
+        \\    m.reviewer_dispatch_status,
+        \\    m.reviewer_review_report_status,
+        \\    m.executor_dispatch_status,
+        \\    m.executor_verification_report_status,
+        \\    m.pilot_delivery_dispatch_status,
+        \\    m.pilot_delivery_report_status
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id

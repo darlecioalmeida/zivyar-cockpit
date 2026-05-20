@@ -2339,6 +2339,43 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
 }
 
 
+.active-mission-cycle-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(67, 214, 255, 0.34);
+  border-radius: 20px;
+  background: rgba(67, 214, 255, 0.06);
+  padding: 14px;
+}
+
+.active-mission-cycle-panel > div {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(7, 13, 24, 0.68);
+  padding: 12px;
+}
+
+.active-mission-cycle-panel span,
+.active-mission-cycle-panel strong {
+  display: block;
+}
+
+.active-mission-cycle-panel span {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.active-mission-cycle-panel strong {
+  line-height: 1.45;
+}
+
+@media (min-width: 900px) {
+  .active-mission-cycle-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .active-mission-dispatch-panel {
   display: grid;
   gap: 12px;

@@ -305,6 +305,76 @@ extends "layout"
           </div>
         </div>
 
+        <div class="active-mission-cycle-panel">
+          <div>
+            <span>Etapa atual</span>
+
+            if (active_mission.pilot_operational_brief_status != "captured") {
+              <strong>Briefing do Piloto</strong>
+            } else if (active_mission.planner_operational_plan_status != "captured") {
+              <strong>Planejamento</strong>
+            } else if (active_mission.scout_report_status != "captured") {
+              <strong>Scout / Mapeamento</strong>
+            } else if (active_mission.builder_implementation_report_status != "captured") {
+              <strong>Builder / Execução</strong>
+            } else if (active_mission.reviewer_review_report_status != "captured") {
+              <strong>Reviewer / Qualidade</strong>
+            } else if (active_mission.executor_verification_report_status != "captured") {
+              <strong>Executor / Verificação</strong>
+            } else if (active_mission.pilot_delivery_report_status != "captured") {
+              <strong>Entrega Final</strong>
+            } else {
+              <strong>Pronta para encerramento</strong>
+            }
+          </div>
+
+          <div>
+            <span>Próxima ação</span>
+
+            if (active_mission.pilot_operational_brief_status != "captured") {
+              <strong>Capturar briefing do Piloto</strong>
+            } else if (active_mission.planner_operational_plan_status != "captured") {
+              if (active_mission.planner_dispatch_status == "sent") {
+                <strong>Capturar plano do Planner</strong>
+              } else {
+                <strong>Enviar briefing ao Planner</strong>
+              }
+            } else if (active_mission.scout_report_status != "captured") {
+              if (active_mission.scout_dispatch_status == "sent") {
+                <strong>Capturar Scout Report</strong>
+              } else {
+                <strong>Enviar plano ao Scout</strong>
+              }
+            } else if (active_mission.builder_implementation_report_status != "captured") {
+              if (active_mission.builder_dispatch_status == "sent") {
+                <strong>Capturar Implementation Report</strong>
+              } else {
+                <strong>Enviar pacote ao Builder</strong>
+              }
+            } else if (active_mission.reviewer_review_report_status != "captured") {
+              if (active_mission.reviewer_dispatch_status == "sent") {
+                <strong>Capturar Review Report</strong>
+              } else {
+                <strong>Enviar report ao Reviewer</strong>
+              }
+            } else if (active_mission.executor_verification_report_status != "captured") {
+              if (active_mission.executor_dispatch_status == "sent") {
+                <strong>Capturar Verification Report</strong>
+              } else {
+                <strong>Enviar pacote ao Executor</strong>
+              }
+            } else if (active_mission.pilot_delivery_report_status != "captured") {
+              if (active_mission.pilot_delivery_dispatch_status == "sent") {
+                <strong>Capturar Final Delivery Report</strong>
+              } else {
+                <strong>Enviar Verification Report ao Piloto</strong>
+              }
+            } else {
+              <strong>Encerrar missão pelo Cockpit</strong>
+            }
+          </div>
+        </div>
+
         <div class="active-mission-dispatch-panel" data-dispatch-status="{ active_mission.pilot_dispatch_status }">
           <div>
             <span>Status do envio ao Piloto</span>
