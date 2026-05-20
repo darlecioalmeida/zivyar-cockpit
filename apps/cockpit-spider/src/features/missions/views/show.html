@@ -46,12 +46,112 @@ extends "layout"
     </div>
   </article>
 
-  <article class="panel runtime-status-panel">
+  <article class="panel runtime-status-panel mission-next-step-panel" data-mission-status="{ mission.status }">
     <span class="eyebrow">Próxima etapa</span>
-    <h3>Mission Room</h3>
-    <p>
-      Esta missão será expandida com fases, eventos, briefings e execução multiagente.
-    </p>
+
+    if (mission.mission_operational_closure_status == "closed") {
+      <h3>Ciclo encerrado</h3>
+      <p>
+        Esta missão foi encerrada operacionalmente com veredito final
+        <strong>{ mission.mission_final_verdict }</strong>.
+      </p>
+    } else if (mission.pilot_operational_brief_status != "captured") {
+      <h3>Concluir briefing do Piloto</h3>
+      <p>
+        O ciclo ainda depende da captura do Briefing Operacional do Piloto.
+        Após o despacho inicial ao Piloto, capture o briefing nesta missão.
+      </p>
+    } else if (mission.planner_operational_plan_status != "captured") {
+      if (mission.planner_dispatch_status == "sent") {
+        <h3>Capturar plano do Planner</h3>
+        <p>
+          O Briefing já foi enviado ao Planner. Aguarde a conclusão da resposta
+          e capture o Plano Operacional.
+        </p>
+      } else {
+        <h3>Enviar briefing ao Planner</h3>
+        <p>
+          O briefing foi capturado. A próxima etapa é despachá-lo ao Planner
+          para produção do plano operacional.
+        </p>
+      }
+    } else if (mission.scout_report_status != "captured") {
+      if (mission.scout_dispatch_status == "sent") {
+        <h3>Capturar Scout Report</h3>
+        <p>
+          O plano foi enviado ao Scout. Aguarde a leitura do workspace e capture
+          o relatório técnico de reconhecimento.
+        </p>
+      } else {
+        <h3>Enviar plano ao Scout</h3>
+        <p>
+          O Plano Operacional foi capturado. A próxima etapa é enviá-lo ao Scout
+          para reconhecimento técnico do workspace.
+        </p>
+      }
+    } else if (mission.builder_implementation_report_status != "captured") {
+      if (mission.builder_dispatch_status == "sent") {
+        <h3>Capturar Implementation Report</h3>
+        <p>
+          O pacote de execução já chegou ao Builder. Aguarde a resposta e capture
+          o relatório de implementação.
+        </p>
+      } else {
+        <h3>Enviar Scout Report ao Builder</h3>
+        <p>
+          O reconhecimento técnico foi capturado. A próxima etapa é liberar o
+          pacote de execução para o Builder.
+        </p>
+      }
+    } else if (mission.reviewer_review_report_status != "captured") {
+      if (mission.reviewer_dispatch_status == "sent") {
+        <h3>Capturar Review Report</h3>
+        <p>
+          O Implementation Report já está com o Reviewer. Capture o parecer
+          técnico assim que ele concluir a revisão.
+        </p>
+      } else {
+        <h3>Enviar Implementation Report ao Reviewer</h3>
+        <p>
+          A execução foi documentada pelo Builder. A próxima etapa é acionar
+          o Quality Gate com o Reviewer.
+        </p>
+      }
+    } else if (mission.executor_verification_report_status != "captured") {
+      if (mission.executor_dispatch_status == "sent") {
+        <h3>Capturar Verification Report</h3>
+        <p>
+          O pacote de verificação já foi enviado ao Executor. Aguarde os checks
+          e capture o relatório técnico de validação.
+        </p>
+      } else {
+        <h3>Enviar Review Report ao Executor</h3>
+        <p>
+          O Quality Gate foi capturado. A próxima etapa é validar tecnicamente
+          o resultado com o Executor.
+        </p>
+      }
+    } else if (mission.pilot_delivery_report_status != "captured") {
+      if (mission.pilot_delivery_dispatch_status == "sent") {
+        <h3>Capturar Final Delivery Report</h3>
+        <p>
+          O Verification Report foi enviado ao Piloto. Capture a consolidação
+          final da missão assim que a resposta estiver pronta.
+        </p>
+      } else {
+        <h3>Enviar Verification Report ao Piloto</h3>
+        <p>
+          A verificação técnica foi concluída. A próxima etapa é devolver o ciclo
+          ao Piloto para consolidação do Final Delivery Report.
+        </p>
+      }
+    } else {
+      <h3>Encerrar missão pelo Cockpit</h3>
+      <p>
+        O Final Delivery Report já foi capturado. Falta formalizar o encerramento
+        operacional da missão e liberar o foco ativo do workspace.
+      </p>
+    }
   </article>
 </section>
 

@@ -601,6 +601,45 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   text-transform: uppercase;
 }
 
+.mission-next-step-panel {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  border-color: rgba(67, 214, 255, 0.28);
+  background: linear-gradient(135deg, rgba(67, 214, 255, 0.08), rgba(61, 226, 151, 0.04));
+}
+
+.mission-next-step-panel h3 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.mission-next-step-panel p {
+  margin: 0;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.mission-next-step-panel strong {
+  color: var(--text);
+}
+
+.mission-next-step-panel[data-mission-status="active"] {
+  border-color: rgba(61, 226, 151, 0.34);
+  background: linear-gradient(135deg, rgba(61, 226, 151, 0.10), rgba(67, 214, 255, 0.04));
+}
+
+.mission-next-step-panel[data-mission-status="review"] {
+  border-color: rgba(255, 209, 102, 0.34);
+  background: linear-gradient(135deg, rgba(255, 209, 102, 0.10), rgba(67, 214, 255, 0.04));
+}
+
+.mission-next-step-panel[data-mission-status="blocked"],
+.mission-next-step-panel[data-mission-status="needs_follow_up"] {
+  border-color: rgba(255, 123, 138, 0.34);
+  background: linear-gradient(135deg, rgba(255, 123, 138, 0.10), rgba(67, 214, 255, 0.04));
+}
+
 .empty-inline-state {
   border: 1px dashed var(--border);
   border-radius: 18px;
