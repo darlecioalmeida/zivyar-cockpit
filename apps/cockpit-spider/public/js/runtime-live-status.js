@@ -222,6 +222,14 @@
           <button class="danger-button" type="submit">Encerrar pane</button>
         </form>
 
+        <form
+          method="post"
+          action="/workspaces/${workspaceId}/panes/${pane.id}/session/recreate"
+          class="inline-form pane-session-recreate-current-form"
+        >
+          <button class="ghost-mini" type="submit">Recriar sessão</button>
+        </form>
+
         <a class="ghost-mini" href="${escapeHtml(runtimeData.server_url)}/Lw/session/${escapeHtml(pane.session_external_id)}" target="_blank" rel="noreferrer">
           Abrir sessão
         </a>

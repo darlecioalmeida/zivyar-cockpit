@@ -35,6 +35,7 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces/:id/panes/:pane_id/session/open", workspacePaneOpenSession)
         .post("/workspaces/:id/panes/:pane_id/session/close", workspacePaneCloseSession)
         .post("/workspaces/:id/panes/:pane_id/session/resume", workspacePaneResumeSession)
+        .post("/workspaces/:id/panes/:pane_id/session/recreate", workspacePaneRecreateSession)
         .post("/workspaces/:id/missions/:mission_id/activate", workspaceMissionActivate)
         .post("/workspaces/:id/missions/:mission_id/dispatch/pilot", workspaceMissionDispatchToPilot)
         .post("/missions/:id/capture/pilot-brief", missionCapturePilotOperationalBrief)
@@ -427,6 +428,11 @@ const MissionIdRow = struct {
 };
 
 
+const MissionPilotDispatchTraceRow = struct {
+    pilot_dispatch_user_message_id: []const u8,
+};
+
+
 const MissionEventRow = struct {
     id: i32,
     event_type: []const u8,
@@ -580,6 +586,131 @@ fn openCodeSessionExists(
     });
 }
 
+
+
+fn extractLatestUserMessageIdMatchingText(
+    allocator: std.mem.Allocator,
+    raw: []const u8,
+    expected_text: []const u8,
+) !?[]const u8 {
+    var parsed = try std.json.parseFromSlice(std.json.Value, allocator, raw, .{});
+    defer parsed.deinit();
+
+    const root = parsed.value;
+    if (root != .array) return null;
+
+    var latest_id: ?[]const u8 = null;
+
+    for (root.array.items) |message_value| {
+        if (message_value != .object) continue;
+
+        const message_obj = message_value.object;
+        const info_value = message_obj.get("info") orelse continue;
+        if (info_value != .object) continue;
+
+        const role_value = info_value.object.get("role") orelse continue;
+        if (role_value != .string) continue;
+        if (!std.mem.eql(u8, role_value.string, "user")) continue;
+
+        const message_id_value = info_value.object.get("id") orelse continue;
+        if (message_id_value != .string) continue;
+
+        const parts_value = message_obj.get("parts") orelse continue;
+        if (parts_value != .array) continue;
+
+        var matches_dispatch = false;
+
+        for (parts_value.array.items) |part_value| {
+            if (part_value != .object) continue;
+
+            const part_obj = part_value.object;
+
+            const type_value = part_obj.get("type") orelse continue;
+            if (type_value != .string) continue;
+            if (!std.mem.eql(u8, type_value.string, "text")) continue;
+
+            const text_value = part_obj.get("text") orelse continue;
+            if (text_value != .string) continue;
+
+            if (std.mem.eql(u8, text_value.string, expected_text)) {
+                matches_dispatch = true;
+                break;
+            }
+        }
+
+        if (matches_dispatch) {
+            latest_id = try allocator.dupe(u8, message_id_value.string);
+        }
+    }
+
+    return latest_id;
+}
+
+fn extractAssistantTextForParentMessage(
+    allocator: std.mem.Allocator,
+    raw: []const u8,
+    parent_message_id: []const u8,
+) !?[]const u8 {
+    var parsed = try std.json.parseFromSlice(std.json.Value, allocator, raw, .{});
+    defer parsed.deinit();
+
+    const root = parsed.value;
+    if (root != .array) return null;
+
+    var latest_text: ?[]const u8 = null;
+
+    for (root.array.items) |message_value| {
+        if (message_value != .object) continue;
+
+        const message_obj = message_value.object;
+        const info_value = message_obj.get("info") orelse continue;
+        if (info_value != .object) continue;
+
+        const role_value = info_value.object.get("role") orelse continue;
+        if (role_value != .string) continue;
+        if (!std.mem.eql(u8, role_value.string, "assistant")) continue;
+
+        const parent_value = info_value.object.get("parentID") orelse continue;
+        if (parent_value != .string) continue;
+        if (!std.mem.eql(u8, parent_value.string, parent_message_id)) continue;
+
+        const parts_value = message_obj.get("parts") orelse continue;
+        if (parts_value != .array) continue;
+
+        var collected: std.ArrayList(u8) = .empty;
+        errdefer collected.deinit(allocator);
+
+        var found_text = false;
+
+        for (parts_value.array.items) |part_value| {
+            if (part_value != .object) continue;
+
+            const part_obj = part_value.object;
+
+            const type_value = part_obj.get("type") orelse continue;
+            if (type_value != .string) continue;
+            if (!std.mem.eql(u8, type_value.string, "text")) continue;
+
+            const text_value = part_obj.get("text") orelse continue;
+            if (text_value != .string) continue;
+
+            if (found_text) {
+                try collected.appendSlice(allocator, "\n\n");
+            }
+
+            try collected.appendSlice(allocator, text_value.string);
+            found_text = true;
+        }
+
+        if (found_text) {
+            latest_text = try collected.toOwnedSlice(allocator);
+        } else {
+            collected.deinit(allocator);
+        }
+    }
+
+    return latest_text;
+}
 
 fn extractLatestAssistantTextFromOpenCodeMessages(
     allocator: std.mem.Allocator,
@@ -2246,6 +2377,67 @@ fn workspacePaneResumeSession(c: *spider.Ctx) !spider.Response {
     return c.redirect(redirect_url);
 }
 
+
+fn workspacePaneRecreateSession(c: *spider.Ctx) !spider.Response {
+    const workspace_id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const pane_id_raw = c.params.get("pane_id") orelse
+        return c.text("Pane não informado.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, workspace_id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const pane_id = std.fmt.parseInt(i32, pane_id_raw, 10) catch
+        return c.text("Pane inválido.", .{ .status = .bad_request });
+
+    const pane_rows = try db.query(
+        WorkspacePaneControlRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    workspace_id,
+        \\    role_name,
+        \\    pane_state,
+        \\    session_external_id,
+        \\    context_state
+        \\FROM workspace_panes
+        \\WHERE id = $1
+        \\AND workspace_id = $2
+        \\LIMIT 1
+        ,
+        .{ pane_id, workspace_id },
+    );
+
+    if (pane_rows.len == 0) {
+        return c.text("Pane não encontrado.", .{ .status = .not_found });
+    }
+
+    const pane = pane_rows[0];
+
+    if (pane.session_external_id.len == 0) {
+        return c.text("Este pane ainda não possui sessão para recriar.", .{ .status = .bad_request });
+    }
+
+    if (!std.mem.eql(u8, pane.pane_state, "active") and !std.mem.eql(u8, pane.pane_state, "closed")) {
+        return c.text("A sessão deste pane não está em estado recriável.", .{ .status = .bad_request });
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE workspace_panes
+        \\SET context_state = 'outdated',
+        \\    updated_at = NOW()
+        \\WHERE id = $1
+        \\AND workspace_id = $2
+        ,
+        .{ pane_id, workspace_id },
+    );
+
+    return workspacePaneOpenSession(c);
+}
+
 fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
     const workspace_id_raw = c.params.get("id") orelse
         return c.text("Workspace não informado.", .{ .status = .bad_request });
@@ -2958,16 +3150,50 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
         );
     }
 
+    const dispatch_messages_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/session/{s}/message",
+        .{ runtime.server_url_label, pilot.session_external_id },
+    );
+
+    var dispatch_user_message_id: []const u8 = "";
+    var dispatch_trace_attempt: usize = 0;
+
+    while (dispatch_trace_attempt < 6 and dispatch_user_message_id.len == 0) : (dispatch_trace_attempt += 1) {
+        const dispatch_messages_result = runRuntimeCommand(c, &.{
+            "curl",
+            "-fsS",
+            dispatch_messages_url,
+        });
+
+        if (dispatch_messages_result.ok) {
+            if (try extractLatestUserMessageIdMatchingText(
+                c.arena,
+                dispatch_messages_result.stdout,
+                mission_prompt,
+            )) |message_id| {
+                dispatch_user_message_id = message_id;
+                break;
+            }
+        }
+
+        std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
+    }
+
     try db.query(
         void,
         c.arena,
         \\UPDATE missions
         \\SET pilot_dispatch_status = 'sent',
         \\    pilot_session_external_id = $1,
-        \\    dispatched_to_pilot_at = NOW()
-        \\WHERE id = $2
+        \\    pilot_dispatch_user_message_id = $2,
+        \\    dispatched_to_pilot_at = NOW(),
+        \\    pilot_operational_brief = '',
+        \\    pilot_operational_brief_status = 'pending_capture',
+        \\    pilot_operational_brief_captured_at = NULL
+        \\WHERE id = $3
         ,
-        .{ pilot.session_external_id, mission_id },
+        .{ pilot.session_external_id, dispatch_user_message_id, mission_id },
     );
 
     const event_message = try std.fmt.allocPrint(
@@ -3609,6 +3835,26 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
     }
 
     const pilot = pilot_rows[0];
+
+    const dispatch_trace_rows = try db.query(
+        MissionPilotDispatchTraceRow,
+        c.arena,
+        \\SELECT pilot_dispatch_user_message_id
+        \\FROM missions
+        \\WHERE id = $1
+        \\LIMIT 1
+        ,
+        .{ mission_id },
+    );
+
+    if (dispatch_trace_rows.len == 0 or dispatch_trace_rows[0].pilot_dispatch_user_message_id.len == 0) {
+        return c.text(
+            "Esta missão ainda não possui rastreio do despacho ao Piloto. Reenvie a missão ao Piloto antes de capturar o briefing.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const dispatch_trace = dispatch_trace_rows[0];
     const runtime_rows = try loadWorkspaceRuntime(c, mission.workspace_id);
 
     if (runtime_rows.len == 0) {
@@ -3652,12 +3898,13 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
         return c.text("Falha ao consultar mensagens da sessão do Piloto.", .{ .status = .bad_request });
     }
 
-    const brief_text = try extractLatestAssistantTextFromOpenCodeMessages(
+    const brief_text = try extractAssistantTextForParentMessage(
         c.arena,
         messages_result.stdout,
+        dispatch_trace.pilot_dispatch_user_message_id,
     ) orelse {
         return c.text(
-            "Nenhuma resposta textual do Piloto foi encontrada para captura.",
+            "Nenhuma resposta textual vinculada ao último despacho rastreado foi encontrada. Aguarde o Piloto concluir a resposta e tente novamente.",
             .{ .status = .bad_request },
         );
     };

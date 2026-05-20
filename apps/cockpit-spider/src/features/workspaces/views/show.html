@@ -451,6 +451,9 @@ extends "layout"
                   <form method="post" action="/workspaces/{ workspace.id }/panes/{ pane.id }/session/close" class="inline-form pane-session-close-form">
                     <button class="danger-button" type="submit">Encerrar pane</button>
                   </form>
+                  <form method="post" action="/workspaces/{ workspace.id }/panes/{ pane.id }/session/recreate" class="inline-form pane-session-recreate-current-form">
+                    <button class="ghost-mini" type="submit">Recriar sessão</button>
+                  </form>
                   <a class="ghost-mini" href="{ runtime.server_url_label }/Lw/session/{ pane.session_external_id }" target="_blank" rel="noreferrer">Abrir sessão</a>
                 } else if (pane.pane_state == "closed") {
                   <form method="post" action="/workspaces/{ workspace.id }/panes/{ pane.id }/session/resume" class="inline-form pane-session-resume-form">
