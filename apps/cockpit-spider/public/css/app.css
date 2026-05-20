@@ -1455,6 +1455,30 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   display: flex;
 }
 
+.workspace-mission-filter-empty {
+  display: none;
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+  background: rgba(10, 15, 22, 0.44);
+  padding: 18px;
+  margin-top: 14px;
+}
+
+.workspace-mission-filter-empty[data-visible="true"] {
+  display: block;
+}
+
+.workspace-mission-filter-empty strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.workspace-mission-filter-empty p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
 .workspace-mission-card {
   border: 1px solid var(--border);
   border-radius: 18px;

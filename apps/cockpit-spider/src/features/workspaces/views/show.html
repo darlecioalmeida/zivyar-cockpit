@@ -138,6 +138,16 @@ extends "layout"
           </article>
         }
       </div>
+
+      <div class="workspace-mission-filter-empty" data-filter-empty="open">
+        <strong>Nenhuma missão aberta.</strong>
+        <p>Todas as missões deste workspace já foram encerradas operacionalmente ou ainda não há missão em aberto.</p>
+      </div>
+
+      <div class="workspace-mission-filter-empty" data-filter-empty="closed">
+        <strong>Nenhuma missão encerrada.</strong>
+        <p>As missões encerradas aparecerão aqui após o fechamento operacional pelo Cockpit.</p>
+      </div>
     } else {
       <div class="empty-inline-state">
         <strong>Nenhum evento registrado.</strong>
@@ -882,22 +892,64 @@ extends "layout"
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
+    const storageKey = "zivyar.workspaceMissionRoom.filter";
     const lists = document.querySelectorAll("[data-workspace-mission-filter]");
     const buttons = document.querySelectorAll("[data-filter-target]");
+    const emptyStates = document.querySelectorAll("[data-filter-empty]");
 
     if (!lists.length || !buttons.length) return;
 
-    function applyFilter(filter) {
+    function hasVisibleMissionForFilter(filter) {
+      if (filter === "all") return true;
+
+      let hasMatch = false;
+
       lists.forEach(function (list) {
-        list.setAttribute("data-workspace-mission-filter", filter);
+        const cards = list.querySelectorAll(".workspace-mission-card");
+
+        cards.forEach(function (card) {
+          const isClosed = card.getAttribute("data-closure-status") === "closed";
+
+          if (filter === "open" && !isClosed) {
+            hasMatch = true;
+          }
+
+          if (filter === "closed" && isClosed) {
+            hasMatch = true;
+          }
+        });
+      });
+
+      return hasMatch;
+    }
+
+    function applyFilter(filter) {
+      const allowedFilters = ["open", "closed", "all"];
+      const normalizedFilter = allowedFilters.includes(filter) ? filter : "open";
+
+      lists.forEach(function (list) {
+        list.setAttribute("data-workspace-mission-filter", normalizedFilter);
       });
 
       buttons.forEach(function (button) {
         button.setAttribute(
           "data-filter-active",
-          button.getAttribute("data-filter-target") === filter ? "true" : "false"
+          button.getAttribute("data-filter-target") === normalizedFilter ? "true" : "false"
         );
       });
+
+      emptyStates.forEach(function (emptyState) {
+        const target = emptyState.getAttribute("data-filter-empty");
+        const shouldShow = target === normalizedFilter && !hasVisibleMissionForFilter(normalizedFilter);
+
+        emptyState.setAttribute("data-visible", shouldShow ? "true" : "false");
+      });
+
+      try {
+        window.localStorage.setItem(storageKey, normalizedFilter);
+      } catch (error) {
+        // LocalStorage indisponível: mantém apenas estado visual.
+      }
     }
 
     buttons.forEach(function (button) {
@@ -906,7 +958,14 @@ extends "layout"
       });
     });
 
-    applyFilter("open");
+    let initialFilter = "open";
+
+    try {
+      initialFilter = window.localStorage.getItem(storageKey) || "open";
+    } catch (error) {
+      initialFilter = "open";
+    }
+
+    applyFilter(initialFilter);
   });
 </script>
-
