@@ -93,6 +93,30 @@ extends "layout"
         </select>
       </label>
 
+      <label>
+        <span>Modo de execução</span>
+        <select name="execution_mode">
+          if (mission.execution_mode == "manual") {
+            <option value="manual" selected>Manual</option>
+          } else {
+            <option value="manual">Manual</option>
+          }
+
+          if (mission.execution_mode == "supervised_auto") {
+            <option value="supervised_auto" selected>Supervisionado automático</option>
+          } else {
+            <option value="supervised_auto">Supervisionado automático</option>
+          }
+
+          if (mission.execution_mode == "autopilot") {
+            <option value="autopilot" selected>Autopilot</option>
+          } else {
+            <option value="autopilot">Autopilot</option>
+          }
+        </select>
+        <small>Manual exige confirmação etapa por etapa. Os modos automáticos serão habilitados gradualmente pelo Mission Engine.</small>
+      </label>
+
       <div class="form-actions">
         if (mission.mission_operational_closure_status == "closed") {
           <a href="/missions/{ mission.id }" class="ghost-link">Voltar para a missão</a>

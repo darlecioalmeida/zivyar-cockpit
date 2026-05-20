@@ -505,6 +505,7 @@ const MissionUpdateForm = struct {
     objective: []const u8,
     status: []const u8,
     priority: []const u8,
+    execution_mode: []const u8,
 };
 
 const MissionIdRow = struct {
@@ -9929,6 +9930,17 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
         );
     }
 
+    if (
+        !std.mem.eql(u8, form.execution_mode, "manual") and
+        !std.mem.eql(u8, form.execution_mode, "supervised_auto") and
+        !std.mem.eql(u8, form.execution_mode, "autopilot")
+    ) {
+        return c.text(
+            "Modo de execução inválido.",
+            .{ .status = .bad_request },
+        );
+    }
+
     try db.query(
         void,
         c.arena,
@@ -9936,14 +9948,16 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
         \\SET title = $1,
         \\    objective = $2,
         \\    status = $3,
-        \\    priority = $4
-        \\WHERE id = $5
+        \\    priority = $4,
+        \\    execution_mode = $5
+        \\WHERE id = $6
         ,
         .{
             form.title,
             form.objective,
-            current_rows[0].status,
+            form.status,
             form.priority,
+            form.execution_mode,
             mission_id,
         },
     );
