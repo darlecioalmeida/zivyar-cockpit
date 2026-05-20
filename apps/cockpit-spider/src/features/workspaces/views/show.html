@@ -248,7 +248,7 @@ extends "layout"
     if (pane_count > 0) {
       <div class="workspace-pane-grid">
         for (panes) |pane| {
-          <article class="workspace-pane-card" data-pane-state="{ pane.pane_state }">
+          <article class="workspace-pane-card" data-pane-state="{ pane.pane_state }" data-pane-id="{ pane.id }" data-workspace-id="{ workspace.id }" data-session-id="{ pane.session_external_id }">
             <div class="workspace-pane-head">
               <div class="provider-avatar compact">P</div>
               <div>
@@ -267,9 +267,26 @@ extends "layout"
               <strong>{ pane.stack_name }</strong>
             </div>
 
-            <div class="workspace-pane-actions">
-              <button class="ghost-mini" type="button" disabled>Abrir sessão</button>
-            </div>
+            if (pane.session_external_id) {
+              <div class="workspace-pane-session">
+                <span>Sessão OpenCode</span>
+                <strong>{ pane.session_external_id }</strong>
+              </div>
+
+              <div class="workspace-pane-actions">
+                <a class="ghost-mini" href="{ runtime.server_url_label }" target="_blank" rel="noreferrer">Abrir Server</a>
+              </div>
+            } else {
+              <div class="workspace-pane-actions">
+                if (runtime.state == "running") {
+                  <form method="post" action="/workspaces/{ workspace.id }/panes/{ pane.id }/session/open" class="inline-form">
+                    <button class="primary-button compact" type="submit">Abrir sessão</button>
+                  </form>
+                } else {
+                  <button class="ghost-mini" type="button" disabled>Runtime parado</button>
+                }
+              </div>
+            }
           </article>
         }
       </div>
@@ -333,4 +350,4 @@ extends "layout"
 </div>
 
 <script src="/js/runtime-actions.js?v=20260519-1"></script>
-<script src="/js/runtime-live-status.js?v=20260519-1"></script>
+<script src="/js/runtime-live-status.js?v=20260519-3"></script>

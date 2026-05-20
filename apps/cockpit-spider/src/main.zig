@@ -32,6 +32,7 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces/:id/runtime/start", workspaceRuntimeStart)
         .post("/workspaces/:id/runtime/stop", workspaceRuntimeStop)
         .get("/workspaces/:id/runtime/live", workspaceRuntimeLiveStatus)
+        .post("/workspaces/:id/panes/:pane_id/session/open", workspacePaneOpenSession)
         .get("/workspaces/:id", workspaceShow)
         .get("/missions", missions)
         .get("/missions/new", missionNew)
@@ -299,6 +300,15 @@ const WorkspacePaneRow = struct {
 };
 
 
+const WorkspacePaneControlRow = struct {
+    id: i32,
+    workspace_id: i32,
+    role_name: []const u8,
+    pane_state: []const u8,
+    session_external_id: []const u8,
+};
+
+
 const MissionRow = struct {
     id: i32,
     workspace_id: i32,
@@ -436,6 +446,33 @@ fn loadWorkspaceSquadsForSelected(c: *spider.Ctx, selected_squad_id: i32) ![]Wor
         ,
         .{ selected_squad_id },
     );
+}
+
+fn extractOpenCodeSessionId(raw: []const u8) ?[]const u8 {
+    const key = "\"id\"";
+    const key_index = std.mem.indexOf(u8, raw, key) orelse return null;
+
+    var cursor: usize = key_index + key.len;
+
+    while (cursor < raw.len and raw[cursor] != ':') : (cursor += 1) {}
+    if (cursor >= raw.len) return null;
+
+    cursor += 1;
+
+    while (
+        cursor < raw.len and
+        (raw[cursor] == ' ' or raw[cursor] == '\n' or raw[cursor] == '\r' or raw[cursor] == '\t')
+    ) : (cursor += 1) {}
+
+    if (cursor >= raw.len or raw[cursor] != '"') return null;
+
+    const start = cursor + 1;
+    cursor = start;
+
+    while (cursor < raw.len and raw[cursor] != '"') : (cursor += 1) {}
+    if (cursor >= raw.len) return null;
+
+    return raw[start..cursor];
 }
 
 fn runtimeLogExcerpt(raw: []const u8) []const u8 {
@@ -1672,6 +1709,181 @@ fn workspaceDelete(c: *spider.Ctx) !spider.Response {
     );
 
     return c.redirect("/workspaces?deleted=1");
+}
+
+fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
+    const workspace_id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const pane_id_raw = c.params.get("pane_id") orelse
+        return c.text("Pane não informado.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, workspace_id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const pane_id = std.fmt.parseInt(i32, pane_id_raw, 10) catch
+        return c.text("Pane inválido.", .{ .status = .bad_request });
+
+    const pane_rows = try db.query(
+        WorkspacePaneControlRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    workspace_id,
+        \\    role_name,
+        \\    pane_state,
+        \\    session_external_id
+        \\FROM workspace_panes
+        \\WHERE id = $1
+        \\AND workspace_id = $2
+        \\LIMIT 1
+        ,
+        .{ pane_id, workspace_id },
+    );
+
+    if (pane_rows.len == 0) {
+        return c.text("Pane não encontrado.", .{ .status = .not_found });
+    }
+
+    const pane = pane_rows[0];
+
+    if (pane.session_external_id.len > 0) {
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        return c.redirect(redirect_url);
+    }
+
+    const runtime_rows = try loadWorkspaceRuntime(c, workspace_id);
+
+    if (runtime_rows.len == 0) {
+        try insertRuntimeEvent(
+            c,
+            workspace_id,
+            "pane-session-error",
+            "Sessão não criada",
+            "O runtime deste workspace ainda não foi preparado.",
+        );
+
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        return c.redirect(redirect_url);
+    }
+
+    try reconcileWorkspaceRuntimeState(c, runtime_rows[0]);
+
+    const refreshed_runtime_rows = try loadWorkspaceRuntime(c, workspace_id);
+
+    if (refreshed_runtime_rows.len == 0) {
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        return c.redirect(redirect_url);
+    }
+
+    const runtime = refreshed_runtime_rows[0];
+
+    if (!std.mem.eql(u8, runtime.state, "running")) {
+        try insertRuntimeEvent(
+            c,
+            workspace_id,
+            "pane-session-error",
+            "Sessão não criada",
+            "O Runtime precisa estar em execução para abrir uma sessão de pane.",
+        );
+
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        return c.redirect(redirect_url);
+    }
+
+    const session_title = try std.fmt.allocPrint(
+        c.arena,
+        "Zivyar Pane · Workspace {d} · {s}",
+        .{ workspace_id, pane.role_name },
+    );
+
+    const request_body = try std.json.Stringify.valueAlloc(
+        c.arena,
+        .{ .title = session_title },
+        .{},
+    );
+
+    const session_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/session",
+        .{ runtime.server_url_label },
+    );
+
+    const create_session_result = runRuntimeCommand(c, &.{
+        "curl",
+        "-sS",
+        "-X",
+        "POST",
+        session_url,
+        "-H",
+        "Content-Type: application/json",
+        "-d",
+        request_body,
+    });
+
+    try insertRuntimeCommandLog(
+        c,
+        workspace_id,
+        "opencode-create-session",
+        "POST <opencode-server>/session",
+        create_session_result,
+    );
+
+    if (!create_session_result.ok) {
+        try insertRuntimeEvent(
+            c,
+            workspace_id,
+            "pane-session-error",
+            "Falha ao criar sessão",
+            "A chamada ao OpenCode Server não concluiu com sucesso.",
+        );
+
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        return c.redirect(redirect_url);
+    }
+
+    const session_id = extractOpenCodeSessionId(create_session_result.stdout) orelse {
+        try insertRuntimeEvent(
+            c,
+            workspace_id,
+            "pane-session-error",
+            "Resposta inválida do OpenCode",
+            "O OpenCode respondeu, mas o Zivyar não encontrou o identificador da sessão.",
+        );
+
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        return c.redirect(redirect_url);
+    };
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE workspace_panes
+        \\SET pane_state = 'active',
+        \\    session_external_id = $1,
+        \\    updated_at = NOW()
+        \\WHERE id = $2
+        \\AND workspace_id = $3
+        ,
+        .{ session_id, pane_id, workspace_id },
+    );
+
+    const event_message = try std.fmt.allocPrint(
+        c.arena,
+        "A sessão {s} foi criada no OpenCode Server para o pane {s}.",
+        .{ session_id, pane.role_name },
+    );
+
+    try insertRuntimeEvent(
+        c,
+        workspace_id,
+        "pane-session-opened",
+        "Sessão de pane criada",
+        event_message,
+    );
+
+    const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+    return c.redirect(redirect_url);
 }
 
 fn workspaceShow(c: *spider.Ctx) !spider.Response {

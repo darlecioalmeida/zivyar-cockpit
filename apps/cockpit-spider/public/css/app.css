@@ -1835,3 +1835,36 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   cursor: not-allowed;
 }
 
+
+.workspace-pane-card[data-pane-state="active"] {
+  border-color: rgba(61, 226, 151, 0.34);
+}
+
+.workspace-pane-card[data-pane-state="active"] .workspace-pane-status-row strong {
+  color: var(--green);
+  border-color: rgba(61, 226, 151, 0.42);
+  background: rgba(61, 226, 151, 0.12);
+}
+
+.workspace-pane-session {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(7, 13, 24, 0.68);
+  padding: 12px;
+}
+
+.workspace-pane-session span,
+.workspace-pane-session strong {
+  display: block;
+}
+
+.workspace-pane-session span {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.workspace-pane-session strong {
+  word-break: break-all;
+}
+

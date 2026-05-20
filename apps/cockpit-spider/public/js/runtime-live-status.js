@@ -126,6 +126,37 @@
     `;
   }
 
+  function refreshPaneSessionActions(data) {
+    const paneCards = document.querySelectorAll(".workspace-pane-card");
+
+    paneCards.forEach((card) => {
+      const paneId = card.dataset.paneId;
+      const sessionId = card.dataset.sessionId || "";
+      const actionsEl = card.querySelector(".workspace-pane-actions");
+
+      if (!actionsEl || !paneId || !workspaceId) {
+        return;
+      }
+
+      // Pane já possui sessão aberta: não alterar este bloco.
+      if (sessionId.length > 0) {
+        return;
+      }
+
+      if (data.is_running) {
+        actionsEl.innerHTML = `
+          <form method="post" action="/workspaces/${workspaceId}/panes/${paneId}/session/open" class="inline-form">
+            <button class="primary-button compact" type="submit">Abrir sessão</button>
+          </form>
+        `;
+      } else {
+        actionsEl.innerHTML = `
+          <button class="ghost-mini" type="button" disabled>Runtime parado</button>
+        `;
+      }
+    });
+  }
+
   async function refreshRuntimeStatus() {
     try {
       const response = await fetch(`/workspaces/${workspaceId}/runtime/live`, {
@@ -166,6 +197,7 @@
 
       renderHistory(data.runtime_events || [], data.runtime_event_count || 0);
       renderLogs(data.runtime_logs || [], data.runtime_log_count || 0);
+      refreshPaneSessionActions(data);
 
       const buttonsArea = panel.querySelector(".runtime-actions, .runtime-prepare-form");
 
