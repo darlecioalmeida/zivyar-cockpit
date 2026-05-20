@@ -274,12 +274,27 @@ extends "layout"
     if (mission_count > 0) {
       <div class="workspace-mission-list">
         for (missions) |mission| {
-          <article class="workspace-mission-card">
-            <div>
+          <article class="workspace-mission-card" data-active-mission="{ mission.is_active_in_cockpit }">
+            <div class="workspace-mission-copy">
               <strong>{ mission.title }</strong>
               <span>{ mission.status } · { mission.priority }</span>
+
+              if (mission.is_active_in_cockpit) {
+                <small class="workspace-mission-active-badge">Ativa no Cockpit</small>
+              }
             </div>
-            <a class="ghost-mini" href="/missions/{ mission.id }">Abrir</a>
+
+            <div class="workspace-mission-actions">
+              <a class="ghost-mini" href="/missions/{ mission.id }">Abrir</a>
+
+              if (mission.is_active_in_cockpit) {
+                <button class="ghost-mini" type="button" disabled>Missão ativa</button>
+              } else {
+                <form method="post" action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/activate" class="inline-form">
+                  <button class="primary-button compact" type="submit">Ativar no Cockpit</button>
+                </form>
+              }
+            </div>
           </article>
         }
       </div>

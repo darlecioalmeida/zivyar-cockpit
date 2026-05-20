@@ -35,6 +35,7 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces/:id/panes/:pane_id/session/open", workspacePaneOpenSession)
         .post("/workspaces/:id/panes/:pane_id/session/close", workspacePaneCloseSession)
         .post("/workspaces/:id/panes/:pane_id/session/resume", workspacePaneResumeSession)
+        .post("/workspaces/:id/missions/:mission_id/activate", workspaceMissionActivate)
         .get("/workspaces/:id", workspaceShow)
         .get("/missions", missions)
         .get("/missions/new", missionNew)
@@ -356,6 +357,20 @@ const MissionRow = struct {
     objective: []const u8,
     status: []const u8,
     priority: []const u8,
+};
+
+
+const WorkspaceMissionPreviewRow = struct {
+    id: i32,
+    workspace_id: i32,
+    workspace_name: []const u8,
+    squad_id: i32,
+    squad_name: []const u8,
+    title: []const u8,
+    objective: []const u8,
+    status: []const u8,
+    priority: []const u8,
+    is_active_in_cockpit: bool,
 };
 
 const MissionForm = struct {
@@ -2519,6 +2534,55 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
     return c.redirect(redirect_url);
 }
 
+
+fn workspaceMissionActivate(c: *spider.Ctx) !spider.Response {
+    const workspace_id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const mission_id_raw = c.params.get("mission_id") orelse
+        return c.text("Missão não informada.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, workspace_id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const mission_id = std.fmt.parseInt(i32, mission_id_raw, 10) catch
+        return c.text("Missão inválida.", .{ .status = .bad_request });
+
+    const mission_rows = try db.query(
+        MissionIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM missions
+        \\WHERE id = $1
+        \\AND workspace_id = $2
+        \\LIMIT 1
+        ,
+        .{ mission_id, workspace_id },
+    );
+
+    if (mission_rows.len == 0) {
+        return c.text("Missão não encontrada neste workspace.", .{ .status = .not_found });
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE workspaces
+        \\SET active_mission_id = $1
+        \\WHERE id = $2
+        ,
+        .{ mission_id, workspace_id },
+    );
+
+    const redirect_url = try std.fmt.allocPrint(
+        c.arena,
+        "/workspaces/{d}",
+        .{ workspace_id },
+    );
+
+    return c.redirect(redirect_url);
+}
+
 fn workspaceShow(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
         return c.text("Workspace não informado.", .{ .status = .bad_request });
@@ -2615,7 +2679,7 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
     );
 
     const workspace_missions = try db.query(
-        MissionRow,
+        WorkspaceMissionPreviewRow,
         c.arena,
         \\SELECT
         \\    m.id,
@@ -2626,12 +2690,18 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\    m.title,
         \\    m.objective,
         \\    m.status,
-        \\    m.priority
+        \\    m.priority,
+        \\    CASE
+        \\        WHEN w.active_mission_id = m.id THEN TRUE
+        \\        ELSE FALSE
+        \\    END AS is_active_in_cockpit
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
         \\WHERE m.workspace_id = $1
-        \\ORDER BY m.id DESC
+        \\ORDER BY
+        \\    CASE WHEN w.active_mission_id = m.id THEN 0 ELSE 1 END,
+        \\    m.id DESC
         ,
         .{ workspace.id },
     );
