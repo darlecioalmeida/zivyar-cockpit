@@ -311,6 +311,11 @@ if (notice) {
           </div>
 
           <div>
+            <span>Modo</span>
+            <strong class="mission-execution-mode-badge" data-execution-mode="{ active_mission.execution_mode }">{ active_mission.execution_mode }</strong>
+          </div>
+
+          <div>
             <span>Squad</span>
             <strong>{ active_mission.squad_name }</strong>
           </div>
@@ -695,6 +700,7 @@ if (notice) {
                 <div class="workspace-mission-status-line">
                   <strong class="mission-status-badge" data-mission-status="{ mission.status }">{ mission.status }</strong>
                   <em>{ mission.priority }</em>
+                  <strong class="mission-execution-mode-badge" data-execution-mode="{ mission.execution_mode }">{ mission.execution_mode }</strong>
                 </div>
 
                 <span>{ mission.objective }</span>

@@ -385,6 +385,7 @@ const MissionRow = struct {
     objective: []const u8,
     status: []const u8,
     priority: []const u8,
+    execution_mode: []const u8,
     pilot_operational_brief: []const u8,
     pilot_operational_brief_status: []const u8,
     pilot_operational_brief_captured_at_label: []const u8,
@@ -440,6 +441,7 @@ const WorkspaceMissionPreviewRow = struct {
     objective: []const u8,
     status: []const u8,
     priority: []const u8,
+    execution_mode: []const u8,
     mission_operational_closure_status: []const u8,
     is_active_in_cockpit: bool,
     mission_final_verdict: []const u8,
@@ -457,6 +459,7 @@ const ActiveMissionPanelRow = struct {
     objective: []const u8,
     status: []const u8,
     priority: []const u8,
+    execution_mode: []const u8,
     pilot_dispatch_status: []const u8,
     pilot_session_external_id: []const u8,
     dispatched_to_pilot_at_label: []const u8,
@@ -1477,6 +1480,7 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -3601,6 +3605,7 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -4016,6 +4021,7 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -4442,6 +4448,7 @@ fn workspaceMissionDispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -4874,6 +4881,7 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -5307,6 +5315,7 @@ fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Respo
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -5744,6 +5753,7 @@ fn workspaceMissionDispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Resp
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -6184,6 +6194,7 @@ fn workspaceMissionDispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Respons
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -6705,6 +6716,7 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.mission_operational_closure_status,
         \\    CASE
         \\        WHEN w.active_mission_id = m.id THEN TRUE
@@ -6739,6 +6751,7 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_dispatch_status,
         \\    m.pilot_session_external_id,
         \\    COALESCE(
@@ -7016,6 +7029,7 @@ fn missions(c: *spider.Ctx) !spider.Response {
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -7366,6 +7380,7 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -7637,6 +7652,7 @@ fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -7927,6 +7943,7 @@ fn missionCaptureScoutReport(c: *spider.Ctx) !spider.Response {
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -8216,6 +8233,7 @@ fn missionCaptureBuilderImplementationReport(c: *spider.Ctx) !spider.Response {
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -8505,6 +8523,7 @@ fn missionCaptureReviewerReviewReport(c: *spider.Ctx) !spider.Response {
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -8795,6 +8814,7 @@ fn missionCaptureExecutorVerificationReport(c: *spider.Ctx) !spider.Response {
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -9086,6 +9106,7 @@ fn missionCapturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -9534,6 +9555,7 @@ fn missionShow(c: *spider.Ctx) !spider.Response {
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -9675,6 +9697,7 @@ fn missionEdit(c: *spider.Ctx) !spider.Response {
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
@@ -9801,6 +9824,7 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.execution_mode,
         \\    m.pilot_operational_brief,
         \\    m.pilot_operational_brief_status,
         \\    COALESCE(
