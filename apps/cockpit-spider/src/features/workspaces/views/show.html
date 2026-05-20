@@ -206,6 +206,61 @@ extends "layout"
   </div>
 </section>
 
+<section class="panel pane-session-history-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Session Governance</span>
+      <h3>Histórico de Sessões Substituídas</h3>
+    </div>
+    <span class="mini-badge" id="pane-session-history-count">{ pane_session_history_count } registros</span>
+  </div>
+
+  <div id="pane-session-history-body">
+    if (pane_session_history_count > 0) {
+      <div class="pane-session-history-list">
+        for (pane_session_history) |history| {
+          <article class="pane-session-history-card">
+            <div class="pane-session-history-head">
+              <div>
+                <strong>{ history.role_name }</strong>
+                <span>{ history.replacement_reason }</span>
+              </div>
+              <small>{ history.created_at_label }</small>
+            </div>
+
+            <div class="pane-session-history-grid">
+              <div>
+                <span>Sessão anterior</span>
+                <strong>{ history.previous_session_external_id }</strong>
+              </div>
+
+              <div>
+                <span>Sessão substituta</span>
+                <strong>{ history.replacement_session_external_id }</strong>
+              </div>
+
+              <div>
+                <span>Agente anterior</span>
+                <strong>{ history.previous_session_agent_handle }</strong>
+              </div>
+
+              <div>
+                <span>Novo agente</span>
+                <strong>{ history.replacement_session_agent_handle }</strong>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    } else {
+      <div class="empty-inline-state">
+        <strong>Nenhuma sessão substituída.</strong>
+        <p>Quando um pane for recriado, o histórico operacional aparecerá aqui.</p>
+      </div>
+    }
+  </div>
+</section>
+
 <section class="grid cockpit-preview-grid">
   <article class="panel mission-preview-panel">
     <div class="panel-title-row">
@@ -384,4 +439,4 @@ extends "layout"
 </div>
 
 <script src="/js/runtime-actions.js?v=20260519-1"></script>
-<script src="/js/runtime-live-status.js?v=20260519-9"></script>
+<script src="/js/runtime-live-status.js?v=20260520-1"></script>

@@ -23,6 +23,9 @@
   const logCountEl = document.getElementById("runtime-live-log-count");
   const logsBodyEl = document.getElementById("runtime-live-logs-body");
 
+  const paneSessionHistoryCountEl = document.getElementById("pane-session-history-count");
+  const paneSessionHistoryBodyEl = document.getElementById("pane-session-history-body");
+
   const overlay = document.getElementById("runtime-loading-overlay");
   const overlayTitle = document.getElementById("runtime-loading-title");
   const overlayMessage = document.getElementById("runtime-loading-message");
@@ -268,6 +271,64 @@
     `;
   }
 
+  function renderPaneSessionHistory(historyRows, count) {
+    if (paneSessionHistoryCountEl) {
+      paneSessionHistoryCountEl.textContent = `${count} registros`;
+    }
+
+    if (!paneSessionHistoryBodyEl) {
+      return;
+    }
+
+    if (!count) {
+      paneSessionHistoryBodyEl.innerHTML = `
+        <div class="empty-inline-state">
+          <strong>Nenhuma sessão substituída.</strong>
+          <p>Quando um pane for recriado, o histórico operacional aparecerá aqui.</p>
+        </div>
+      `;
+      return;
+    }
+
+    paneSessionHistoryBodyEl.innerHTML = `
+      <div class="pane-session-history-list">
+        ${historyRows.map((history) => `
+          <article class="pane-session-history-card">
+            <div class="pane-session-history-head">
+              <div>
+                <strong>${escapeHtml(history.role_name)}</strong>
+                <span>${escapeHtml(history.replacement_reason)}</span>
+              </div>
+              <small>${escapeHtml(history.created_at_label)}</small>
+            </div>
+
+            <div class="pane-session-history-grid">
+              <div>
+                <span>Sessão anterior</span>
+                <strong>${escapeHtml(history.previous_session_external_id)}</strong>
+              </div>
+
+              <div>
+                <span>Sessão substituta</span>
+                <strong>${escapeHtml(history.replacement_session_external_id)}</strong>
+              </div>
+
+              <div>
+                <span>Agente anterior</span>
+                <strong>${escapeHtml(history.previous_session_agent_handle || "Não rastreado")}</strong>
+              </div>
+
+              <div>
+                <span>Novo agente</span>
+                <strong>${escapeHtml(history.replacement_session_agent_handle || "Não informado")}</strong>
+              </div>
+            </div>
+          </article>
+        `).join("")}
+      </div>
+    `;
+  }
+
   function renderPanes(panes, runtimeData) {
     panes.forEach((pane) => {
       const card = document.querySelector(`.workspace-pane-card[data-pane-id="${pane.id}"]`);
@@ -376,6 +437,7 @@
 
       renderHistory(data.runtime_events || [], data.runtime_event_count || 0);
       renderLogs(data.runtime_logs || [], data.runtime_log_count || 0);
+      renderPaneSessionHistory(data.pane_session_history || [], data.pane_session_history_count || 0);
       renderPanes(data.workspace_panes || [], data);
 
       const buttonsArea = panel.querySelector(".runtime-actions, .runtime-prepare-form");

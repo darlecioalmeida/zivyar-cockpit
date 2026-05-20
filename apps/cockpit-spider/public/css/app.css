@@ -1917,3 +1917,80 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   line-height: 1.5;
 }
 
+
+.pane-session-history-panel {
+  margin-top: 18px;
+}
+
+.pane-session-history-list {
+  display: grid;
+  gap: 14px;
+}
+
+.pane-session-history-card {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: rgba(10, 15, 22, .56);
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.pane-session-history-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pane-session-history-head strong,
+.pane-session-history-head span,
+.pane-session-history-head small {
+  display: block;
+}
+
+.pane-session-history-head span {
+  margin-top: 5px;
+  color: var(--amber);
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.pane-session-history-head small {
+  color: var(--muted);
+  text-align: right;
+}
+
+.pane-session-history-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.pane-session-history-grid > div {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(7, 13, 24, 0.68);
+  padding: 12px;
+}
+
+.pane-session-history-grid span,
+.pane-session-history-grid strong {
+  display: block;
+}
+
+.pane-session-history-grid span {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.pane-session-history-grid strong {
+  word-break: break-all;
+}
+
+@media (min-width: 900px) {
+  .pane-session-history-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+

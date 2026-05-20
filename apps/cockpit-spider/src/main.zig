@@ -448,6 +448,18 @@ const WorkspaceRuntimeLogRow = struct {
     stderr_excerpt: []const u8,
 };
 
+
+const WorkspacePaneSessionHistoryRow = struct {
+    id: i32,
+    role_name: []const u8,
+    previous_session_external_id: []const u8,
+    replacement_session_external_id: []const u8,
+    replacement_reason: []const u8,
+    previous_session_agent_handle: []const u8,
+    replacement_session_agent_handle: []const u8,
+    created_at_label: []const u8,
+};
+
 const RuntimeCommandResult = struct {
     ok: bool,
     exit_code: i32,
@@ -1408,6 +1420,26 @@ fn workspaceRuntimeLiveStatus(c: *spider.Ctx) !spider.Response {
         .{ workspace_id },
     );
 
+    const pane_session_history = try db.query(
+        WorkspacePaneSessionHistoryRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    role_name,
+        \\    previous_session_external_id,
+        \\    replacement_session_external_id,
+        \\    replacement_reason,
+        \\    previous_session_agent_handle,
+        \\    replacement_session_agent_handle,
+        \\    TO_CHAR(created_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS') AS created_at_label
+        \\FROM workspace_pane_session_history
+        \\WHERE workspace_id = $1
+        \\ORDER BY id DESC
+        \\LIMIT 8
+        ,
+        .{ workspace_id },
+    );
+
     return c.json(.{
         .ok = true,
         .workspace_id = workspace_id,
@@ -1422,6 +1454,8 @@ fn workspaceRuntimeLiveStatus(c: *spider.Ctx) !spider.Response {
         .runtime_event_count = runtime_events.len,
         .runtime_logs = runtime_logs,
         .runtime_log_count = runtime_logs.len,
+        .pane_session_history = pane_session_history,
+        .pane_session_history_count = pane_session_history.len,
         .workspace_panes = workspace_panes,
         .workspace_pane_count = workspace_panes.len,
     }, .{});
@@ -2560,6 +2594,26 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .{ workspace.id },
     );
 
+    const pane_session_history = try db.query(
+        WorkspacePaneSessionHistoryRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    role_name,
+        \\    previous_session_external_id,
+        \\    replacement_session_external_id,
+        \\    replacement_reason,
+        \\    previous_session_agent_handle,
+        \\    replacement_session_agent_handle,
+        \\    TO_CHAR(created_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS') AS created_at_label
+        \\FROM workspace_pane_session_history
+        \\WHERE workspace_id = $1
+        \\ORDER BY id DESC
+        \\LIMIT 8
+        ,
+        .{ workspace.id },
+    );
+
     const workspace_missions = try db.query(
         MissionRow,
         c.arena,
@@ -2709,6 +2763,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .runtime_event_count = runtime_events.len,
         .runtime_logs = runtime_logs,
         .runtime_log_count = runtime_logs.len,
+        .pane_session_history = pane_session_history,
+        .pane_session_history_count = pane_session_history.len,
     }, .{});
 }
 
