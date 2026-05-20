@@ -1646,3 +1646,74 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   }
 }
 
+
+.workspace-runtime-summary {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: rgba(7, 13, 24, 0.58);
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.workspace-runtime-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.workspace-runtime-head > span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.workspace-runtime-badge {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(10, 15, 22, .7);
+  color: var(--cyan);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.workspace-runtime-meta {
+  display: grid;
+  gap: 12px;
+}
+
+.workspace-runtime-meta div {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(10, 15, 22, .56);
+}
+
+.workspace-runtime-meta span,
+.workspace-runtime-meta strong {
+  display: block;
+}
+
+.workspace-runtime-meta span {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.workspace-runtime-meta strong {
+  word-break: break-word;
+}
+
+.workspace-card-actions-expanded {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.primary-button.compact {
+  padding: 10px 14px;
+  font-size: 13px;
+}
+

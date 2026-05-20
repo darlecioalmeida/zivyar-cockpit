@@ -85,6 +85,23 @@ const WorkspaceRow = struct {
     status: []const u8,
 };
 
+
+const WorkspaceIndexRow = struct {
+    id: i32,
+    name: []const u8,
+    local_path: []const u8,
+    stack_name: []const u8,
+    default_squad_id: ?i32,
+    squad_name: []const u8,
+    status: []const u8,
+    runtime_state: []const u8,
+    runtime_container_name: []const u8,
+    runtime_port_label: []const u8,
+    runtime_server_url_label: []const u8,
+    runtime_is_prepared: bool,
+    runtime_is_running: bool,
+};
+
 const WorkspaceForm = struct {
     name: []const u8,
     local_path: []const u8,
@@ -802,7 +819,7 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
 
 fn workspaces(c: *spider.Ctx) !spider.Response {
     const rows = try db.query(
-        WorkspaceRow,
+        WorkspaceIndexRow,
         c.arena,
         \\SELECT
         \\    w.id,
@@ -811,9 +828,25 @@ fn workspaces(c: *spider.Ctx) !spider.Response {
         \\    w.stack_name,
         \\    w.default_squad_id,
         \\    COALESCE(s.name, 'Sem squad vinculada') AS squad_name,
-        \\    w.status
+        \\    w.status,
+        \\    COALESCE(r.state, 'not_prepared') AS runtime_state,
+        \\    COALESCE(NULLIF(r.container_name, ''), 'Ainda não criado') AS runtime_container_name,
+        \\    CASE
+        \\        WHEN r.opencode_port IS NULL OR r.opencode_port = 0 THEN 'A definir'
+        \\        ELSE r.opencode_port::text
+        \\    END AS runtime_port_label,
+        \\    COALESCE(NULLIF(r.server_url, ''), 'A definir') AS runtime_server_url_label,
+        \\    CASE
+        \\        WHEN r.id IS NULL THEN FALSE
+        \\        ELSE TRUE
+        \\    END AS runtime_is_prepared,
+        \\    CASE
+        \\        WHEN r.state = 'running' THEN TRUE
+        \\        ELSE FALSE
+        \\    END AS runtime_is_running
         \\FROM workspaces w
         \\LEFT JOIN squads s ON s.id = w.default_squad_id
+        \\LEFT JOIN workspace_runtimes r ON r.workspace_id = w.id
         \\ORDER BY w.id DESC
         ,
         .{},
@@ -824,6 +857,17 @@ fn workspaces(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\SELECT COUNT(*)::bigint AS total
         \\FROM workspace_runtimes
+        \\WHERE state = 'running'
+        ,
+        .{},
+    );
+
+    const mission_count_rows = try db.query(
+        WorkspaceRuntimeCountRow,
+        c.arena,
+        \\SELECT COUNT(*)::bigint AS total
+        \\FROM missions
+        \\WHERE status <> 'completed'
         ,
         .{},
     );
@@ -843,7 +887,7 @@ fn workspaces(c: *spider.Ctx) !spider.Response {
         .workspaces = rows,
         .workspace_count = rows.len,
         .runtime_count = runtime_count_rows[0].total,
-        .mission_count = 0,
+        .mission_count = mission_count_rows[0].total,
         .notice = notice,
     }, .{});
 }
