@@ -285,8 +285,8 @@ extends "layout"
 
         <div class="active-mission-meta-grid">
           <div>
-            <span>Status</span>
-            <strong>{ active_mission.status }</strong>
+            <span>Status operacional</span>
+            <strong class="mission-status-badge" data-mission-status="{ active_mission.status }">{ active_mission.status }</strong>
           </div>
 
           <div>
@@ -364,18 +364,17 @@ extends "layout"
           <article class="workspace-mission-card" data-active-mission="{ mission.is_active_in_cockpit }">
             <div class="workspace-mission-copy">
               <strong>{ mission.title }</strong>
-              <span>{ mission.status } · { mission.priority }</span>
+              <span class="workspace-mission-status-line">
+                <strong class="mission-status-badge compact" data-mission-status="{ mission.status }">{ mission.status }</strong>
+                <em>{ mission.priority }</em>
+              </span>
 
               if (mission.mission_operational_closure_status == "closed") {
-                <small class="workspace-mission-active-badge">Encerrada</small>
-              } else if (mission.is_active_in_cockpit) {
-                <small class="workspace-mission-active-badge">Ativa no Cockpit</small>
-              }
-
-              if (mission.mission_operational_closure_status == "closed") {
-                <small class="workspace-mission-active-badge">
+                <small class="workspace-mission-closed-badge">
                   Encerrada · { mission.mission_final_verdict } · { mission.mission_operational_closed_at_label }
                 </small>
+              } else if (mission.is_active_in_cockpit) {
+                <small class="workspace-mission-active-badge">Ativa no Cockpit</small>
               }
             </div>
 
