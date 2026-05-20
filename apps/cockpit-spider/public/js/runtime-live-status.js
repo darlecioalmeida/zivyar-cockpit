@@ -195,8 +195,8 @@
           <button class="danger-button" type="submit">Encerrar pane</button>
         </form>
 
-        <a class="ghost-mini" href="${escapeHtml(runtimeData.server_url)}" target="_blank" rel="noreferrer">
-          Abrir Server
+        <a class="ghost-mini" href="${escapeHtml(runtimeData.server_url)}/Lw/session/${escapeHtml(pane.session_external_id)}" target="_blank" rel="noreferrer">
+          Abrir sessão
         </a>
       `;
       return;
@@ -212,8 +212,8 @@
           <button class="primary-button compact" type="submit">Retomar sessão</button>
         </form>
 
-        <a class="ghost-mini" href="${escapeHtml(runtimeData.server_url)}" target="_blank" rel="noreferrer">
-          Abrir Server
+        <a class="ghost-mini" href="${escapeHtml(runtimeData.server_url)}/Lw/session/${escapeHtml(pane.session_external_id)}" target="_blank" rel="noreferrer">
+          Abrir sessão
         </a>
       `;
       return;

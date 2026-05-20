@@ -278,12 +278,12 @@ extends "layout"
                   <form method="post" action="/workspaces/{ workspace.id }/panes/{ pane.id }/session/close" class="inline-form pane-session-close-form">
                     <button class="danger-button" type="submit">Encerrar pane</button>
                   </form>
-                  <a class="ghost-mini" href="{ runtime.server_url_label }" target="_blank" rel="noreferrer">Abrir Server</a>
+                  <a class="ghost-mini" href="{ runtime.server_url_label }/Lw/session/{ pane.session_external_id }" target="_blank" rel="noreferrer">Abrir sessão</a>
                 } else if (pane.pane_state == "closed") {
                   <form method="post" action="/workspaces/{ workspace.id }/panes/{ pane.id }/session/resume" class="inline-form pane-session-resume-form">
                     <button class="primary-button compact" type="submit">Retomar sessão</button>
                   </form>
-                  <a class="ghost-mini" href="{ runtime.server_url_label }" target="_blank" rel="noreferrer">Abrir Server</a>
+                  <a class="ghost-mini" href="{ runtime.server_url_label }/Lw/session/{ pane.session_external_id }" target="_blank" rel="noreferrer">Abrir sessão</a>
                 } else {
                   if (runtime.state == "running") {
                     <form method="post" action="/workspaces/{ workspace.id }/panes/{ pane.id }/session/open" class="inline-form pane-session-open-form pane-session-recreate-form">
@@ -368,4 +368,4 @@ extends "layout"
 </div>
 
 <script src="/js/runtime-actions.js?v=20260519-1"></script>
-<script src="/js/runtime-live-status.js?v=20260519-6"></script>
+<script src="/js/runtime-live-status.js?v=20260519-7"></script>
