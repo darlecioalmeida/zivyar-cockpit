@@ -9782,6 +9782,12 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
                 "/missions/{d}?next_step_ready=dispatch_pilot",
                 .{ mission_id },
             )
+        else if (std.mem.eql(u8, next_action_code, "capture_pilot_brief"))
+            try std.fmt.allocPrint(
+                c.arena,
+                "/missions/{d}?next_step_ready=capture_pilot_brief",
+                .{ mission_id },
+            )
         else
             try std.fmt.allocPrint(
                 c.arena,

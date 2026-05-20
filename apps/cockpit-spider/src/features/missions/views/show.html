@@ -296,6 +296,26 @@ if (next_step_ready_notice) {
     }
     if (
       mission.execution_mode == "supervised_auto" and
+      mission.next_step_detected_code == "capture_pilot_brief" and
+      mission.next_step_detected_route
+    ) {
+      <div class="mission-next-step-execute-panel">
+        <span>Execução supervisionada disponível</span>
+        <strong>Capturar briefing do Piloto</strong>
+        <p>Esta ação chama a rota operacional real de captura do briefing do Piloto.</p>
+
+        <form
+          method="post"
+          action="{ mission.next_step_detected_route }"
+          class="inline-form"
+        >
+          <button class="primary-button compact" type="submit">Capturar briefing do Piloto agora</button>
+        </form>
+      </div>
+    }
+
+    if (
+      mission.execution_mode == "supervised_auto" and
       mission.next_step_detected_code == "dispatch_pilot" and
       mission.next_step_detected_route
     ) {

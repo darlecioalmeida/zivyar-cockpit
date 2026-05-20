@@ -56,7 +56,7 @@ if (notice) {
     </div>
   </article>
 
-  <article class="panel runtime-status-panel" id="workspace-runtime-panel" data-workspace-id="{ pane.workspace_id }">
+  <article class="panel runtime-status-panel" id="workspace-runtime-panel" data-workspace-id="{ workspace.id }">
     <span class="eyebrow">Runtime</span>
     <h3>Docker + OpenCode Server</h3>
 
@@ -516,6 +516,26 @@ if (notice) {
             </article>
           </div>
         </div>
+
+        if (
+          active_mission.execution_mode == "supervised_auto" and
+          active_mission.next_step_detected_code == "capture_pilot_brief" and
+          active_mission.next_step_detected_route
+        ) {
+          <div class="active-mission-next-step-execute-panel">
+            <span>Execução supervisionada disponível</span>
+            <strong>Capturar briefing do Piloto</strong>
+            <p>Esta ação chama a rota operacional real de captura do briefing do Piloto.</p>
+
+            <form
+              method="post"
+              action="{ active_mission.next_step_detected_route }"
+              class="inline-form"
+            >
+              <button class="primary-button compact" type="submit">Capturar briefing do Piloto agora</button>
+            </form>
+          </div>
+        }
 
         if (
           active_mission.execution_mode == "supervised_auto" and
