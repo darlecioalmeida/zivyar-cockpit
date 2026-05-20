@@ -6901,6 +6901,11 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .runtime_log_count = runtime_logs.len,
         .pane_session_history = pane_session_history,
         .pane_session_history_count = pane_session_history.len,
+        .notice =
+            if (c.query("mission_created") != null)
+                "Missão criada com sucesso e vinculada a este workspace."
+            else
+                "",
     }, .{});
 }
 
@@ -7188,6 +7193,11 @@ fn missionNew(c: *spider.Ctx) !spider.Response {
         .form = .{
             .workspace_id = c.query("workspace_id") orelse "",
             .context_workspace_id = c.query("workspace_id") orelse "",
+            .cancel_url =
+                if (c.query("workspace_id")) |workspace_id|
+                    try std.fmt.allocPrint(c.arena, "/workspaces/{s}", .{ workspace_id })
+                else
+                    "/missions",
             .title = "",
             .objective = "",
             .status = "briefing",
