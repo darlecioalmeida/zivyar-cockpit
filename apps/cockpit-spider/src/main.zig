@@ -37,6 +37,7 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces/:id/panes/:pane_id/session/resume", workspacePaneResumeSession)
         .post("/workspaces/:id/missions/:mission_id/activate", workspaceMissionActivate)
         .post("/workspaces/:id/missions/:mission_id/dispatch/pilot", workspaceMissionDispatchToPilot)
+        .post("/missions/:id/capture/pilot-brief", missionCapturePilotOperationalBrief)
         .get("/workspaces/:id", workspaceShow)
         .get("/missions", missions)
         .get("/missions/new", missionNew)
@@ -358,6 +359,9 @@ const MissionRow = struct {
     objective: []const u8,
     status: []const u8,
     priority: []const u8,
+    pilot_operational_brief: []const u8,
+    pilot_operational_brief_status: []const u8,
+    pilot_operational_brief_captured_at_label: []const u8,
 };
 
 
@@ -576,6 +580,71 @@ fn openCodeSessionExists(
     });
 }
 
+
+fn extractLatestAssistantTextFromOpenCodeMessages(
+    allocator: std.mem.Allocator,
+    raw: []const u8,
+) !?[]const u8 {
+    var parsed = try std.json.parseFromSlice(std.json.Value, allocator, raw, .{});
+    defer parsed.deinit();
+
+    const root = parsed.value;
+    if (root != .array) return null;
+
+    var latest_text: ?[]const u8 = null;
+
+    for (root.array.items) |message_value| {
+        if (message_value != .object) continue;
+
+        const message_obj = message_value.object;
+
+        const info_value = message_obj.get("info") orelse continue;
+        if (info_value != .object) continue;
+
+        const role_value = info_value.object.get("role") orelse continue;
+        if (role_value != .string) continue;
+
+        if (!std.mem.eql(u8, role_value.string, "assistant")) continue;
+
+        const parts_value = message_obj.get("parts") orelse continue;
+        if (parts_value != .array) continue;
+
+        var collected: std.ArrayList(u8) = .empty;
+        errdefer collected.deinit(allocator);
+
+        var found_text = false;
+
+        for (parts_value.array.items) |part_value| {
+            if (part_value != .object) continue;
+
+            const part_obj = part_value.object;
+
+            const type_value = part_obj.get("type") orelse continue;
+            if (type_value != .string) continue;
+
+            if (!std.mem.eql(u8, type_value.string, "text")) continue;
+
+            const text_value = part_obj.get("text") orelse continue;
+            if (text_value != .string) continue;
+
+            if (found_text) {
+                try collected.appendSlice(allocator, "\n\n");
+            }
+
+            try collected.appendSlice(allocator, text_value.string);
+            found_text = true;
+        }
+
+        if (found_text) {
+            latest_text = try collected.toOwnedSlice(allocator);
+        } else {
+            collected.deinit(allocator);
+        }
+    }
+
+    return latest_text;
+}
+
 fn extractOpenCodeSessionId(raw: []const u8) ?[]const u8 {
     const key = "\"id\"";
     const key_index = std.mem.indexOf(u8, raw, key) orelse return null;
@@ -633,8 +702,8 @@ fn runRuntimeCommand(c: *spider.Ctx, argv: []const []const u8) RuntimeCommandRes
     return .{
         .ok = exit_code == 0,
         .exit_code = exit_code,
-        .stdout = runtimeLogExcerpt(result.stdout),
-        .stderr = runtimeLogExcerpt(result.stderr),
+        .stdout = result.stdout,
+        .stderr = result.stderr,
     };
 }
 
@@ -665,8 +734,8 @@ fn insertRuntimeCommandLog(
             command_label,
             result.exit_code,
             result.ok,
-            result.stdout,
-            result.stderr,
+            runtimeLogExcerpt(result.stdout),
+            runtimeLogExcerpt(result.stderr),
         },
     );
 }
@@ -1049,7 +1118,13 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         \\    w.name AS workspace_name,
         \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
         \\    m.status,
-        \\    m.priority
+        \\    m.priority,
+        \\    m.pilot_operational_brief,
+        \\    m.pilot_operational_brief_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS pilot_operational_brief_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -2669,7 +2744,13 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
         \\    m.title,
         \\    m.objective,
         \\    m.status,
-        \\    m.priority
+        \\    m.priority,
+        \\    m.pilot_operational_brief,
+        \\    m.pilot_operational_brief_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS pilot_operational_brief_captured_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -3314,7 +3395,13 @@ fn missions(c: *spider.Ctx) !spider.Response {
         \\    m.title,
         \\    m.objective,
         \\    m.status,
-        \\    m.priority
+        \\    m.priority,
+        \\    m.pilot_operational_brief,
+        \\    m.pilot_operational_brief_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS pilot_operational_brief_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -3458,6 +3545,171 @@ fn missionCreate(c: *spider.Ctx) !spider.Response {
     return c.redirect("/missions?created=1");
 }
 
+
+fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Missão não informada.", .{ .status = .bad_request });
+
+    const mission_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Missão inválida.", .{ .status = .bad_request });
+
+    const mission_rows = try db.query(
+        MissionRow,
+        c.arena,
+        \\SELECT
+        \\    m.id,
+        \\    m.workspace_id,
+        \\    w.name AS workspace_name,
+        \\    m.squad_id,
+        \\    COALESCE(s.name, 'Squad não localizada') AS squad_name,
+        \\    m.title,
+        \\    m.objective,
+        \\    m.status,
+        \\    m.priority,
+        \\    m.pilot_operational_brief,
+        \\    m.pilot_operational_brief_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS pilot_operational_brief_captured_at_label
+        \\FROM missions m
+        \\INNER JOIN workspaces w ON w.id = m.workspace_id
+        \\LEFT JOIN squads s ON s.id = m.squad_id
+        \\WHERE m.id = $1
+        \\LIMIT 1
+        ,
+        .{ mission_id },
+    );
+
+    if (mission_rows.len == 0) {
+        return c.text("Missão não encontrada.", .{ .status = .not_found });
+    }
+
+    const mission = mission_rows[0];
+
+    const pilot_rows = try db.query(
+        WorkspacePilotPaneDispatchRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    role_name,
+        \\    pane_state,
+        \\    session_external_id,
+        \\    context_state
+        \\FROM workspace_panes
+        \\WHERE workspace_id = $1
+        \\AND role_name = 'Piloto'
+        \\LIMIT 1
+        ,
+        .{ mission.workspace_id },
+    );
+
+    if (pilot_rows.len == 0 or pilot_rows[0].session_external_id.len == 0) {
+        return c.text("O pane Piloto não possui sessão disponível.", .{ .status = .bad_request });
+    }
+
+    const pilot = pilot_rows[0];
+    const runtime_rows = try loadWorkspaceRuntime(c, mission.workspace_id);
+
+    if (runtime_rows.len == 0) {
+        return c.text("Runtime do workspace não encontrado.", .{ .status = .bad_request });
+    }
+
+    try reconcileWorkspaceRuntimeState(c, runtime_rows[0]);
+
+    const refreshed_runtime_rows = try loadWorkspaceRuntime(c, mission.workspace_id);
+    if (refreshed_runtime_rows.len == 0) {
+        return c.text("Runtime indisponível após reconciliação.", .{ .status = .bad_request });
+    }
+
+    const runtime = refreshed_runtime_rows[0];
+
+    if (!std.mem.eql(u8, runtime.state, "running")) {
+        return c.text("O runtime precisa estar em execução para capturar o briefing.", .{ .status = .bad_request });
+    }
+
+    const messages_url = try std.fmt.allocPrint(
+        c.arena,
+        "{s}/session/{s}/message",
+        .{ runtime.server_url_label, pilot.session_external_id },
+    );
+
+    const messages_result = runRuntimeCommand(c, &.{
+        "curl",
+        "-fsS",
+        messages_url,
+    });
+
+    try insertRuntimeCommandLog(
+        c,
+        mission.workspace_id,
+        "opencode-fetch-pilot-session-messages",
+        "GET <opencode-server>/session/<session-id>/message",
+        messages_result,
+    );
+
+    if (!messages_result.ok) {
+        return c.text("Falha ao consultar mensagens da sessão do Piloto.", .{ .status = .bad_request });
+    }
+
+    const brief_text = try extractLatestAssistantTextFromOpenCodeMessages(
+        c.arena,
+        messages_result.stdout,
+    ) orelse {
+        return c.text(
+            "Nenhuma resposta textual do Piloto foi encontrada para captura.",
+            .{ .status = .bad_request },
+        );
+    };
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE missions
+        \\SET pilot_operational_brief = $1,
+        \\    pilot_operational_brief_status = 'captured',
+        \\    pilot_operational_brief_captured_at = NOW()
+        \\WHERE id = $2
+        ,
+        .{ brief_text, mission_id },
+    );
+
+    const event_message = try std.fmt.allocPrint(
+        c.arena,
+        "O Briefing Operacional do Piloto foi capturado a partir da sessão {s}.",
+        .{ pilot.session_external_id },
+    );
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO mission_events (
+        \\    mission_id,
+        \\    workspace_id,
+        \\    event_type,
+        \\    title,
+        \\    message
+        \\)
+        \\VALUES (
+        \\    $1,
+        \\    $2,
+        \\    'pilot-operational-brief-captured',
+        \\    'Briefing do Piloto capturado',
+        \\    $3
+        \\)
+        ,
+        .{ mission_id, mission.workspace_id, event_message },
+    );
+
+    const redirect_url = try std.fmt.allocPrint(
+        c.arena,
+        "/missions/{d}",
+        .{ mission_id },
+    );
+
+    return c.redirect(redirect_url);
+}
+
 fn missionShow(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
         return c.text("Missão não informada.", .{ .status = .bad_request });
@@ -3477,7 +3729,13 @@ fn missionShow(c: *spider.Ctx) !spider.Response {
         \\    m.title,
         \\    m.objective,
         \\    m.status,
-        \\    m.priority
+        \\    m.priority,
+        \\    m.pilot_operational_brief,
+        \\    m.pilot_operational_brief_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS pilot_operational_brief_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -3534,7 +3792,13 @@ fn missionEdit(c: *spider.Ctx) !spider.Response {
         \\    m.title,
         \\    m.objective,
         \\    m.status,
-        \\    m.priority
+        \\    m.priority,
+        \\    m.pilot_operational_brief,
+        \\    m.pilot_operational_brief_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS pilot_operational_brief_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -3576,7 +3840,13 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
         \\    m.title,
         \\    m.objective,
         \\    m.status,
-        \\    m.priority
+        \\    m.priority,
+        \\    m.pilot_operational_brief,
+        \\    m.pilot_operational_brief_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.pilot_operational_brief_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não capturado'
+        \\    ) AS pilot_operational_brief_captured_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id

@@ -2220,3 +2220,43 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   line-height: 1.6;
 }
 
+
+.mission-brief-panel {
+  margin-top: 18px;
+}
+
+.mission-brief-card {
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: rgba(10, 15, 22, 0.56);
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.mission-brief-meta span,
+.mission-brief-meta strong {
+  display: block;
+}
+
+.mission-brief-meta span {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.mission-brief-card pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  line-height: 1.65;
+  font: inherit;
+  color: var(--text);
+}
+
+.mission-brief-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+

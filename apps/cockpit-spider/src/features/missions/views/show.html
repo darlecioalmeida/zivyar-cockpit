@@ -50,6 +50,40 @@ extends "layout"
   </article>
 </section>
 
+
+<section class="panel mission-brief-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Mission Brief</span>
+      <h3>Briefing Operacional do Piloto</h3>
+    </div>
+
+    <span class="mini-badge">{ mission.pilot_operational_brief_status }</span>
+  </div>
+
+  if (mission.pilot_operational_brief) {
+    <article class="mission-brief-card">
+      <div class="mission-brief-meta">
+        <span>Capturado em</span>
+        <strong>{ mission.pilot_operational_brief_captured_at_label }</strong>
+      </div>
+
+      <pre>{ mission.pilot_operational_brief }</pre>
+    </article>
+  } else {
+    <div class="empty-inline-state">
+      <strong>Nenhum briefing capturado.</strong>
+      <p>Após o Piloto responder à missão, capture o conteúdo para persistir o briefing operacional.</p>
+    </div>
+  }
+
+  <div class="mission-brief-actions">
+    <form method="post" action="/missions/{ mission.id }/capture/pilot-brief" class="inline-form">
+      <button class="primary-button compact" type="submit">Capturar briefing do Piloto</button>
+    </form>
+  </div>
+</section>
+
 <section class="panel mission-timeline-panel">
   <div class="panel-title-row">
     <div>
