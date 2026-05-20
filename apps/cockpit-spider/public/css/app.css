@@ -1748,3 +1748,90 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   background: rgba(10, 15, 22, .7);
 }
 
+
+.workspace-pane-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.workspace-pane-card {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 16px;
+  background: rgba(10, 15, 22, .56);
+  display: grid;
+  gap: 14px;
+}
+
+.workspace-pane-card[data-pane-state="idle"] {
+  border-color: rgba(69, 217, 245, 0.24);
+}
+
+.workspace-pane-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.workspace-pane-head strong,
+.workspace-pane-head span {
+  display: block;
+}
+
+.workspace-pane-head span {
+  color: var(--muted);
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.workspace-pane-status-row,
+.workspace-pane-meta {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(7, 13, 24, 0.68);
+  padding: 12px;
+}
+
+.workspace-pane-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.workspace-pane-status-row span,
+.workspace-pane-meta span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.workspace-pane-status-row strong {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 7px 12px;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--cyan);
+  background: rgba(10, 15, 22, .7);
+}
+
+.workspace-pane-meta span,
+.workspace-pane-meta strong {
+  display: block;
+}
+
+.workspace-pane-meta span {
+  margin-bottom: 6px;
+}
+
+.workspace-pane-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.workspace-pane-actions button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+

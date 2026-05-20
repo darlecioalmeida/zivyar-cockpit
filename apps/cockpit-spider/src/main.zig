@@ -283,6 +283,22 @@ const SquadMemberAgentIdRow = struct {
 };
 
 
+const WorkspacePaneRow = struct {
+    id: i32,
+    workspace_id: i32,
+    role_name: []const u8,
+    squad_member_id: ?i32,
+    agent_id: i32,
+    pane_state: []const u8,
+    session_external_id: []const u8,
+    display_order: i32,
+    agent_name: []const u8,
+    agent_handle: []const u8,
+    agent_role: []const u8,
+    stack_name: []const u8,
+};
+
+
 const MissionRow = struct {
     id: i32,
     workspace_id: i32,
@@ -1775,11 +1791,95 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .{ linked_squad_id },
     );
 
+    if (linked_squad_id <= 0) {
+        try db.query(
+            void,
+            c.arena,
+            \\DELETE FROM workspace_panes
+            \\WHERE workspace_id = $1
+            ,
+            .{ workspace.id },
+        );
+    } else {
+        try db.query(
+            void,
+            c.arena,
+            \\DELETE FROM workspace_panes wp
+            \\WHERE wp.workspace_id = $1
+            \\AND NOT EXISTS (
+            \\    SELECT 1
+            \\    FROM squad_members sm
+            \\    WHERE sm.squad_id = $2
+            \\    AND sm.role_name = wp.role_name
+            \\)
+            ,
+            .{ workspace.id, linked_squad_id },
+        );
+
+        for (members) |member| {
+            try db.query(
+                void,
+                c.arena,
+                \\INSERT INTO workspace_panes (
+                \\    workspace_id,
+                \\    role_name,
+                \\    squad_member_id,
+                \\    agent_id,
+                \\    pane_state,
+                \\    session_external_id,
+                \\    display_order
+                \\)
+                \\VALUES ($1, $2, $3, $4, 'idle', '', $5)
+                \\ON CONFLICT (workspace_id, role_name)
+                \\DO UPDATE SET
+                \\    squad_member_id = EXCLUDED.squad_member_id,
+                \\    agent_id = EXCLUDED.agent_id,
+                \\    display_order = EXCLUDED.display_order,
+                \\    updated_at = NOW()
+                ,
+                .{
+                    workspace.id,
+                    member.role_name,
+                    member.id,
+                    member.agent_id,
+                    member.display_order,
+                },
+            );
+        }
+    }
+
+    const panes = try db.query(
+        WorkspacePaneRow,
+        c.arena,
+        \\SELECT
+        \\    wp.id,
+        \\    wp.workspace_id,
+        \\    wp.role_name,
+        \\    wp.squad_member_id,
+        \\    wp.agent_id,
+        \\    wp.pane_state,
+        \\    wp.session_external_id,
+        \\    wp.display_order,
+        \\    a.name AS agent_name,
+        \\    a.handle AS agent_handle,
+        \\    a.agent_role,
+        \\    s.name AS stack_name
+        \\FROM workspace_panes wp
+        \\INNER JOIN agents a ON a.id = wp.agent_id
+        \\INNER JOIN stacks s ON s.id = a.default_stack_id
+        \\WHERE wp.workspace_id = $1
+        \\ORDER BY wp.display_order ASC
+        ,
+        .{ workspace.id },
+    );
+
     return c.view("workspaces/show", .{
         .title = workspace.name,
         .workspace = workspace,
         .members = members,
         .member_count = members.len,
+        .panes = panes,
+        .pane_count = panes.len,
         .missions = workspace_missions,
         .mission_count = workspace_missions.len,
         .runtime = refreshed_runtime_rows[0],
