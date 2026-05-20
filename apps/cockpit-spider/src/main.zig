@@ -9205,6 +9205,44 @@ fn missionFinalizeFromPilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         .{ mission_id, mission.workspace_id, event_message },
     );
 
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE workspaces
+        \\SET active_mission_id = NULL
+        \\WHERE id = $1
+        \\AND active_mission_id = $2
+        ,
+        .{ mission.workspace_id, mission_id },
+    );
+
+    const release_event_message = try std.fmt.allocPrint(
+        c.arena,
+        "A missão \"{s}\" foi removida do foco ativo do workspace após o encerramento operacional.",
+        .{ mission.title },
+    );
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO mission_events (
+        \\    mission_id,
+        \\    workspace_id,
+        \\    event_type,
+        \\    title,
+        \\    message
+        \\)
+        \\VALUES (
+        \\    $1,
+        \\    $2,
+        \\    'mission-released-from-workspace-focus',
+        \\    'Missão removida do foco ativo',
+        \\    $3
+        \\)
+        ,
+        .{ mission_id, mission.workspace_id, release_event_message },
+    );
+
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
         "/missions/{d}",
