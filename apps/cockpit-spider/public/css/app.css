@@ -2450,3 +2450,31 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   margin-top: 18px;
 }
 
+
+.mission-builder-dispatch-status {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(7, 13, 24, 0.68);
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.mission-builder-dispatch-status span,
+.mission-builder-dispatch-status strong,
+.mission-builder-dispatch-status small {
+  display: block;
+}
+
+.mission-builder-dispatch-status span,
+.mission-builder-dispatch-status small {
+  color: var(--muted);
+}
+
+.mission-builder-dispatch-status strong {
+  color: var(--cyan);
+  text-transform: uppercase;
+  font-size: 13px;
+}
+
