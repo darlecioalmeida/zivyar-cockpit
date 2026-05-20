@@ -2237,6 +2237,21 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   background: rgba(61, 226, 151, 0.08);
 }
 
+.workspace-mission-card[data-closure-status="closed"] {
+  border-color: rgba(255, 123, 138, 0.34);
+  background: rgba(255, 123, 138, 0.06);
+}
+
+.workspace-mission-closed-meta {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.workspace-mission-copy .mission-status-badge {
+  width: fit-content;
+}
+
 .workspace-mission-copy {
   display: grid;
   gap: 6px;

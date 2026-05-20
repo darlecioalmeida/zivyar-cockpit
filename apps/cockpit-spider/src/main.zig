@@ -442,6 +442,8 @@ const WorkspaceMissionPreviewRow = struct {
     priority: []const u8,
     mission_operational_closure_status: []const u8,
     is_active_in_cockpit: bool,
+    mission_final_verdict: []const u8,
+    mission_operational_closed_at_label: []const u8,
 };
 
 
@@ -6707,7 +6709,6 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\        ELSE FALSE
         \\    END AS is_active_in_cockpit,
         \\    m.mission_final_verdict,
-        \\    m.mission_operational_closure_status,
         \\    COALESCE(
         \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não encerrada'

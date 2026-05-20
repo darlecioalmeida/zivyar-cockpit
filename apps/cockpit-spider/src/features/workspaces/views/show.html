@@ -650,37 +650,50 @@ extends "layout"
     if (mission_count > 0) {
       <div class="workspace-mission-list">
         for (missions) |mission| {
-          <article class="workspace-mission-card" data-active-mission="{ mission.is_active_in_cockpit }">
-            <div class="workspace-mission-copy">
-              <strong>{ mission.title }</strong>
-              <span class="workspace-mission-status-line">
-                <strong class="mission-status-badge compact" data-mission-status="{ mission.status }">{ mission.status }</strong>
-                <em>{ mission.priority }</em>
-              </span>
+          <article
+              class="workspace-mission-card"
+              data-active-mission="{ mission.is_active_in_cockpit }"
+              data-closure-status="{ mission.mission_operational_closure_status }"
+            >
+              <div class="workspace-mission-copy">
+                <strong>{ mission.title }</strong>
 
-              if (mission.mission_operational_closure_status == "closed") {
-                <small class="workspace-mission-closed-badge">
-                  Encerrada · { mission.mission_final_verdict } · { mission.mission_operational_closed_at_label }
-                </small>
-              } else if (mission.is_active_in_cockpit) {
-                <small class="workspace-mission-active-badge">Ativa no Cockpit</small>
-              }
-            </div>
+                <div class="workspace-mission-status-line">
+                  <strong class="mission-status-badge" data-mission-status="{ mission.status }">{ mission.status }</strong>
+                  <em>{ mission.priority }</em>
+                </div>
 
-            <div class="workspace-mission-actions">
-              <a class="ghost-mini" href="/missions/{ mission.id }">Abrir</a>
+                <span>{ mission.objective }</span>
 
-              if (mission.is_active_in_cockpit) {
-                <button class="ghost-mini" type="button" disabled>Missão ativa</button>
-              } else if (mission.mission_operational_closure_status == "closed") {
-                <button class="ghost-mini" type="button" disabled>Missão encerrada</button>
-              } else {
-                <form method="post" action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/activate" class="inline-form">
-                  <button class="primary-button compact" type="submit">Ativar no Cockpit</button>
-                </form>
-              }
-            </div>
-          </article>
+                if (mission.is_active_in_cockpit) {
+                  <small class="workspace-mission-active-badge">Ativa no Cockpit</small>
+                }
+
+                if (mission.mission_operational_closure_status == "closed") {
+                  <small class="workspace-mission-closed-badge">
+                    Encerrada · { mission.mission_final_verdict }
+                  </small>
+
+                  <small class="workspace-mission-closed-meta">
+                    Encerrada em { mission.mission_operational_closed_at_label }
+                  </small>
+                }
+              </div>
+
+              <div class="workspace-mission-actions">
+                <a class="ghost-mini" href="/missions/{ mission.id }">Abrir</a>
+
+                if (mission.is_active_in_cockpit) {
+                  <button class="ghost-mini" type="button" disabled>Missão ativa</button>
+                } else if (mission.mission_operational_closure_status == "closed") {
+                  <button class="ghost-mini" type="button" disabled>Missão encerrada</button>
+                } else {
+                  <form method="post" action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/activate" class="inline-form">
+                    <button class="primary-button compact" type="submit">Ativar no Cockpit</button>
+                  </form>
+                }
+              </div>
+            </article>
         }
       </div>
     } else {
