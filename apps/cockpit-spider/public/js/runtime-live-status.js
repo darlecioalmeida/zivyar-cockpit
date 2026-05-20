@@ -219,6 +219,26 @@
       return;
     }
 
+    if (pane.pane_state === "stale") {
+      if (runtimeData.is_running) {
+        actionsEl.innerHTML = `
+          <form
+            method="post"
+            action="/workspaces/${workspaceId}/panes/${pane.id}/session/open"
+            class="inline-form pane-session-open-form pane-session-recreate-form"
+          >
+            <button class="primary-button compact" type="submit">Criar nova sessão</button>
+          </form>
+        `;
+      } else {
+        actionsEl.innerHTML = `
+          <button class="ghost-mini" type="button" disabled>Runtime parado</button>
+        `;
+      }
+
+      return;
+    }
+
     actionsEl.innerHTML = `
       <button class="ghost-mini" type="button" disabled>Sessão indisponível</button>
     `;
@@ -363,9 +383,17 @@
     let busyText = "Processando...";
 
     if (openForm) {
-      actionLabel = "Criando sessão";
-      messageText = "O Zivyar está criando uma sessão real no OpenCode Server e vinculando-a ao workspace.";
-      busyText = "Criando sessão...";
+      const isRecreate = openForm.classList.contains("pane-session-recreate-form");
+
+      if (isRecreate) {
+        actionLabel = "Recriando sessão";
+        messageText = "A sessão anterior ficou indisponível. O Zivyar está criando uma nova sessão real no OpenCode Server.";
+        busyText = "Criando nova sessão...";
+      } else {
+        actionLabel = "Criando sessão";
+        messageText = "O Zivyar está criando uma sessão real no OpenCode Server e vinculando-a ao workspace.";
+        busyText = "Criando sessão...";
+      }
     } else if (closeForm) {
       actionLabel = "Encerrando pane";
       messageText = "O pane será encerrado no Cockpit, mantendo a sessão OpenCode disponível para retomada.";

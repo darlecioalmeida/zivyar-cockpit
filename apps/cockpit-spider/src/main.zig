@@ -2076,8 +2076,9 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
     }
 
     const pane = pane_rows[0];
+    const is_recreating_stale_session = std.mem.eql(u8, pane.pane_state, "stale");
 
-    if (pane.session_external_id.len > 0) {
+    if (pane.session_external_id.len > 0 and !is_recreating_stale_session) {
         const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
         return c.redirect(redirect_url);
     }
@@ -2198,17 +2199,25 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
         .{ session_id, pane_id, workspace_id },
     );
 
-    const event_message = try std.fmt.allocPrint(
-        c.arena,
-        "A sessão {s} foi criada no OpenCode Server para o pane {s}.",
-        .{ session_id, pane.role_name },
-    );
+    const event_message =
+        if (is_recreating_stale_session)
+            try std.fmt.allocPrint(
+                c.arena,
+                "A sessão antiga do pane {s} estava indisponível. O Zivyar criou a nova sessão {s} no OpenCode Server.",
+                .{ pane.role_name, session_id },
+            )
+        else
+            try std.fmt.allocPrint(
+                c.arena,
+                "A sessão {s} foi criada no OpenCode Server para o pane {s}.",
+                .{ session_id, pane.role_name },
+            );
 
     try insertRuntimeEvent(
         c,
         workspace_id,
-        "pane-session-opened",
-        "Sessão de pane criada",
+        if (is_recreating_stale_session) "pane-session-recreated" else "pane-session-opened",
+        if (is_recreating_stale_session) "Sessão de pane recriada" else "Sessão de pane criada",
         event_message,
     );
 
