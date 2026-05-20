@@ -818,6 +818,54 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
 }
 
 fn workspaces(c: *spider.Ctx) !spider.Response {
+    const initial_rows = try db.query(
+        WorkspaceIndexRow,
+        c.arena,
+        \\SELECT
+        \\    w.id,
+        \\    w.name,
+        \\    w.local_path,
+        \\    w.stack_name,
+        \\    w.default_squad_id,
+        \\    COALESCE(s.name, 'Sem squad vinculada') AS squad_name,
+        \\    w.status,
+        \\    COALESCE(r.state, 'not_prepared') AS runtime_state,
+        \\    COALESCE(NULLIF(r.container_name, ''), 'Ainda não criado') AS runtime_container_name,
+        \\    CASE
+        \\        WHEN r.opencode_port IS NULL OR r.opencode_port = 0 THEN 'A definir'
+        \\        ELSE r.opencode_port::text
+        \\    END AS runtime_port_label,
+        \\    COALESCE(NULLIF(r.server_url, ''), 'A definir') AS runtime_server_url_label,
+        \\    CASE
+        \\        WHEN r.id IS NULL THEN FALSE
+        \\        ELSE TRUE
+        \\    END AS runtime_is_prepared,
+        \\    CASE
+        \\        WHEN r.state = 'running' THEN TRUE
+        \\        ELSE FALSE
+        \\    END AS runtime_is_running
+        \\FROM workspaces w
+        \\LEFT JOIN squads s ON s.id = w.default_squad_id
+        \\LEFT JOIN workspace_runtimes r ON r.workspace_id = w.id
+        \\ORDER BY w.id DESC
+        ,
+        .{},
+    );
+
+    for (initial_rows) |workspace| {
+        if (!workspace.runtime_is_prepared) {
+            continue;
+        }
+
+        const runtime_rows = try loadWorkspaceRuntime(c, workspace.id);
+
+        if (runtime_rows.len == 0) {
+            continue;
+        }
+
+        try reconcileWorkspaceRuntimeState(c, runtime_rows[0]);
+    }
+
     const rows = try db.query(
         WorkspaceIndexRow,
         c.arena,

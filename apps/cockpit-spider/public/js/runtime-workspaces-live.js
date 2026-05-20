@@ -55,11 +55,16 @@
   }
 
   function updateCard(card, data) {
+    const runtimeSummaryEl = card.querySelector(".workspace-runtime-summary");
     const stateEl = card.querySelector(".workspace-live-runtime-state");
     const containerEl = card.querySelector(".workspace-live-runtime-container");
     const portEl = card.querySelector(".workspace-live-runtime-port");
     const serverEl = card.querySelector(".workspace-live-runtime-server");
     const actionsEl = card.querySelector(".workspace-live-runtime-actions");
+
+    if (runtimeSummaryEl) {
+      runtimeSummaryEl.dataset.runtimeState = data.state;
+    }
 
     if (stateEl) {
       stateEl.textContent = data.state;
