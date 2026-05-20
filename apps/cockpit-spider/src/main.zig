@@ -440,6 +440,7 @@ const WorkspaceMissionPreviewRow = struct {
     objective: []const u8,
     status: []const u8,
     priority: []const u8,
+    mission_operational_closure_status: []const u8,
     is_active_in_cockpit: bool,
 };
 
@@ -489,6 +490,11 @@ const MissionUpdateForm = struct {
 
 const MissionIdRow = struct {
     id: i32,
+};
+
+const MissionActivationTargetRow = struct {
+    id: i32,
+    mission_operational_closure_status: []const u8,
 };
 
 
@@ -3487,9 +3493,11 @@ fn workspaceMissionActivate(c: *spider.Ctx) !spider.Response {
         return c.text("Missão inválida.", .{ .status = .bad_request });
 
     const mission_rows = try db.query(
-        MissionIdRow,
+        MissionActivationTargetRow,
         c.arena,
-        \\SELECT id
+        \\SELECT
+        \\    id,
+        \\    mission_operational_closure_status
         \\FROM missions
         \\WHERE id = $1
         \\AND workspace_id = $2
@@ -3500,6 +3508,13 @@ fn workspaceMissionActivate(c: *spider.Ctx) !spider.Response {
 
     if (mission_rows.len == 0) {
         return c.text("Missão não encontrada neste workspace.", .{ .status = .not_found });
+    }
+
+    if (std.mem.eql(u8, mission_rows[0].mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem ser reativadas no Cockpit.",
+            .{ .status = .bad_request },
+        );
     }
 
     try db.query(
@@ -6622,10 +6637,17 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\    m.objective,
         \\    m.status,
         \\    m.priority,
+        \\    m.mission_operational_closure_status,
         \\    CASE
         \\        WHEN w.active_mission_id = m.id THEN TRUE
         \\        ELSE FALSE
-        \\    END AS is_active_in_cockpit
+        \\    END AS is_active_in_cockpit,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -6787,7 +6809,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .panes = panes,
         .pane_count = panes.len,
         .missions = workspace_missions,
-        .mission_count = workspace_missions.len,
+        .mission_count = countOpenWorkspaceMissions(workspace_missions),
+        .open_mission_count = countOpenWorkspaceMissions(workspace_missions),
         .active_missions = active_missions,
         .active_mission_count = active_missions.len,
         .runtime = refreshed_runtime_rows[0],
@@ -7025,6 +7048,19 @@ fn countOpenMissions(rows: []const MissionRow) usize {
             total += 1;
         }
     }
+    return total;
+}
+
+
+fn countOpenWorkspaceMissions(rows: []const WorkspaceMissionPreviewRow) usize {
+    var total: usize = 0;
+
+    for (rows) |row| {
+        if (!std.mem.eql(u8, row.mission_operational_closure_status, "closed")) {
+            total += 1;
+        }
+    }
+
     return total;
 }
 

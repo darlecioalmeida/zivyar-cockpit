@@ -355,7 +355,7 @@ extends "layout"
         <span class="eyebrow">Mission Room</span>
         <h3>Missões do workspace</h3>
       </div>
-      <span class="mini-badge">{ mission_count } abertas</span>
+      <span class="mini-badge">{ open_mission_count } abertas</span>
     </div>
 
     if (mission_count > 0) {
@@ -366,8 +366,16 @@ extends "layout"
               <strong>{ mission.title }</strong>
               <span>{ mission.status } · { mission.priority }</span>
 
-              if (mission.is_active_in_cockpit) {
+              if (mission.mission_operational_closure_status == "closed") {
+                <small class="workspace-mission-active-badge">Encerrada</small>
+              } else if (mission.is_active_in_cockpit) {
                 <small class="workspace-mission-active-badge">Ativa no Cockpit</small>
+              }
+
+              if (mission.mission_operational_closure_status == "closed") {
+                <small class="workspace-mission-active-badge">
+                  Encerrada · { mission.mission_final_verdict } · { mission.mission_operational_closed_at_label }
+                </small>
               }
             </div>
 
@@ -376,6 +384,8 @@ extends "layout"
 
               if (mission.is_active_in_cockpit) {
                 <button class="ghost-mini" type="button" disabled>Missão ativa</button>
+              } else if (mission.mission_operational_closure_status == "closed") {
+                <button class="ghost-mini" type="button" disabled>Missão encerrada</button>
               } else {
                 <form method="post" action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/activate" class="inline-form">
                   <button class="primary-button compact" type="submit">Ativar no Cockpit</button>
