@@ -422,6 +422,15 @@ const MissionIdRow = struct {
     id: i32,
 };
 
+
+const MissionEventRow = struct {
+    id: i32,
+    event_type: []const u8,
+    title: []const u8,
+    message: []const u8,
+    created_at_label: []const u8,
+};
+
 const MissionWorkspaceOptionRow = struct {
     id: i32,
     name: []const u8,
@@ -2604,6 +2613,27 @@ fn workspaceMissionActivate(c: *spider.Ctx) !spider.Response {
         .{ mission_id, workspace_id },
     );
 
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO mission_events (
+        \\    mission_id,
+        \\    workspace_id,
+        \\    event_type,
+        \\    title,
+        \\    message
+        \\)
+        \\VALUES (
+        \\    $1,
+        \\    $2,
+        \\    'mission-activated-in-cockpit',
+        \\    'Missão ativada no Cockpit',
+        \\    'Esta missão foi definida como foco operacional ativo do workspace.'
+        \\)
+        ,
+        .{ mission_id, workspace_id },
+    );
+
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
         "/workspaces/{d}",
@@ -2820,6 +2850,27 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
             "O OpenCode Server não confirmou o envio assíncrono da missão ativa.",
         );
 
+        try db.query(
+            void,
+            c.arena,
+            \\INSERT INTO mission_events (
+            \\    mission_id,
+            \\    workspace_id,
+            \\    event_type,
+            \\    title,
+            \\    message
+            \\)
+            \\VALUES (
+            \\    $1,
+            \\    $2,
+            \\    'mission-dispatch-to-pilot-error',
+            \\    'Falha ao enviar missão ao Piloto',
+            \\    'O despacho assíncrono ao pane Piloto não foi confirmado pelo OpenCode Server.'
+            \\)
+            ,
+            .{ mission_id, workspace_id },
+        );
+
         return c.text(
             "Falha ao enviar a missão ativa ao Piloto.",
             .{ .status = .bad_request },
@@ -2850,6 +2901,27 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
         "mission-dispatched-to-pilot",
         "Missão enviada ao Piloto",
         event_message,
+    );
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO mission_events (
+        \\    mission_id,
+        \\    workspace_id,
+        \\    event_type,
+        \\    title,
+        \\    message
+        \\)
+        \\VALUES (
+        \\    $1,
+        \\    $2,
+        \\    'mission-dispatched-to-pilot',
+        \\    'Missão enviada ao Piloto',
+        \\    $3
+        \\)
+        ,
+        .{ mission_id, workspace_id, event_message },
     );
 
     const pilot_session_url = try std.fmt.allocPrint(
@@ -3419,9 +3491,27 @@ fn missionShow(c: *spider.Ctx) !spider.Response {
         return c.text("Missão não encontrada.", .{ .status = .not_found });
     }
 
+    const mission_events = try db.query(
+        MissionEventRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    event_type,
+        \\    title,
+        \\    message,
+        \\    TO_CHAR(created_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS') AS created_at_label
+        \\FROM mission_events
+        \\WHERE mission_id = $1
+        \\ORDER BY id DESC
+        ,
+        .{ mission_id },
+    );
+
     return c.view("missions/show", .{
         .title = rows[0].title,
         .mission = rows[0],
+        .mission_events = mission_events,
+        .mission_event_count = mission_events.len,
     }, .{});
 }
 
