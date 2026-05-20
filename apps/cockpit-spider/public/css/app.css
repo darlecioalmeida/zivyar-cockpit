@@ -3099,3 +3099,9 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   font-size: 11px;
   font-weight: 800;
 }
+
+
+.mission-next-step-diagnostic small,
+.active-mission-next-step-diagnostic small {
+  word-break: break-all;
+}
