@@ -279,7 +279,7 @@ extends "layout"
             } else {
               <div class="workspace-pane-actions">
                 if (runtime.state == "running") {
-                  <form method="post" action="/workspaces/{ workspace.id }/panes/{ pane.id }/session/open" class="inline-form">
+                  <form method="post" action="/workspaces/{ workspace.id }/panes/{ pane.id }/session/open" class="inline-form pane-session-open-form">
                     <button class="primary-button compact" type="submit">Abrir sessão</button>
                   </form>
                 } else {
@@ -350,4 +350,4 @@ extends "layout"
 </div>
 
 <script src="/js/runtime-actions.js?v=20260519-1"></script>
-<script src="/js/runtime-live-status.js?v=20260519-3"></script>
+<script src="/js/runtime-live-status.js?v=20260519-4"></script>

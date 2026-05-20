@@ -23,6 +23,14 @@
   const logCountEl = document.getElementById("runtime-live-log-count");
   const logsBodyEl = document.getElementById("runtime-live-logs-body");
 
+  const overlay = document.getElementById("runtime-loading-overlay");
+  const overlayTitle = document.getElementById("runtime-loading-title");
+  const overlayMessage = document.getElementById("runtime-loading-message");
+  const overlayStep = document.getElementById("runtime-loading-step");
+  const overlayHint = document.getElementById("runtime-loading-hint");
+
+  let refreshInFlight = false;
+
   function escapeHtml(value) {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -30,6 +38,31 @@
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
+  }
+
+  function showPaneSessionOverlay(roleName) {
+    if (!overlay || !overlayTitle || !overlayMessage || !overlayStep || !overlayHint) {
+      return;
+    }
+
+    overlayTitle.textContent = `Abrindo sessão do pane ${roleName}`;
+    overlayMessage.textContent =
+      "O Zivyar está criando uma sessão real no OpenCode Server e vinculando-a ao workspace.";
+    overlayStep.textContent = "Criando sessão no OpenCode";
+    overlayHint.textContent =
+      "Aguarde a conclusão. O card será atualizado automaticamente.";
+
+    overlay.hidden = false;
+    document.body.classList.add("runtime-operation-active");
+  }
+
+  function hidePaneSessionOverlay() {
+    if (!overlay) {
+      return;
+    }
+
+    overlay.hidden = true;
+    document.body.classList.remove("runtime-operation-active");
   }
 
   function renderHistory(events, count) {
@@ -126,38 +159,88 @@
     `;
   }
 
-  function refreshPaneSessionActions(data) {
-    const paneCards = document.querySelectorAll(".workspace-pane-card");
+  function renderPaneAction(card, pane, runtimeData) {
+    const actionsEl = card.querySelector(".workspace-pane-actions");
 
-    paneCards.forEach((card) => {
-      const paneId = card.dataset.paneId;
-      const sessionId = card.dataset.sessionId || "";
-      const actionsEl = card.querySelector(".workspace-pane-actions");
+    if (!actionsEl) {
+      return;
+    }
 
-      if (!actionsEl || !paneId || !workspaceId) {
+    if (pane.session_external_id) {
+      actionsEl.innerHTML = `
+        <a class="ghost-mini" href="${escapeHtml(runtimeData.server_url)}" target="_blank" rel="noreferrer">
+          Abrir Server
+        </a>
+      `;
+      return;
+    }
+
+    if (runtimeData.is_running) {
+      actionsEl.innerHTML = `
+        <form
+          method="post"
+          action="/workspaces/${workspaceId}/panes/${pane.id}/session/open"
+          class="inline-form pane-session-open-form"
+        >
+          <button class="primary-button compact" type="submit">Abrir sessão</button>
+        </form>
+      `;
+      return;
+    }
+
+    actionsEl.innerHTML = `
+      <button class="ghost-mini" type="button" disabled>Runtime parado</button>
+    `;
+  }
+
+  function renderPanes(panes, runtimeData) {
+    panes.forEach((pane) => {
+      const card = document.querySelector(`.workspace-pane-card[data-pane-id="${pane.id}"]`);
+
+      if (!card) {
         return;
       }
 
-      // Pane já possui sessão aberta: não alterar este bloco.
-      if (sessionId.length > 0) {
-        return;
+      card.dataset.paneState = pane.pane_state;
+      card.dataset.sessionId = pane.session_external_id || "";
+
+      const statusEl = card.querySelector(".workspace-pane-status-row strong");
+      if (statusEl) {
+        statusEl.textContent = pane.pane_state;
       }
 
-      if (data.is_running) {
-        actionsEl.innerHTML = `
-          <form method="post" action="/workspaces/${workspaceId}/panes/${paneId}/session/open" class="inline-form">
-            <button class="primary-button compact" type="submit">Abrir sessão</button>
-          </form>
+      let sessionBox = card.querySelector(".workspace-pane-session");
+
+      if (pane.session_external_id) {
+        if (!sessionBox) {
+          sessionBox = document.createElement("div");
+          sessionBox.className = "workspace-pane-session";
+
+          const actionsEl = card.querySelector(".workspace-pane-actions");
+          if (actionsEl) {
+            card.insertBefore(sessionBox, actionsEl);
+          }
+        }
+
+        sessionBox.innerHTML = `
+          <span>Sessão OpenCode</span>
+          <strong>${escapeHtml(pane.session_external_id)}</strong>
         `;
-      } else {
-        actionsEl.innerHTML = `
-          <button class="ghost-mini" type="button" disabled>Runtime parado</button>
-        `;
+      } else if (sessionBox) {
+        sessionBox.remove();
       }
+
+      renderPaneAction(card, pane, runtimeData);
     });
   }
 
   async function refreshRuntimeStatus() {
+    if (refreshInFlight) {
+      return;
+    }
+
+    refreshInFlight = true;
+
     try {
       const response = await fetch(`/workspaces/${workspaceId}/runtime/live`, {
         headers: {
@@ -197,7 +280,7 @@
 
       renderHistory(data.runtime_events || [], data.runtime_event_count || 0);
       renderLogs(data.runtime_logs || [], data.runtime_log_count || 0);
-      refreshPaneSessionActions(data);
+      renderPanes(data.workspace_panes || [], data);
 
       const buttonsArea = panel.querySelector(".runtime-actions, .runtime-prepare-form");
 
@@ -221,9 +304,56 @@
         `;
       }
     } catch (_) {
-      // Silencioso para não poluir a interface em falhas transitórias.
+      // Falha transitória silenciosa.
+    } finally {
+      refreshInFlight = false;
     }
   }
+
+  document.addEventListener("submit", async (event) => {
+    const form = event.target.closest(".pane-session-open-form");
+
+    if (!form) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const card = form.closest(".workspace-pane-card");
+    const roleName =
+      card?.querySelector(".workspace-pane-head strong")?.textContent?.trim() || "agente";
+
+    const button = form.querySelector("button[type='submit']");
+
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Criando sessão...";
+    }
+
+    showPaneSessionOverlay(roleName);
+
+    try {
+      const response = await fetch(form.action, {
+        method: "POST",
+        headers: {
+          "Accept": "text/html"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error("Falha ao abrir sessão.");
+      }
+
+      await refreshRuntimeStatus();
+    } catch (_) {
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Abrir sessão";
+      }
+    } finally {
+      hidePaneSessionOverlay();
+    }
+  });
 
   refreshRuntimeStatus();
   window.setInterval(refreshRuntimeStatus, 3000);

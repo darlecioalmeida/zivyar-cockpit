@@ -1238,6 +1238,31 @@ fn workspaceRuntimeLiveStatus(c: *spider.Ctx) !spider.Response {
         .{ workspace_id },
     );
 
+    const workspace_panes = try db.query(
+        WorkspacePaneRow,
+        c.arena,
+        \\SELECT
+        \\    wp.id,
+        \\    wp.workspace_id,
+        \\    wp.role_name,
+        \\    wp.squad_member_id,
+        \\    wp.agent_id,
+        \\    wp.pane_state,
+        \\    wp.session_external_id,
+        \\    wp.display_order,
+        \\    a.name AS agent_name,
+        \\    a.handle AS agent_handle,
+        \\    a.agent_role,
+        \\    s.name AS stack_name
+        \\FROM workspace_panes wp
+        \\INNER JOIN agents a ON a.id = wp.agent_id
+        \\INNER JOIN stacks s ON s.id = a.default_stack_id
+        \\WHERE wp.workspace_id = $1
+        \\ORDER BY wp.display_order ASC
+        ,
+        .{ workspace_id },
+    );
+
     return c.json(.{
         .ok = true,
         .workspace_id = workspace_id,
@@ -1252,6 +1277,8 @@ fn workspaceRuntimeLiveStatus(c: *spider.Ctx) !spider.Response {
         .runtime_event_count = runtime_events.len,
         .runtime_logs = runtime_logs,
         .runtime_log_count = runtime_logs.len,
+        .workspace_panes = workspace_panes,
+        .workspace_pane_count = workspace_panes.len,
     }, .{});
 }
 
