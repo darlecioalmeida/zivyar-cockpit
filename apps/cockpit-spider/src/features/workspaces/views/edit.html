@@ -68,7 +68,7 @@ extends "layout"
           </div>
         </form>
       </section>
-    }
+    } else {
 
     <form class="cockpit-form" method="post" action="/workspaces/{ workspace.id }/update">
       <label>
@@ -112,6 +112,7 @@ extends "layout"
         <a href="/workspaces" class="ghost-link">Cancelar</a>
       </div>
     </form>
+    }
   </article>
 
   <article class="panel guidance-panel">
