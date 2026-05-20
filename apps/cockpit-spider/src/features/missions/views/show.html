@@ -18,6 +18,12 @@ extends "layout"
   </div>
 </section>
 
+if (next_step_notice) {
+<section class="alert success">
+  { next_step_notice }
+</section>
+}
+
 <section class="workspace-detail-grid">
   <article class="panel workspace-summary-panel">
     <span class="eyebrow">Contexto</span>

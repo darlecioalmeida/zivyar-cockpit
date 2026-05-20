@@ -9498,13 +9498,40 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
         else
             "Encerrar missão pelo Cockpit";
 
-    const message = try std.fmt.allocPrint(
+    const event_message = try std.fmt.allocPrint(
         c.arena,
         "Próxima etapa detectada para a missão \"{s}\": {s}. O executor supervised_auto ainda está em modo diagnóstico e não executou a ação.",
         .{ mission.title, next_action },
     );
 
-    return c.text(message, .{ .status = .bad_request });
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO mission_events (
+        \\    mission_id,
+        \\    workspace_id,
+        \\    event_type,
+        \\    title,
+        \\    message
+        \\)
+        \\VALUES (
+        \\    $1,
+        \\    $2,
+        \\    'mission-next-step-detected',
+        \\    'Próxima etapa detectada',
+        \\    $3
+        \\)
+        ,
+        .{ mission_id, mission.workspace_id, event_message },
+    );
+
+    const redirect_url = try std.fmt.allocPrint(
+        c.arena,
+        "/missions/{d}?next_step_detected=1",
+        .{ mission_id },
+    );
+
+    return c.redirect(redirect_url);
 }
 
 
@@ -9805,6 +9832,11 @@ fn missionShow(c: *spider.Ctx) !spider.Response {
         .mission = rows[0],
         .mission_events = mission_events,
         .mission_event_count = mission_events.len,
+        .next_step_notice =
+            if (c.query("next_step_detected") != null)
+                "Próxima etapa detectada e registrada na timeline operacional."
+            else
+                "",
     }, .{});
 }
 
