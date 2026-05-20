@@ -6889,6 +6889,7 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .missions = workspace_missions,
         .mission_count = workspace_missions.len,
         .open_mission_count = countOpenWorkspaceMissions(workspace_missions),
+        .closed_mission_count = countClosedWorkspaceMissions(workspace_missions),
         .active_missions = active_missions,
         .active_mission_count = active_missions.len,
         .runtime = refreshed_runtime_rows[0],
@@ -7135,6 +7136,18 @@ fn countOpenWorkspaceMissions(rows: []const WorkspaceMissionPreviewRow) usize {
 
     for (rows) |row| {
         if (!std.mem.eql(u8, row.mission_operational_closure_status, "closed")) {
+            total += 1;
+        }
+    }
+
+    return total;
+}
+
+fn countClosedWorkspaceMissions(rows: []const WorkspaceMissionPreviewRow) usize {
+    var total: usize = 0;
+
+    for (rows) |row| {
+        if (std.mem.eql(u8, row.mission_operational_closure_status, "closed")) {
             total += 1;
         }
     }

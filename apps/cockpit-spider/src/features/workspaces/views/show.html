@@ -644,7 +644,11 @@ extends "layout"
         <span class="eyebrow">Mission Room</span>
         <h3>Missões do workspace</h3>
       </div>
-      <span class="mini-badge">{ open_mission_count } abertas</span>
+      <div class="workspace-mission-counts">
+        <span class="mini-badge">{ mission_count } total</span>
+        <span class="mini-badge">{ open_mission_count } abertas</span>
+        <span class="mini-badge">{ closed_mission_count } encerradas</span>
+      </div>
     </div>
 
     if (mission_count > 0) {
@@ -652,9 +656,9 @@ extends "layout"
         <span>Filtro operacional</span>
 
         <div class="workspace-mission-filter-actions">
-          <button type="button" class="workspace-mission-filter-button" data-filter-target="open">Abertas</button>
-          <button type="button" class="workspace-mission-filter-button" data-filter-target="closed">Encerradas</button>
-          <button type="button" class="workspace-mission-filter-button" data-filter-target="all">Todas</button>
+          <button type="button" class="workspace-mission-filter-button" data-filter-target="open">Abertas · { open_mission_count }</button>
+          <button type="button" class="workspace-mission-filter-button" data-filter-target="closed">Encerradas · { closed_mission_count }</button>
+          <button type="button" class="workspace-mission-filter-button" data-filter-target="all">Todas · { mission_count }</button>
         </div>
       </div>
 
