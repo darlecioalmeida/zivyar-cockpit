@@ -52,6 +52,7 @@ pub fn main(init: std.process.Init) !void {
         .post("/missions/:id/capture/reviewer-report", missionCaptureReviewerReviewReport)
         .post("/missions/:id/capture/executor-report", missionCaptureExecutorVerificationReport)
         .post("/missions/:id/capture/pilot-delivery-report", missionCapturePilotDeliveryReport)
+        .post("/missions/:id/finalize", missionFinalizeFromPilotDeliveryReport)
         .get("/workspaces/:id", workspaceShow)
         .get("/missions", missions)
         .get("/missions/new", missionNew)
@@ -423,6 +424,9 @@ const MissionRow = struct {
     pilot_delivery_report: []const u8,
     pilot_delivery_report_status: []const u8,
     pilot_delivery_report_captured_at_label: []const u8,
+    mission_final_verdict: []const u8,
+    mission_operational_closure_status: []const u8,
+    mission_operational_closed_at_label: []const u8,
 };
 
 
@@ -515,6 +519,16 @@ const MissionExecutorDispatchTraceRow = struct {
 
 const MissionPilotDeliveryDispatchTraceRow = struct {
     pilot_delivery_dispatch_user_message_id: []const u8,
+};
+
+const MissionClosureFinalizeRow = struct {
+    id: i32,
+    workspace_id: i32,
+    title: []const u8,
+    pilot_delivery_report: []const u8,
+    pilot_delivery_report_status: []const u8,
+    mission_final_verdict: []const u8,
+    mission_operational_closure_status: []const u8,
 };
 
 
@@ -859,6 +873,97 @@ fn extractLatestAssistantTextFromOpenCodeMessages(
     }
 
     return latest_text;
+}
+
+fn containsAsciiCaseInsensitive(haystack: []const u8, needle: []const u8) bool {
+    if (needle.len == 0) return true;
+    if (haystack.len < needle.len) return false;
+
+    var i: usize = 0;
+    while (i + needle.len <= haystack.len) : (i += 1) {
+        var j: usize = 0;
+
+        while (j < needle.len) : (j += 1) {
+            const left = std.ascii.toLower(haystack[i + j]);
+            const right = std.ascii.toLower(needle[j]);
+
+            if (left != right) break;
+        }
+
+        if (j == needle.len) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+fn extractMissionFinalVerdictFromPilotDeliveryReport(report: []const u8) []const u8 {
+    const completed_patterns = [_][]const u8{
+        "**status final:** completed",
+        "status final: completed",
+        "**veredito final:** completed",
+        "veredito final: completed",
+        "**conclusão operacional:** completed",
+        "conclusão operacional: completed",
+        "**status** | `completed`",
+        "status | `completed`",
+        "**status** | completed",
+        "status | completed",
+        "## ✅ completed",
+        "## 🟢 completed",
+        "## completed",
+    };
+
+    for (completed_patterns) |pattern| {
+        if (containsAsciiCaseInsensitive(report, pattern)) {
+            return "completed";
+        }
+    }
+
+    const follow_up_patterns = [_][]const u8{
+        "**status final:** needs_follow_up",
+        "status final: needs_follow_up",
+        "**veredito final:** needs_follow_up",
+        "veredito final: needs_follow_up",
+        "**conclusão operacional:** needs_follow_up",
+        "conclusão operacional: needs_follow_up",
+        "**status** | `needs_follow_up`",
+        "status | `needs_follow_up`",
+        "**status** | needs_follow_up",
+        "status | needs_follow_up",
+        "## 🟡 needs_follow_up",
+        "## needs_follow_up",
+    };
+
+    for (follow_up_patterns) |pattern| {
+        if (containsAsciiCaseInsensitive(report, pattern)) {
+            return "needs_follow_up";
+        }
+    }
+
+    const blocked_patterns = [_][]const u8{
+        "**status final:** blocked",
+        "status final: blocked",
+        "**veredito final:** blocked",
+        "veredito final: blocked",
+        "**conclusão operacional:** blocked",
+        "conclusão operacional: blocked",
+        "**status** | `blocked`",
+        "status | `blocked`",
+        "**status** | blocked",
+        "status | blocked",
+        "## 🔴 blocked",
+        "## blocked",
+    };
+
+    for (blocked_patterns) |pattern| {
+        if (containsAsciiCaseInsensitive(report, pattern)) {
+            return "blocked";
+        }
+    }
+
+    return "";
 }
 
 fn extractOpenCodeSessionId(raw: []const u8) ?[]const u8 {
@@ -1426,7 +1531,13 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -3535,7 +3646,13 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -3937,7 +4054,13 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -4350,7 +4473,13 @@ fn workspaceMissionDispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -4769,7 +4898,13 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -5188,7 +5323,13 @@ fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Respo
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -5611,7 +5752,13 @@ fn workspaceMissionDispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Resp
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -6038,7 +6185,13 @@ fn workspaceMissionDispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Respons
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM workspaces w
         \\INNER JOIN missions m ON m.id = w.active_mission_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -6831,7 +6984,13 @@ fn missions(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -7073,7 +7232,13 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -7331,7 +7496,13 @@ fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -7607,7 +7778,13 @@ fn missionCaptureScoutReport(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -7883,7 +8060,13 @@ fn missionCaptureBuilderImplementationReport(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -8159,7 +8342,13 @@ fn missionCaptureReviewerReviewReport(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -8436,7 +8625,13 @@ fn missionCaptureExecutorVerificationReport(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -8714,7 +8909,13 @@ fn missionCapturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -8893,6 +9094,127 @@ fn missionCapturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
     return c.redirect(redirect_url);
 }
 
+
+fn missionFinalizeFromPilotDeliveryReport(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Missão não informada.", .{ .status = .bad_request });
+
+    const mission_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Missão inválida.", .{ .status = .bad_request });
+
+    const rows = try db.query(
+        MissionClosureFinalizeRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    workspace_id,
+        \\    title,
+        \\    pilot_delivery_report,
+        \\    pilot_delivery_report_status,
+        \\    mission_final_verdict,
+        \\    mission_operational_closure_status
+        \\FROM missions
+        \\WHERE id = $1
+        \\LIMIT 1
+        ,
+        .{ mission_id },
+    );
+
+    if (rows.len == 0) {
+        return c.text("Missão não encontrada.", .{ .status = .not_found });
+    }
+
+    const mission = rows[0];
+
+    if (
+        mission.pilot_delivery_report.len == 0 or
+        !std.mem.eql(u8, mission.pilot_delivery_report_status, "captured")
+    ) {
+        return c.text(
+            "Capture o Final Delivery Report do Piloto antes de encerrar a missão.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    if (std.mem.eql(u8, mission.mission_operational_closure_status, "closed")) {
+        const redirect_url = try std.fmt.allocPrint(
+            c.arena,
+            "/missions/{d}",
+            .{ mission_id },
+        );
+
+        return c.redirect(redirect_url);
+    }
+
+    const final_verdict = extractMissionFinalVerdictFromPilotDeliveryReport(
+        mission.pilot_delivery_report,
+    );
+
+    if (final_verdict.len == 0) {
+        return c.text(
+            "Não foi possível identificar automaticamente o status final da missão no Final Delivery Report. O relatório precisa declarar explicitamente: completed, needs_follow_up ou blocked.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    const formal_mission_status =
+        if (std.mem.eql(u8, final_verdict, "completed"))
+            "completed"
+        else if (std.mem.eql(u8, final_verdict, "needs_follow_up"))
+            "needs_follow_up"
+        else
+            "blocked";
+
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE missions
+        \\SET mission_final_verdict = $1,
+        \\    mission_operational_closure_status = 'closed',
+        \\    mission_operational_closed_at = NOW(),
+        \\    status = $2
+        \\WHERE id = $3
+        ,
+        .{ final_verdict, formal_mission_status, mission_id },
+    );
+
+    const event_message = try std.fmt.allocPrint(
+        c.arena,
+        "A missão \"{s}\" foi encerrada operacionalmente pelo Cockpit com veredito final: {s}.",
+        .{ mission.title, final_verdict },
+    );
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO mission_events (
+        \\    mission_id,
+        \\    workspace_id,
+        \\    event_type,
+        \\    title,
+        \\    message
+        \\)
+        \\VALUES (
+        \\    $1,
+        \\    $2,
+        \\    'mission-operationally-closed',
+        \\    'Missão encerrada pelo Cockpit',
+        \\    $3
+        \\)
+        ,
+        .{ mission_id, mission.workspace_id, event_message },
+    );
+
+    const redirect_url = try std.fmt.allocPrint(
+        c.arena,
+        "/missions/{d}",
+        .{ mission_id },
+    );
+
+    return c.redirect(redirect_url);
+}
+
+
 fn missionShow(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
         return c.text("Missão não informada.", .{ .status = .bad_request });
@@ -8990,7 +9312,13 @@ fn missionShow(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -9125,7 +9453,13 @@ fn missionEdit(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
@@ -9245,7 +9579,13 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
         \\    COALESCE(
         \\        TO_CHAR(m.pilot_delivery_report_captured_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
         \\        'Ainda não capturado'
-        \\    ) AS pilot_delivery_report_captured_at_label
+        \\    ) AS pilot_delivery_report_captured_at_label,
+        \\    m.mission_final_verdict,
+        \\    m.mission_operational_closure_status,
+        \\    COALESCE(
+        \\        TO_CHAR(m.mission_operational_closed_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+        \\        'Ainda não encerrada'
+        \\    ) AS mission_operational_closed_at_label
         \\FROM missions m
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
