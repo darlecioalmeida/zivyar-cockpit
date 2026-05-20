@@ -271,7 +271,18 @@ extends "layout"
         </form>
       </div>
     }
-  </article>
+      if (
+      mission.mission_operational_closure_status != "closed" and
+      mission.execution_mode == "supervised_auto"
+    ) {
+      <div class="mission-next-step-actions">
+        <form method="post" action="/missions/{ mission.id }/next-step" class="inline-form">
+          <button class="primary-button compact" type="submit" disabled>Executar próxima etapa</button>
+        </form>
+        <small>O modo supervised_auto está preparado, mas o motor automático ainda será ativado em sprint futura.</small>
+      </div>
+    }
+</article>
 </section>
 
 <section class="panel mission-progress-panel">

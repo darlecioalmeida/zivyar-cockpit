@@ -53,6 +53,7 @@ pub fn main(init: std.process.Init) !void {
         .post("/missions/:id/capture/executor-report", missionCaptureExecutorVerificationReport)
         .post("/missions/:id/capture/pilot-delivery-report", missionCapturePilotDeliveryReport)
         .post("/missions/:id/finalize", missionFinalizeFromPilotDeliveryReport)
+        .post("/missions/:id/next-step", missionRunNextStep)
         .get("/workspaces/:id", workspaceShow)
         .get("/missions", missions)
         .get("/missions/new", missionNew)
@@ -9375,6 +9376,50 @@ fn missionCapturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
     );
 
     return c.redirect(redirect_url);
+}
+
+
+
+fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Missão não informada.", .{ .status = .bad_request });
+
+    const mission_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Missão inválida.", .{ .status = .bad_request });
+
+    const rows = try db.query(
+        MissionClosureFinalizeRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    workspace_id,
+        \\    title,
+        \\    pilot_delivery_report,
+        \\    pilot_delivery_report_status,
+        \\    mission_final_verdict,
+        \\    mission_operational_closure_status
+        \\FROM missions
+        \\WHERE id = $1
+        \\LIMIT 1
+        ,
+        .{ mission_id },
+    );
+
+    if (rows.len == 0) {
+        return c.text("Missão não encontrada.", .{ .status = .not_found });
+    }
+
+    if (std.mem.eql(u8, rows[0].mission_operational_closure_status, "closed")) {
+        return c.text(
+            "Missões encerradas operacionalmente não podem executar próxima etapa.",
+            .{ .status = .bad_request },
+        );
+    }
+
+    return c.text(
+        "O motor supervised_auto ainda será implementado. Use as ações manuais da missão por enquanto.",
+        .{ .status = .bad_request },
+    );
 }
 
 

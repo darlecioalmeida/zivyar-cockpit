@@ -537,6 +537,12 @@ if (notice) {
         <div class="active-mission-actions">
           <a class="ghost-mini" href="/missions/{ active_mission.id }">Abrir missão</a>
 
+          if (active_mission.execution_mode == "supervised_auto") {
+            <form method="post" action="/missions/{ active_mission.id }/next-step" class="inline-form">
+              <button class="primary-button compact" type="submit" disabled>Executar próxima etapa</button>
+            </form>
+          }
+
           if (active_mission.pilot_operational_brief_status != "captured") {
             if (active_mission.pilot_dispatch_status == "sent") {
               <form method="post" action="/missions/{ active_mission.id }/capture/pilot-brief" class="inline-form">
