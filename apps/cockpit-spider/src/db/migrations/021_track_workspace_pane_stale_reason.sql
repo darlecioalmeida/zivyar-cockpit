@@ -1,0 +1,2 @@
+ALTER TABLE workspace_panes
+    ADD COLUMN IF NOT EXISTS stale_reason VARCHAR(120) NOT NULL DEFAULT '';

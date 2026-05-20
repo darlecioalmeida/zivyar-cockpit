@@ -262,7 +262,11 @@
             action="/workspaces/${workspaceId}/panes/${pane.id}/session/open"
             class="inline-form pane-session-open-form pane-session-recreate-form"
           >
-            <button class="primary-button compact" type="submit">Criar nova sessão</button>
+            <button class="primary-button compact" type="submit">
+              ${pane.stale_reason === "workspace_local_path_changed"
+                ? "Recriar sessão no novo workspace"
+                : "Criar nova sessão"}
+            </button>
           </form>
         `;
       } else {
@@ -356,6 +360,7 @@
 
       let sessionBox = card.querySelector(".workspace-pane-session");
       let contextWarning = card.querySelector(".workspace-pane-context-warning");
+      let runtimeWarning = card.querySelector(".workspace-pane-runtime-warning");
 
       if (pane.session_external_id) {
         if (!sessionBox) {
@@ -393,6 +398,28 @@
         `;
       } else if (contextWarning) {
         contextWarning.remove();
+      }
+
+      if (
+        pane.pane_state === "stale" &&
+        pane.stale_reason === "workspace_local_path_changed"
+      ) {
+        if (!runtimeWarning) {
+          runtimeWarning = document.createElement("div");
+          runtimeWarning.className = "workspace-pane-runtime-warning";
+
+          const actionsEl = card.querySelector(".workspace-pane-actions");
+          if (actionsEl) {
+            card.insertBefore(runtimeWarning, actionsEl);
+          }
+        }
+
+        runtimeWarning.innerHTML = `
+          <strong>Sessão invalidada por troca de pasta</strong>
+          <p>O caminho local deste workspace foi alterado. Recrie esta sessão para operar sobre o novo diretório montado no runtime.</p>
+        `;
+      } else if (runtimeWarning) {
+        runtimeWarning.remove();
       }
 
       renderPaneAction(card, pane, runtimeData);

@@ -435,6 +435,11 @@ extends "layout"
                   <strong>Contexto desatualizado</strong>
                   <p>Esta sessão foi criada antes da configuração atual do agente ou perdeu rastreabilidade segura.</p>
                 </div>
+              } else if (pane.pane_state == "stale" and pane.stale_reason == "workspace_local_path_changed") {
+                <div class="workspace-pane-runtime-warning">
+                  <strong>Sessão invalidada por troca de pasta</strong>
+                  <p>O caminho local deste workspace foi alterado. Recrie esta sessão para operar sobre o novo diretório montado no runtime.</p>
+                </div>
               }
 
               <div class="workspace-pane-actions">
@@ -463,7 +468,11 @@ extends "layout"
                 } else {
                   if (runtime.state == "running") {
                     <form method="post" action="/workspaces/{ workspace.id }/panes/{ pane.id }/session/open" class="inline-form pane-session-open-form pane-session-recreate-form">
-                      <button class="primary-button compact" type="submit">Criar nova sessão</button>
+                      if (pane.stale_reason == "workspace_local_path_changed") {
+                        <button class="primary-button compact" type="submit">Recriar sessão no novo workspace</button>
+                      } else {
+                        <button class="primary-button compact" type="submit">Criar nova sessão</button>
+                      }
                     </form>
                   } else {
                     <button class="ghost-mini" type="button" disabled>Runtime parado</button>

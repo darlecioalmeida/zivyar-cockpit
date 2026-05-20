@@ -311,6 +311,7 @@ const WorkspacePaneRow = struct {
     session_agent_id: ?i32,
     session_agent_handle: []const u8,
     context_state: []const u8,
+    stale_reason: []const u8,
     display_order: i32,
     agent_name: []const u8,
     agent_handle: []const u8,
@@ -329,6 +330,7 @@ const WorkspacePaneControlRow = struct {
     session_agent_id: ?i32,
     session_agent_handle: []const u8,
     context_state: []const u8,
+    stale_reason: []const u8,
 };
 
 const WorkspacePaneBootstrapRow = struct {
@@ -981,7 +983,8 @@ fn reconcileWorkspacePaneSessions(
         \\    session_external_id,
         \\    session_agent_id,
         \\    session_agent_handle,
-        \\    context_state
+        \\    context_state,
+        \\    stale_reason
         \\FROM workspace_panes
         \\WHERE workspace_id = $1
         \\AND session_external_id <> ''
@@ -1745,6 +1748,7 @@ fn workspaceRuntimeLiveStatus(c: *spider.Ctx) !spider.Response {
         \\    wp.session_agent_id,
         \\    wp.session_agent_handle,
         \\    wp.context_state,
+        \\    wp.stale_reason,
         \\    wp.display_order,
         \\    a.name AS agent_name,
         \\    a.handle AS agent_handle,
@@ -2494,6 +2498,10 @@ fn workspaceConfirmLocalPathChange(c: *spider.Ctx) !spider.Response {
             \\        WHEN session_external_id <> '' THEN 'stale'
             \\        ELSE pane_state
             \\    END,
+            \\    stale_reason = CASE
+            \\        WHEN session_external_id <> '' THEN 'workspace_local_path_changed'
+            \\        ELSE stale_reason
+            \\    END,
             \\    updated_at = NOW()
             \\WHERE workspace_id = $1
             ,
@@ -2829,7 +2837,8 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
         \\    session_external_id,
         \\    session_agent_id,
         \\    session_agent_handle,
-        \\    context_state
+        \\    context_state,
+        \\    stale_reason
         \\FROM workspace_panes
         \\WHERE id = $1
         \\AND workspace_id = $2
@@ -3157,6 +3166,7 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
         \\    session_agent_id = $2,
         \\    session_agent_handle = $3,
         \\    context_state = 'current',
+        \\    stale_reason = '',
         \\    updated_at = NOW()
         \\WHERE id = $4
         \\AND workspace_id = $5
@@ -3856,6 +3866,7 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\    wp.session_agent_id,
         \\    wp.session_agent_handle,
         \\    wp.context_state,
+        \\    wp.stale_reason,
         \\    wp.display_order,
         \\    a.name AS agent_name,
         \\    a.handle AS agent_handle,
