@@ -7044,7 +7044,7 @@ fn missions(c: *spider.Ctx) !spider.Response {
 fn countOpenMissions(rows: []const MissionRow) usize {
     var total: usize = 0;
     for (rows) |row| {
-        if (!std.mem.eql(u8, row.status, "completed")) {
+        if (!std.mem.eql(u8, row.mission_operational_closure_status, "closed")) {
             total += 1;
         }
     }

@@ -30,7 +30,7 @@ if (notice) {
   <article class="metric-card">
     <span>Em aberto</span>
     <strong>{ open_count }</strong>
-    <small>Status diferente de concluída</small>
+    <small>Sem encerramento operacional</small>
   </article>
 
   <article class="metric-card">
@@ -50,6 +50,10 @@ if (mission_count > 0) {
           <span class="eyebrow">{ mission.priority }</span>
           <h3>{ mission.title }</h3>
           <small>{ mission.workspace_name }</small>
+
+          if (mission.mission_operational_closure_status == "closed") {
+            <small class="workspace-mission-closed-badge">Encerrada · { mission.mission_final_verdict }</small>
+          }
         </div>
       </div>
 
@@ -65,6 +69,18 @@ if (mission_count > 0) {
           <span>Squad herdada</span>
           <strong>{ mission.squad_name }</strong>
         </div>
+
+        if (mission.mission_operational_closure_status == "closed") {
+          <div>
+            <span>Veredito final</span>
+            <strong>{ mission.mission_final_verdict }</strong>
+          </div>
+
+          <div>
+            <span>Encerrada em</span>
+            <strong>{ mission.mission_operational_closed_at_label }</strong>
+          </div>
+        }
       </div>
 
       <div class="workspace-card-actions">
