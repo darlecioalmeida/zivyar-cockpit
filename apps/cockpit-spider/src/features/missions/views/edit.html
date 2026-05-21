@@ -109,12 +109,12 @@ extends "layout"
           }
 
           if (mission.execution_mode == "autopilot") {
-            <option value="autopilot" selected disabled>Autopilot — em breve</option>
+            <option value="autopilot" selected>Autopilot</option>
           } else {
-            <option value="autopilot" disabled>Autopilot — em breve</option>
+            <option value="autopilot">Autopilot</option>
           }
         </select>
-        <small>Manual exige confirmação etapa por etapa. Supervisionado automático executará a próxima etapa com confirmação humana. Autopilot será liberado futuramente para execução automática completa.</small>
+        <small>Manual exige confirmação etapa por etapa. Supervisionado automático executará a próxima etapa com confirmação humana. Autopilot segue direto para a ação operacional detectada.</small>
       </label>
 
       <div class="execution-mode-help-panel">
@@ -122,7 +122,7 @@ extends "layout"
         <ul>
           <li><b>manual</b>: você controla cada envio, captura e encerramento por botão.</li>
           <li><b>supervised_auto</b>: o Cockpit prepara a próxima ação e pede sua confirmação.</li>
-          <li><b>autopilot</b>: modo futuro para rodar a missão automaticamente com pausas em erro, bloqueio ou baixa confiança.</li>
+          <li><b>autopilot</b>: o Cockpit segue diretamente para a ação operacional detectada, sem exigir confirmação humana nessa etapa.</li>
         </ul>
       </div>
 

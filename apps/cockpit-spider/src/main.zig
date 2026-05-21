@@ -7025,6 +7025,11 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
                 "Missão criada com sucesso e vinculada a este workspace."
             else
                 "",
+        .next_step_ready_notice =
+            if (c.query("next_step_ready") != null)
+                "Próxima etapa pronta para execução supervisionada. Confirme a ação operacional abaixo."
+            else
+                "",
     }, .{});
 }
 
@@ -9618,9 +9623,9 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
         );
     }
 
-    if (!std.mem.eql(u8, mission.execution_mode, "supervised_auto")) {
+    if (!std.mem.eql(u8, mission.execution_mode, "supervised_auto") and !std.mem.eql(u8, mission.execution_mode, "autopilot")) {
         return c.text(
-            "A execução automática supervisionada só está disponível para missões em modo supervised_auto.",
+            "A execução supervisionada automática só está disponível para missões em modo supervised_auto ou autopilot.",
             .{ .status = .bad_request },
         );
     }
@@ -9735,11 +9740,18 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
         else
             try std.fmt.allocPrint(c.arena, "/missions/{d}/finalize", .{ mission_id });
 
-    const event_message = try std.fmt.allocPrint(
-        c.arena,
-        "Próxima etapa detectada para a missão \"{s}\": {s}. O executor supervised_auto ainda está em modo diagnóstico e não executou a ação.",
-        .{ mission.title, next_action },
-    );
+    const event_message = if (std.mem.eql(u8, mission.execution_mode, "autopilot"))
+        try std.fmt.allocPrint(
+            c.arena,
+            "Próxima etapa detectada para a missão \"{s}\": {s}. O executor autopilot seguirá diretamente para a ação operacional detectada.",
+            .{ mission.title, next_action },
+        )
+    else
+        try std.fmt.allocPrint(
+            c.arena,
+            "Próxima etapa detectada para a missão \"{s}\": {s}. O executor supervised_auto ainda está em modo diagnóstico e não executou a ação.",
+            .{ mission.title, next_action },
+        );
 
     try db.query(
         void,
@@ -9788,12 +9800,100 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
                 "/missions/{d}?next_step_ready=capture_pilot_brief",
                 .{ mission_id },
             )
+        else if (std.mem.eql(u8, next_action_code, "dispatch_planner"))
+            try std.fmt.allocPrint(
+                c.arena,
+                "/missions/{d}?next_step_ready=dispatch_planner",
+                .{ mission_id },
+            )
+        else if (std.mem.eql(u8, next_action_code, "capture_planner_plan"))
+            try std.fmt.allocPrint(
+                c.arena,
+                "/missions/{d}?next_step_ready=capture_planner_plan",
+                .{ mission_id },
+            )
+        else if (std.mem.eql(u8, next_action_code, "dispatch_scout"))
+            try std.fmt.allocPrint(
+                c.arena,
+                "/missions/{d}?next_step_ready=dispatch_scout",
+                .{ mission_id },
+            )
+        else if (std.mem.eql(u8, next_action_code, "capture_scout_report"))
+            try std.fmt.allocPrint(
+                c.arena,
+                "/missions/{d}?next_step_ready=capture_scout_report",
+                .{ mission_id },
+            )
+        else if (std.mem.eql(u8, next_action_code, "dispatch_builder"))
+            try std.fmt.allocPrint(
+                c.arena,
+                "/missions/{d}?next_step_ready=dispatch_builder",
+                .{ mission_id },
+            )
+        else if (std.mem.eql(u8, next_action_code, "capture_builder_report"))
+            try std.fmt.allocPrint(
+                c.arena,
+                "/missions/{d}?next_step_ready=capture_builder_report",
+                .{ mission_id },
+            )
+        else if (std.mem.eql(u8, next_action_code, "dispatch_reviewer"))
+            try std.fmt.allocPrint(
+                c.arena,
+                "/missions/{d}?next_step_ready=dispatch_reviewer",
+                .{ mission_id },
+            )
+        else if (std.mem.eql(u8, next_action_code, "capture_reviewer_report"))
+            try std.fmt.allocPrint(
+                c.arena,
+                "/missions/{d}?next_step_ready=capture_reviewer_report",
+                .{ mission_id },
+            )
+        else if (std.mem.eql(u8, next_action_code, "dispatch_executor"))
+            try std.fmt.allocPrint(
+                c.arena,
+                "/missions/{d}?next_step_ready=dispatch_executor",
+                .{ mission_id },
+            )
+        else if (std.mem.eql(u8, next_action_code, "capture_executor_report"))
+            try std.fmt.allocPrint(
+                c.arena,
+                "/missions/{d}?next_step_ready=capture_executor_report",
+                .{ mission_id },
+            )
+        else if (std.mem.eql(u8, next_action_code, "dispatch_pilot_delivery"))
+            try std.fmt.allocPrint(
+                c.arena,
+                "/missions/{d}?next_step_ready=dispatch_pilot_delivery",
+                .{ mission_id },
+            )
+        else if (std.mem.eql(u8, next_action_code, "capture_pilot_delivery_report"))
+            try std.fmt.allocPrint(
+                c.arena,
+                "/missions/{d}?next_step_ready=capture_pilot_delivery_report",
+                .{ mission_id },
+            )
+        else if (std.mem.eql(u8, next_action_code, "finalize_mission"))
+            try std.fmt.allocPrint(
+                c.arena,
+                "/missions/{d}?next_step_ready=finalize_mission",
+                .{ mission_id },
+            )
         else
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_detected=1",
                 .{ mission_id },
             );
+
+    if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
+        const headers = try c.arena.alloc([2][]const u8, 1);
+        headers[0] = .{ "Location", next_action_route };
+
+        return c.text("", .{
+            .status = .temporary_redirect,
+            .headers = headers,
+        });
+    }
 
     return c.redirect(redirect_url);
 }
@@ -10393,13 +10493,6 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
     ) {
         return c.text(
             "Modo de execução inválido.",
-            .{ .status = .bad_request },
-        );
-    }
-
-    if (std.mem.eql(u8, form.execution_mode, "autopilot")) {
-        return c.text(
-            "O modo autopilot ainda não está habilitado. Use manual ou supervised_auto.",
             .{ .status = .bad_request },
         );
     }

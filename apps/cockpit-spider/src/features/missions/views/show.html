@@ -334,6 +334,259 @@ if (next_step_ready_notice) {
         </form>
       </div>
     }
+    if (
+      mission.execution_mode == "supervised_auto" and
+      mission.next_step_detected_code == "dispatch_planner" and
+      mission.next_step_detected_route
+    ) {
+      <div class="mission-next-step-execute-panel">
+        <span>Execução supervisionada disponível</span>
+        <strong>Enviar briefing ao Planner</strong>
+        <p>Esta ação chama a rota operacional real de despacho do briefing ao Planner.</p>
+
+        <form
+          method="post"
+          action="{ mission.next_step_detected_route }"
+          class="inline-form"
+          target="_blank"
+        >
+          <button class="primary-button compact" type="submit">Executar envio ao Planner agora</button>
+        </form>
+      </div>
+    }
+    if (
+      mission.execution_mode == "supervised_auto" and
+      mission.next_step_detected_code == "capture_planner_plan" and
+      mission.next_step_detected_route
+    ) {
+      <div class="mission-next-step-execute-panel">
+        <span>Execução supervisionada disponível</span>
+        <strong>Capturar plano do Planner</strong>
+        <p>Esta ação chama a rota operacional real de captura do plano do Planner.</p>
+
+        <form
+          method="post"
+          action="{ mission.next_step_detected_route }"
+          class="inline-form"
+        >
+          <button class="primary-button compact" type="submit">Capturar plano do Planner agora</button>
+        </form>
+      </div>
+    }
+    if (
+      mission.execution_mode == "supervised_auto" and
+      mission.next_step_detected_code == "dispatch_scout" and
+      mission.next_step_detected_route
+    ) {
+      <div class="mission-next-step-execute-panel">
+        <span>Execução supervisionada disponível</span>
+        <strong>Enviar plano ao Scout</strong>
+        <p>Esta ação chama a rota operacional real de despacho do plano ao Scout.</p>
+
+        <form
+          method="post"
+          action="{ mission.next_step_detected_route }"
+          class="inline-form"
+          target="_blank"
+        >
+          <button class="primary-button compact" type="submit">Executar envio ao Scout agora</button>
+        </form>
+      </div>
+    }
+    if (
+      mission.execution_mode == "supervised_auto" and
+      mission.next_step_detected_code == "capture_scout_report" and
+      mission.next_step_detected_route
+    ) {
+      <div class="mission-next-step-execute-panel">
+        <span>Execução supervisionada disponível</span>
+        <strong>Capturar Scout Report</strong>
+        <p>Esta ação chama a rota operacional real de captura do Scout Report.</p>
+
+        <form
+          method="post"
+          action="{ mission.next_step_detected_route }"
+          class="inline-form"
+        >
+          <button class="primary-button compact" type="submit">Capturar Scout Report agora</button>
+        </form>
+      </div>
+    }
+    if (
+      mission.execution_mode == "supervised_auto" and
+      mission.next_step_detected_code == "dispatch_builder" and
+      mission.next_step_detected_route
+    ) {
+      <div class="mission-next-step-execute-panel">
+        <span>Execução supervisionada disponível</span>
+        <strong>Enviar pacote ao Builder</strong>
+        <p>Esta ação chama a rota operacional real de despacho do pacote ao Builder.</p>
+
+        <form
+          method="post"
+          action="{ mission.next_step_detected_route }"
+          class="inline-form"
+          target="_blank"
+        >
+          <button class="primary-button compact" type="submit">Executar envio ao Builder agora</button>
+        </form>
+      </div>
+    }
+    if (
+      mission.execution_mode == "supervised_auto" and
+      mission.next_step_detected_code == "capture_builder_report" and
+      mission.next_step_detected_route
+    ) {
+      <div class="mission-next-step-execute-panel">
+        <span>Execução supervisionada disponível</span>
+        <strong>Capturar Implementation Report</strong>
+        <p>Esta ação chama a rota operacional real de captura do Implementation Report.</p>
+
+        <form
+          method="post"
+          action="{ mission.next_step_detected_route }"
+          class="inline-form"
+        >
+          <button class="primary-button compact" type="submit">Capturar Implementation Report agora</button>
+        </form>
+      </div>
+    }
+    if (
+      mission.execution_mode == "supervised_auto" and
+      mission.next_step_detected_code == "dispatch_reviewer" and
+      mission.next_step_detected_route
+    ) {
+      <div class="mission-next-step-execute-panel">
+        <span>Execução supervisionada disponível</span>
+        <strong>Enviar Implementation Report ao Reviewer</strong>
+        <p>Esta ação chama a rota operacional real de despacho ao Reviewer.</p>
+
+        <form
+          method="post"
+          action="{ mission.next_step_detected_route }"
+          class="inline-form"
+          target="_blank"
+        >
+          <button class="primary-button compact" type="submit">Executar envio ao Reviewer agora</button>
+        </form>
+      </div>
+    }
+    if (
+      mission.execution_mode == "supervised_auto" and
+      mission.next_step_detected_code == "capture_reviewer_report" and
+      mission.next_step_detected_route
+    ) {
+      <div class="mission-next-step-execute-panel">
+        <span>Execução supervisionada disponível</span>
+        <strong>Capturar Review Report</strong>
+        <p>Esta ação chama a rota operacional real de captura do Review Report.</p>
+
+        <form
+          method="post"
+          action="{ mission.next_step_detected_route }"
+          class="inline-form"
+        >
+          <button class="primary-button compact" type="submit">Capturar Review Report agora</button>
+        </form>
+      </div>
+    }
+    if (
+      mission.execution_mode == "supervised_auto" and
+      mission.next_step_detected_code == "dispatch_executor" and
+      mission.next_step_detected_route
+    ) {
+      <div class="mission-next-step-execute-panel">
+        <span>Execução supervisionada disponível</span>
+        <strong>Enviar Review Report ao Executor</strong>
+        <p>Esta ação chama a rota operacional real de despacho ao Executor.</p>
+
+        <form
+          method="post"
+          action="{ mission.next_step_detected_route }"
+          class="inline-form"
+          target="_blank"
+        >
+          <button class="primary-button compact" type="submit">Executar envio ao Executor agora</button>
+        </form>
+      </div>
+    }
+    if (
+      mission.execution_mode == "supervised_auto" and
+      mission.next_step_detected_code == "capture_executor_report" and
+      mission.next_step_detected_route
+    ) {
+      <div class="mission-next-step-execute-panel">
+        <span>Execução supervisionada disponível</span>
+        <strong>Capturar Verification Report</strong>
+        <p>Esta ação chama a rota operacional real de captura do Verification Report.</p>
+
+        <form
+          method="post"
+          action="{ mission.next_step_detected_route }"
+          class="inline-form"
+        >
+          <button class="primary-button compact" type="submit">Capturar Verification Report agora</button>
+        </form>
+      </div>
+    }
+    if (
+      mission.execution_mode == "supervised_auto" and
+      mission.next_step_detected_code == "dispatch_pilot_delivery" and
+      mission.next_step_detected_route
+    ) {
+      <div class="mission-next-step-execute-panel">
+        <span>Execução supervisionada disponível</span>
+        <strong>Enviar Verification Report ao Piloto</strong>
+        <p>Esta ação chama a rota operacional real de despacho ao Piloto para entrega final.</p>
+
+        <form
+          method="post"
+          action="{ mission.next_step_detected_route }"
+          class="inline-form"
+          target="_blank"
+        >
+          <button class="primary-button compact" type="submit">Executar envio final ao Piloto agora</button>
+        </form>
+      </div>
+    }
+    if (
+      mission.execution_mode == "supervised_auto" and
+      mission.next_step_detected_code == "capture_pilot_delivery_report" and
+      mission.next_step_detected_route
+    ) {
+      <div class="mission-next-step-execute-panel">
+        <span>Execução supervisionada disponível</span>
+        <strong>Capturar Final Delivery Report</strong>
+        <p>Esta ação chama a rota operacional real de captura do relatório final do Piloto.</p>
+
+        <form
+          method="post"
+          action="{ mission.next_step_detected_route }"
+          class="inline-form"
+        >
+          <button class="primary-button compact" type="submit">Capturar Final Delivery Report agora</button>
+        </form>
+      </div>
+    }
+    if (
+      mission.execution_mode == "supervised_auto" and
+      mission.next_step_detected_code == "finalize_mission" and
+      mission.next_step_detected_route
+    ) {
+      <div class="mission-next-step-execute-panel">
+        <span>Execução supervisionada disponível</span>
+        <strong>Encerrar missão pelo Cockpit</strong>
+        <p>Esta ação chama a rota operacional real de encerramento da missão.</p>
+
+        <form
+          method="post"
+          action="{ mission.next_step_detected_route }"
+          class="inline-form"
+        >
+          <button class="primary-button compact" type="submit">Encerrar missão pelo Cockpit agora</button>
+        </form>
+      </div>
+    }
     if (mission.next_step_detected_action) {
       <div class="mission-next-step-diagnostic">
         <span>Última próxima etapa detectada</span>
