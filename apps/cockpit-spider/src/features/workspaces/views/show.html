@@ -524,7 +524,7 @@ if (next_step_ready_notice) {
         </div>
 
         if (
-          active_mission.execution_mode == "supervised_auto" and
+          (active_mission.execution_mode == "supervised_auto" or active_mission.execution_mode == "autopilot") and
           active_mission.next_step_detected_code == "capture_pilot_brief" and
           active_mission.next_step_detected_route
         ) {
@@ -544,7 +544,7 @@ if (next_step_ready_notice) {
         }
 
         if (
-          active_mission.execution_mode == "supervised_auto" and
+          (active_mission.execution_mode == "supervised_auto" or active_mission.execution_mode == "autopilot") and
           active_mission.next_step_detected_code == "dispatch_pilot" and
           active_mission.next_step_detected_route
         ) {
@@ -565,7 +565,7 @@ if (next_step_ready_notice) {
         }
 
         if (
-          active_mission.execution_mode == "supervised_auto" and
+          (active_mission.execution_mode == "supervised_auto" or active_mission.execution_mode == "autopilot") and
           active_mission.next_step_detected_code == "dispatch_planner" and
           active_mission.next_step_detected_route
         ) {
@@ -586,7 +586,7 @@ if (next_step_ready_notice) {
         }
 
         if (
-          active_mission.execution_mode == "supervised_auto" and
+          (active_mission.execution_mode == "supervised_auto" or active_mission.execution_mode == "autopilot") and
           active_mission.next_step_detected_code == "capture_planner_plan" and
           active_mission.next_step_detected_route
         ) {
@@ -606,7 +606,7 @@ if (next_step_ready_notice) {
         }
 
         if (
-          active_mission.execution_mode == "supervised_auto" and
+          (active_mission.execution_mode == "supervised_auto" or active_mission.execution_mode == "autopilot") and
           active_mission.next_step_detected_code == "dispatch_scout" and
           active_mission.next_step_detected_route
         ) {
@@ -627,7 +627,7 @@ if (next_step_ready_notice) {
         }
 
         if (
-          active_mission.execution_mode == "supervised_auto" and
+          (active_mission.execution_mode == "supervised_auto" or active_mission.execution_mode == "autopilot") and
           active_mission.next_step_detected_code == "capture_scout_report" and
           active_mission.next_step_detected_route
         ) {
@@ -647,7 +647,7 @@ if (next_step_ready_notice) {
         }
 
         if (
-          active_mission.execution_mode == "supervised_auto" and
+          (active_mission.execution_mode == "supervised_auto" or active_mission.execution_mode == "autopilot") and
           active_mission.next_step_detected_code == "dispatch_builder" and
           active_mission.next_step_detected_route
         ) {
@@ -668,7 +668,7 @@ if (next_step_ready_notice) {
         }
 
         if (
-          active_mission.execution_mode == "supervised_auto" and
+          (active_mission.execution_mode == "supervised_auto" or active_mission.execution_mode == "autopilot") and
           active_mission.next_step_detected_code == "capture_builder_report" and
           active_mission.next_step_detected_route
         ) {
@@ -688,7 +688,7 @@ if (next_step_ready_notice) {
         }
 
         if (
-          active_mission.execution_mode == "supervised_auto" and
+          (active_mission.execution_mode == "supervised_auto" or active_mission.execution_mode == "autopilot") and
           active_mission.next_step_detected_code == "dispatch_reviewer" and
           active_mission.next_step_detected_route
         ) {
@@ -709,7 +709,7 @@ if (next_step_ready_notice) {
         }
 
         if (
-          active_mission.execution_mode == "supervised_auto" and
+          (active_mission.execution_mode == "supervised_auto" or active_mission.execution_mode == "autopilot") and
           active_mission.next_step_detected_code == "capture_reviewer_report" and
           active_mission.next_step_detected_route
         ) {
@@ -729,7 +729,7 @@ if (next_step_ready_notice) {
         }
 
         if (
-          active_mission.execution_mode == "supervised_auto" and
+          (active_mission.execution_mode == "supervised_auto" or active_mission.execution_mode == "autopilot") and
           active_mission.next_step_detected_code == "dispatch_executor" and
           active_mission.next_step_detected_route
         ) {
@@ -750,7 +750,7 @@ if (next_step_ready_notice) {
         }
 
         if (
-          active_mission.execution_mode == "supervised_auto" and
+          (active_mission.execution_mode == "supervised_auto" or active_mission.execution_mode == "autopilot") and
           active_mission.next_step_detected_code == "capture_executor_report" and
           active_mission.next_step_detected_route
         ) {
@@ -770,7 +770,7 @@ if (next_step_ready_notice) {
         }
 
         if (
-          active_mission.execution_mode == "supervised_auto" and
+          (active_mission.execution_mode == "supervised_auto" or active_mission.execution_mode == "autopilot") and
           active_mission.next_step_detected_code == "dispatch_pilot_delivery" and
           active_mission.next_step_detected_route
         ) {
@@ -791,7 +791,7 @@ if (next_step_ready_notice) {
         }
 
         if (
-          active_mission.execution_mode == "supervised_auto" and
+          (active_mission.execution_mode == "supervised_auto" or active_mission.execution_mode == "autopilot") and
           active_mission.next_step_detected_code == "capture_pilot_delivery_report" and
           active_mission.next_step_detected_route
         ) {
@@ -811,7 +811,7 @@ if (next_step_ready_notice) {
         }
 
         if (
-          active_mission.execution_mode == "supervised_auto" and
+          (active_mission.execution_mode == "supervised_auto" or active_mission.execution_mode == "autopilot") and
           active_mission.next_step_detected_code == "finalize_mission" and
           active_mission.next_step_detected_route
         ) {
@@ -860,7 +860,7 @@ if (next_step_ready_notice) {
         <div class="active-mission-actions">
           <a class="ghost-mini" href="/missions/{ active_mission.id }">Abrir missão</a>
 
-          if (active_mission.execution_mode == "supervised_auto") {
+          if (active_mission.execution_mode == "supervised_auto" or active_mission.execution_mode == "autopilot") {
             <form method="post" action="/missions/{ active_mission.id }/next-step" class="inline-form">
               <button class="primary-button compact" type="submit">Executar próxima etapa</button>
             </form>
