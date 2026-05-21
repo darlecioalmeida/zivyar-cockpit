@@ -40,9 +40,21 @@ if (memory_notice) {
 </section>
 }
 
+if (memory_update_notice) {
+<section class="alert success">
+  { memory_update_notice }
+</section>
+}
+
 if (handoff_notice) {
 <section class="alert success">
   { handoff_notice }
+</section>
+}
+
+if (handoff_update_notice) {
+<section class="alert success">
+  { handoff_update_notice }
 </section>
 }
 
@@ -52,9 +64,21 @@ if (decision_notice) {
 </section>
 }
 
+if (decision_update_notice) {
+<section class="alert success">
+  { decision_update_notice }
+</section>
+}
+
 if (snapshot_notice) {
 <section class="alert success">
   { snapshot_notice }
+</section>
+}
+
+if (snapshot_update_notice) {
+<section class="alert success">
+  { snapshot_update_notice }
 </section>
 }
 
@@ -254,6 +278,33 @@ if (snapshot_notice) {
               <strong>{ memory_entry.title }</strong>
               <small>{ memory_entry.created_at_label }</small>
             </div>
+            <div class="workspace-memory-card-actions">
+              <details class="record-edit-details">
+                <summary class="ghost-mini">Editar</summary>
+
+                <form method="post" action="/workspaces/{ workspace.id }/memory/{ memory_entry.id }/update" class="workspace-memory-form record-edit-form">
+                  <div class="workspace-memory-form-grid">
+                    <label>
+                      <span>Título</span>
+                      <input name="title" type="text" value="{ memory_entry.title }" required />
+                    </label>
+
+                    <label>
+                      <span>Conteúdo</span>
+                      <textarea name="content" rows="4" required>{ memory_entry.content }</textarea>
+                    </label>
+                  </div>
+
+                  <div class="form-actions">
+                    <button class="primary-button" type="submit">Salvar alterações</button>
+                  </div>
+                </form>
+              </details>
+
+              <form method="post" action="/workspaces/{ workspace.id }/memory/{ memory_entry.id }/delete" class="inline-form" onsubmit="return confirm('Remover esta memória?');">
+                <button class="danger-button" type="submit">Excluir</button>
+              </form>
+            </div>
           </div>
           <p>{ memory_entry.content }</p>
         </article>
@@ -312,6 +363,38 @@ if (snapshot_notice) {
               <strong>{ snapshot.title }</strong>
               <small>{ snapshot.created_at_label }</small>
             </div>
+            <div class="workspace-memory-card-actions">
+              <details class="record-edit-details">
+                <summary class="ghost-mini">Editar</summary>
+
+                <form method="post" action="/workspaces/{ workspace.id }/snapshots/{ snapshot.id }/update" class="workspace-memory-form record-edit-form">
+                  <div class="workspace-memory-form-grid">
+                    <label>
+                      <span>Título</span>
+                      <input name="title" type="text" value="{ snapshot.title }" required />
+                    </label>
+
+                    <label>
+                      <span>Escopo</span>
+                      <input name="scope" type="text" value="{ snapshot.scope }" required />
+                    </label>
+
+                    <label>
+                      <span>Conteúdo</span>
+                      <textarea name="content" rows="4" required>{ snapshot.content }</textarea>
+                    </label>
+                  </div>
+
+                  <div class="form-actions">
+                    <button class="primary-button" type="submit">Salvar alterações</button>
+                  </div>
+                </form>
+              </details>
+
+              <form method="post" action="/workspaces/{ workspace.id }/snapshots/{ snapshot.id }/delete" class="inline-form" onsubmit="return confirm('Remover este snapshot?');">
+                <button class="danger-button" type="submit">Excluir</button>
+              </form>
+            </div>
           </div>
           <p>{ snapshot.content }</p>
           <small>{ snapshot.scope }</small>
@@ -369,6 +452,38 @@ if (snapshot_notice) {
             <div>
               <strong>{ decision_record.title }</strong>
               <small>{ decision_record.created_at_label }</small>
+            </div>
+            <div class="workspace-memory-card-actions">
+              <details class="record-edit-details">
+                <summary class="ghost-mini">Editar</summary>
+
+                <form method="post" action="/workspaces/{ workspace.id }/decision-records/{ decision_record.id }/update" class="workspace-memory-form record-edit-form">
+                  <div class="workspace-memory-form-grid">
+                    <label>
+                      <span>Título</span>
+                      <input name="title" type="text" value="{ decision_record.title }" required />
+                    </label>
+
+                    <label>
+                      <span>Decisão</span>
+                      <input name="decision" type="text" value="{ decision_record.decision }" required />
+                    </label>
+
+                    <label>
+                      <span>Racional</span>
+                      <textarea name="rationale" rows="4" required>{ decision_record.rationale }</textarea>
+                    </label>
+                  </div>
+
+                  <div class="form-actions">
+                    <button class="primary-button" type="submit">Salvar alterações</button>
+                  </div>
+                </form>
+              </details>
+
+              <form method="post" action="/workspaces/{ workspace.id }/decision-records/{ decision_record.id }/delete" class="inline-form" onsubmit="return confirm('Remover esta decisão?');">
+                <button class="danger-button" type="submit">Excluir</button>
+              </form>
             </div>
           </div>
           <p>{ decision_record.decision }</p>
@@ -432,6 +547,43 @@ if (snapshot_notice) {
             <div>
               <strong>{ handoff.from_role } → { handoff.to_role }</strong>
               <small>{ handoff.created_at_label }</small>
+            </div>
+            <div class="workspace-memory-card-actions">
+              <details class="record-edit-details">
+                <summary class="ghost-mini">Editar</summary>
+
+                <form method="post" action="/workspaces/{ workspace.id }/handoffs/{ handoff.id }/update" class="workspace-memory-form record-edit-form">
+                  <div class="workspace-memory-form-grid">
+                    <label>
+                      <span>Origem</span>
+                      <input name="from_role" type="text" value="{ handoff.from_role }" required />
+                    </label>
+
+                    <label>
+                      <span>Destino</span>
+                      <input name="to_role" type="text" value="{ handoff.to_role }" required />
+                    </label>
+
+                    <label>
+                      <span>Resumo</span>
+                      <input name="summary" type="text" value="{ handoff.summary }" required />
+                    </label>
+
+                    <label>
+                      <span>Contexto</span>
+                      <textarea name="context" rows="4">{ handoff.context }</textarea>
+                    </label>
+                  </div>
+
+                  <div class="form-actions">
+                    <button class="primary-button" type="submit">Salvar alterações</button>
+                  </div>
+                </form>
+              </details>
+
+              <form method="post" action="/workspaces/{ workspace.id }/handoffs/{ handoff.id }/delete" class="inline-form" onsubmit="return confirm('Remover este handoff?');">
+                <button class="danger-button" type="submit">Excluir</button>
+              </form>
             </div>
           </div>
           <p>{ handoff.summary }</p>
