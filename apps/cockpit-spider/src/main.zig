@@ -29,6 +29,7 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces/:id/update", workspaceUpdate)
         .post("/workspaces/:id/local-path/confirm", workspaceConfirmLocalPathChange)
         .post("/workspaces/:id/delete", workspaceDelete)
+        .post("/workspaces/:id/memory", workspaceMemoryCreate)
         .post("/workspaces/:id/runtime/prepare", workspaceRuntimePrepare)
         .post("/workspaces/:id/runtime/start", workspaceRuntimeStart)
         .post("/workspaces/:id/runtime/stop", workspaceRuntimeStop)
@@ -701,6 +702,18 @@ const WorkspacePaneSessionHistoryRow = struct {
     created_at_label: []const u8,
 };
 
+const WorkspaceMemoryEntryRow = struct {
+    id: i32,
+    title: []const u8,
+    content: []const u8,
+    created_at_label: []const u8,
+};
+
+const WorkspaceMemoryForm = struct {
+    title: []const u8,
+    content: []const u8,
+};
+
 const RuntimeCommandResult = struct {
     ok: bool,
     exit_code: i32,
@@ -734,6 +747,50 @@ fn loadWorkspaceSquadsForSelected(c: *spider.Ctx, selected_squad_id: i32) ![]Wor
     ,
         .{selected_squad_id},
     );
+}
+
+fn workspaceMemoryCreate(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const form = try c.parseForm(WorkspaceMemoryForm);
+
+    if (form.title.len == 0 or form.content.len == 0) {
+        return c.redirect(try std.fmt.allocPrint(c.arena, "/workspaces/{d}?memory_error=1", .{workspace_id}));
+    }
+
+    const workspace_rows = try db.query(
+        WorkspaceIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM workspaces
+        \\WHERE id = $1
+        \\LIMIT 1
+    ,
+        .{workspace_id},
+    );
+
+    if (workspace_rows.len == 0) {
+        return c.text("Workspace não encontrado.", .{ .status = .not_found });
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO workspace_memory_entries (
+        \\    workspace_id,
+        \\    title,
+        \\    content
+        \\)
+        \\VALUES ($1, $2, $3)
+    ,
+        .{ workspace_id, form.title, form.content },
+    );
+
+    return c.redirect(try std.fmt.allocPrint(c.arena, "/workspaces/{d}?memory_created=1", .{workspace_id}));
 }
 
 fn openCodeSessionExists(
@@ -6794,6 +6851,22 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .{workspace.id},
     );
 
+    const workspace_memory_entries = try db.query(
+        WorkspaceMemoryEntryRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    title,
+        \\    content,
+        \\    TO_CHAR(created_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS') AS created_at_label
+        \\FROM workspace_memory_entries
+        \\WHERE workspace_id = $1
+        \\ORDER BY id DESC
+        \\LIMIT 8
+    ,
+        .{workspace.id},
+    );
+
     const workspace_missions = try db.query(
         WorkspaceMissionPreviewRow,
         c.arena,
@@ -7019,8 +7092,16 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .runtime_log_count = runtime_logs.len,
         .pane_session_history = pane_session_history,
         .pane_session_history_count = pane_session_history.len,
+        .workspace_memory_entries = workspace_memory_entries,
+        .workspace_memory_count = workspace_memory_entries.len,
         .notice = if (c.query("mission_created") != null)
             "Missão criada com sucesso e vinculada a este workspace."
+        else
+            "",
+        .memory_notice = if (c.query("memory_created") != null)
+            "Memória de workspace registrada com sucesso."
+        else if (c.query("memory_error") != null)
+            "Informe título e conteúdo para registrar a memória de workspace."
         else
             "",
         .next_step_ready_notice = if (c.query("next_step_ready") != null)

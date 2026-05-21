@@ -34,6 +34,62 @@ if (next_step_ready_notice) {
 </section>
 }
 
+if (memory_notice) {
+<section class="alert success">
+  { memory_notice }
+</section>
+}
+
+<section class="panel workspace-memory-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Context Engine</span>
+      <h3>Memória do workspace</h3>
+    </div>
+    <span class="mini-badge">{ workspace_memory_count } registros</span>
+  </div>
+
+  <form method="post" action="/workspaces/{ workspace.id }/memory" class="workspace-memory-form">
+    <div class="workspace-memory-form-grid">
+      <label>
+        <span>Título</span>
+        <input name="title" type="text" placeholder="Ex.: Decisão de arquitetura" required />
+      </label>
+
+      <label>
+        <span>Conteúdo</span>
+        <textarea name="content" rows="4" placeholder="Registre aqui um contexto, decisão, observação ou handoff" required></textarea>
+      </label>
+    </div>
+
+    <div class="form-actions">
+      <button class="primary-button" type="submit">Salvar memória</button>
+    </div>
+  </form>
+
+  if (workspace_memory_count > 0) {
+    <div class="workspace-memory-list">
+      for (workspace_memory_entries) |memory_entry| {
+        <article class="workspace-memory-card">
+          <div class="panel-title-row">
+            <div>
+              <strong>{ memory_entry.title }</strong>
+              <small>{ memory_entry.created_at_label }</small>
+            </div>
+          </div>
+          <p>{ memory_entry.content }</p>
+        </article>
+      }
+    </div>
+  } else {
+    <div class="empty-inline-state">
+      <strong>Nenhuma memória registrada.</strong>
+      <p>Use este espaço para guardar contexto do workspace, decisões e handoffs.
+      </p>
+    </div>
+  }
+</section>
+
 <section class="workspace-detail-grid">
   <article class="panel workspace-summary-panel">
     <span class="eyebrow">Resumo</span>
