@@ -40,6 +40,24 @@ if (memory_notice) {
 </section>
 }
 
+if (handoff_notice) {
+<section class="alert success">
+  { handoff_notice }
+</section>
+}
+
+if (decision_notice) {
+<section class="alert success">
+  { decision_notice }
+</section>
+}
+
+if (snapshot_notice) {
+<section class="alert success">
+  { snapshot_notice }
+</section>
+}
+
 <section class="panel workspace-memory-panel">
   <div class="panel-title-row">
     <div>
@@ -86,6 +104,178 @@ if (memory_notice) {
       <strong>Nenhuma memória registrada.</strong>
       <p>Use este espaço para guardar contexto do workspace, decisões e handoffs.
       </p>
+    </div>
+  }
+</section>
+
+<section class="panel workspace-memory-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Context Engine</span>
+      <h3>Snapshots de contexto</h3>
+    </div>
+    <span class="mini-badge">{ workspace_snapshot_count } registros</span>
+  </div>
+
+  <form method="post" action="/workspaces/{ workspace.id }/snapshots" class="workspace-memory-form">
+    <div class="workspace-memory-form-grid">
+      <label>
+        <span>Título</span>
+        <input name="title" type="text" placeholder="Ex.: Estado do workspace após handoff" required />
+      </label>
+
+      <label>
+        <span>Escopo</span>
+        <input name="scope" type="text" placeholder="Ex.: workspace, mission engine, runtime" required />
+      </label>
+
+      <label>
+        <span>Conteúdo</span>
+        <textarea name="content" rows="4" placeholder="Capture o estado relevante para retomada posterior" required></textarea>
+      </label>
+    </div>
+
+    <div class="form-actions">
+      <button class="primary-button" type="submit">Salvar snapshot</button>
+    </div>
+  </form>
+
+  if (workspace_snapshot_count > 0) {
+    <div class="workspace-memory-list">
+      for (workspace_snapshots) |snapshot| {
+        <article class="workspace-memory-card">
+          <div class="panel-title-row">
+            <div>
+              <strong>{ snapshot.title }</strong>
+              <small>{ snapshot.created_at_label }</small>
+            </div>
+          </div>
+          <p>{ snapshot.content }</p>
+          <small>{ snapshot.scope }</small>
+        </article>
+      }
+    </div>
+  } else {
+    <div class="empty-inline-state">
+      <strong>Nenhum snapshot registrado.</strong>
+      <p>Use este espaço para congelar o estado do workspace quando necessário.</p>
+    </div>
+  }
+</section>
+
+<section class="panel workspace-memory-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Context Engine</span>
+      <h3>Decision records</h3>
+    </div>
+    <span class="mini-badge">{ workspace_decision_record_count } registros</span>
+  </div>
+
+  <form method="post" action="/workspaces/{ workspace.id }/decision-records" class="workspace-memory-form">
+    <div class="workspace-memory-form-grid">
+      <label>
+        <span>Título</span>
+        <input name="title" type="text" placeholder="Ex.: Stack aprovada para o workspace" required />
+      </label>
+
+      <label>
+        <span>Decisão</span>
+        <input name="decision" type="text" placeholder="Ex.: Usar runtime OpenCode com supervisão" required />
+      </label>
+
+      <label>
+        <span>Racional</span>
+        <textarea name="rationale" rows="4" placeholder="Explique por que essa decisão foi tomada" required></textarea>
+      </label>
+    </div>
+
+    <div class="form-actions">
+      <button class="primary-button" type="submit">Salvar decisão</button>
+    </div>
+  </form>
+
+  if (workspace_decision_record_count > 0) {
+    <div class="workspace-memory-list">
+      for (workspace_decision_records) |decision_record| {
+        <article class="workspace-memory-card">
+          <div class="panel-title-row">
+            <div>
+              <strong>{ decision_record.title }</strong>
+              <small>{ decision_record.created_at_label }</small>
+            </div>
+          </div>
+          <p>{ decision_record.decision }</p>
+          <small>{ decision_record.rationale }</small>
+        </article>
+      }
+    </div>
+  } else {
+    <div class="empty-inline-state">
+      <strong>Nenhuma decisão registrada.</strong>
+      <p>Use este espaço para registrar decisões que precisam permanecer como referência operacional.</p>
+    </div>
+  }
+</section>
+
+<section class="panel workspace-memory-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Context Engine</span>
+      <h3>Handoffs do workspace</h3>
+    </div>
+    <span class="mini-badge">{ workspace_handoff_count } registros</span>
+  </div>
+
+  <form method="post" action="/workspaces/{ workspace.id }/handoffs" class="workspace-memory-form">
+    <div class="workspace-memory-form-grid">
+      <label>
+        <span>Origem</span>
+        <input name="from_role" type="text" placeholder="Ex.: Planner" required />
+      </label>
+
+      <label>
+        <span>Destino</span>
+        <input name="to_role" type="text" placeholder="Ex.: Scout" required />
+      </label>
+
+      <label>
+        <span>Resumo</span>
+        <input name="summary" type="text" placeholder="Ex.: Plano operacional pronto para reconhecimento" required />
+      </label>
+
+      <label>
+        <span>Contexto</span>
+        <textarea name="context" rows="4" placeholder="Detalhe a passagem de contexto entre agentes"></textarea>
+      </label>
+    </div>
+
+    <div class="form-actions">
+      <button class="primary-button" type="submit">Salvar handoff</button>
+    </div>
+  </form>
+
+  if (workspace_handoff_count > 0) {
+    <div class="workspace-memory-list">
+      for (workspace_handoffs) |handoff| {
+        <article class="workspace-memory-card">
+          <div class="panel-title-row">
+            <div>
+              <strong>{ handoff.from_role } → { handoff.to_role }</strong>
+              <small>{ handoff.created_at_label }</small>
+            </div>
+          </div>
+          <p>{ handoff.summary }</p>
+          if (handoff.context.len > 0) {
+            <small>{ handoff.context }</small>
+          }
+        </article>
+      }
+    </div>
+  } else {
+    <div class="empty-inline-state">
+      <strong>Nenhum handoff registrado.</strong>
+      <p>Use este espaço para registrar passagens de contexto entre agentes e panes.</p>
     </div>
   }
 </section>

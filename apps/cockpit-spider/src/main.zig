@@ -30,6 +30,9 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces/:id/local-path/confirm", workspaceConfirmLocalPathChange)
         .post("/workspaces/:id/delete", workspaceDelete)
         .post("/workspaces/:id/memory", workspaceMemoryCreate)
+        .post("/workspaces/:id/handoffs", workspaceHandoffCreate)
+        .post("/workspaces/:id/decision-records", workspaceDecisionRecordCreate)
+        .post("/workspaces/:id/snapshots", workspaceSnapshotCreate)
         .post("/workspaces/:id/runtime/prepare", workspaceRuntimePrepare)
         .post("/workspaces/:id/runtime/start", workspaceRuntimeStart)
         .post("/workspaces/:id/runtime/stop", workspaceRuntimeStop)
@@ -714,6 +717,50 @@ const WorkspaceMemoryForm = struct {
     content: []const u8,
 };
 
+const WorkspaceHandoffRow = struct {
+    id: i32,
+    from_role: []const u8,
+    to_role: []const u8,
+    summary: []const u8,
+    context: []const u8,
+    created_at_label: []const u8,
+};
+
+const WorkspaceHandoffForm = struct {
+    from_role: []const u8,
+    to_role: []const u8,
+    summary: []const u8,
+    context: []const u8,
+};
+
+const WorkspaceDecisionRecordRow = struct {
+    id: i32,
+    title: []const u8,
+    decision: []const u8,
+    rationale: []const u8,
+    created_at_label: []const u8,
+};
+
+const WorkspaceDecisionRecordForm = struct {
+    title: []const u8,
+    decision: []const u8,
+    rationale: []const u8,
+};
+
+const WorkspaceSnapshotRow = struct {
+    id: i32,
+    title: []const u8,
+    scope: []const u8,
+    content: []const u8,
+    created_at_label: []const u8,
+};
+
+const WorkspaceSnapshotForm = struct {
+    title: []const u8,
+    scope: []const u8,
+    content: []const u8,
+};
+
 const RuntimeCommandResult = struct {
     ok: bool,
     exit_code: i32,
@@ -791,6 +838,142 @@ fn workspaceMemoryCreate(c: *spider.Ctx) !spider.Response {
     );
 
     return c.redirect(try std.fmt.allocPrint(c.arena, "/workspaces/{d}?memory_created=1", .{workspace_id}));
+}
+
+fn workspaceHandoffCreate(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const form = try c.parseForm(WorkspaceHandoffForm);
+
+    if (form.from_role.len == 0 or form.to_role.len == 0 or form.summary.len == 0) {
+        return c.redirect(try std.fmt.allocPrint(c.arena, "/workspaces/{d}?handoff_error=1", .{workspace_id}));
+    }
+
+    const workspace_rows = try db.query(
+        WorkspaceIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM workspaces
+        \\WHERE id = $1
+        \\LIMIT 1
+    ,
+        .{workspace_id},
+    );
+
+    if (workspace_rows.len == 0) {
+        return c.text("Workspace não encontrado.", .{ .status = .not_found });
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO workspace_handoffs (
+        \\    workspace_id,
+        \\    from_role,
+        \\    to_role,
+        \\    summary,
+        \\    context
+        \\)
+        \\VALUES ($1, $2, $3, $4, $5)
+    ,
+        .{ workspace_id, form.from_role, form.to_role, form.summary, form.context },
+    );
+
+    return c.redirect(try std.fmt.allocPrint(c.arena, "/workspaces/{d}?handoff_created=1", .{workspace_id}));
+}
+
+fn workspaceDecisionRecordCreate(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const form = try c.parseForm(WorkspaceDecisionRecordForm);
+
+    if (form.title.len == 0 or form.decision.len == 0 or form.rationale.len == 0) {
+        return c.redirect(try std.fmt.allocPrint(c.arena, "/workspaces/{d}?decision_error=1", .{workspace_id}));
+    }
+
+    const workspace_rows = try db.query(
+        WorkspaceIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM workspaces
+        \\WHERE id = $1
+        \\LIMIT 1
+    ,
+        .{workspace_id},
+    );
+
+    if (workspace_rows.len == 0) {
+        return c.text("Workspace não encontrado.", .{ .status = .not_found });
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO workspace_decision_records (
+        \\    workspace_id,
+        \\    title,
+        \\    decision,
+        \\    rationale
+        \\)
+        \\VALUES ($1, $2, $3, $4)
+    ,
+        .{ workspace_id, form.title, form.decision, form.rationale },
+    );
+
+    return c.redirect(try std.fmt.allocPrint(c.arena, "/workspaces/{d}?decision_created=1", .{workspace_id}));
+}
+
+fn workspaceSnapshotCreate(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const form = try c.parseForm(WorkspaceSnapshotForm);
+
+    if (form.title.len == 0 or form.scope.len == 0 or form.content.len == 0) {
+        return c.redirect(try std.fmt.allocPrint(c.arena, "/workspaces/{d}?snapshot_error=1", .{workspace_id}));
+    }
+
+    const workspace_rows = try db.query(
+        WorkspaceIdRow,
+        c.arena,
+        \\SELECT id
+        \\FROM workspaces
+        \\WHERE id = $1
+        \\LIMIT 1
+    ,
+        .{workspace_id},
+    );
+
+    if (workspace_rows.len == 0) {
+        return c.text("Workspace não encontrado.", .{ .status = .not_found });
+    }
+
+    try db.query(
+        void,
+        c.arena,
+        \\INSERT INTO workspace_snapshots (
+        \\    workspace_id,
+        \\    title,
+        \\    scope,
+        \\    content
+        \\)
+        \\VALUES ($1, $2, $3, $4)
+    ,
+        .{ workspace_id, form.title, form.scope, form.content },
+    );
+
+    return c.redirect(try std.fmt.allocPrint(c.arena, "/workspaces/{d}?snapshot_created=1", .{workspace_id}));
 }
 
 fn openCodeSessionExists(
@@ -6867,6 +7050,58 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .{workspace.id},
     );
 
+    const workspace_handoffs = try db.query(
+        WorkspaceHandoffRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    from_role,
+        \\    to_role,
+        \\    summary,
+        \\    context,
+        \\    TO_CHAR(created_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS') AS created_at_label
+        \\FROM workspace_handoffs
+        \\WHERE workspace_id = $1
+        \\ORDER BY id DESC
+        \\LIMIT 8
+    ,
+        .{workspace.id},
+    );
+
+    const workspace_decision_records = try db.query(
+        WorkspaceDecisionRecordRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    title,
+        \\    decision,
+        \\    rationale,
+        \\    TO_CHAR(created_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS') AS created_at_label
+        \\FROM workspace_decision_records
+        \\WHERE workspace_id = $1
+        \\ORDER BY id DESC
+        \\LIMIT 8
+    ,
+        .{workspace.id},
+    );
+
+    const workspace_snapshots = try db.query(
+        WorkspaceSnapshotRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    title,
+        \\    scope,
+        \\    content,
+        \\    TO_CHAR(created_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS') AS created_at_label
+        \\FROM workspace_snapshots
+        \\WHERE workspace_id = $1
+        \\ORDER BY id DESC
+        \\LIMIT 8
+    ,
+        .{workspace.id},
+    );
+
     const workspace_missions = try db.query(
         WorkspaceMissionPreviewRow,
         c.arena,
@@ -7094,6 +7329,12 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .pane_session_history_count = pane_session_history.len,
         .workspace_memory_entries = workspace_memory_entries,
         .workspace_memory_count = workspace_memory_entries.len,
+        .workspace_handoffs = workspace_handoffs,
+        .workspace_handoff_count = workspace_handoffs.len,
+        .workspace_decision_records = workspace_decision_records,
+        .workspace_decision_record_count = workspace_decision_records.len,
+        .workspace_snapshots = workspace_snapshots,
+        .workspace_snapshot_count = workspace_snapshots.len,
         .notice = if (c.query("mission_created") != null)
             "Missão criada com sucesso e vinculada a este workspace."
         else
@@ -7102,6 +7343,24 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
             "Memória de workspace registrada com sucesso."
         else if (c.query("memory_error") != null)
             "Informe título e conteúdo para registrar a memória de workspace."
+        else
+            "",
+        .handoff_notice = if (c.query("handoff_created") != null)
+            "Handoff registrado com sucesso."
+        else if (c.query("handoff_error") != null)
+            "Preencha origem, destino e resumo para registrar o handoff."
+        else
+            "",
+        .decision_notice = if (c.query("decision_created") != null)
+            "Decision record registrada com sucesso."
+        else if (c.query("decision_error") != null)
+            "Preencha título, decisão e racional para registrar a decisão."
+        else
+            "",
+        .snapshot_notice = if (c.query("snapshot_created") != null)
+            "Snapshot de contexto registrado com sucesso."
+        else if (c.query("snapshot_error") != null)
+            "Preencha título, escopo e conteúdo para registrar o snapshot."
         else
             "",
         .next_step_ready_notice = if (c.query("next_step_ready") != null)

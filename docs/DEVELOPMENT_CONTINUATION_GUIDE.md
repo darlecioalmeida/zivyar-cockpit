@@ -187,6 +187,16 @@ capture_executor_report
 dispatch_pilot_delivery
 capture_pilot_delivery_report
 finalize_mission
+workspace_memory
+handoffs
+decision_records
+snapshots
+```
+
+Próximo bloco recomendado:
+
+```text
+Sprint 5 - Graphify integration
 ```
 
 A automação ainda não é totalmente autônoma.

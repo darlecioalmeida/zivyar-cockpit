@@ -62,6 +62,19 @@ Rota esperada:
 POST /workspaces/3/missions/2/dispatch/scout
 ```
 
+## Context Engine
+
+O workspace 3 já recebeu a base inicial do Context Engine com:
+
+```text
+workspace memory
+handoffs
+decision records
+snapshots de contexto
+```
+
+A próxima continuação natural passa a ser a integração Graphify.
+
 ---
 
 ## Arquivos principais alterados recentemente
