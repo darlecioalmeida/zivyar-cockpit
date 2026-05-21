@@ -107,7 +107,6 @@ const WorkspaceRow = struct {
     status: []const u8,
 };
 
-
 const WorkspaceIndexRow = struct {
     id: i32,
     name: []const u8,
@@ -131,7 +130,6 @@ const WorkspaceForm = struct {
     default_squad_id: []const u8,
 };
 
-
 const WorkspaceLocalPathConfirmForm = struct {
     name: []const u8,
     local_path: []const u8,
@@ -144,13 +142,11 @@ const WorkspaceIdRow = struct {
     id: i32,
 };
 
-
 const WorkspaceSquadOptionRow = struct {
     id: i32,
     name: []const u8,
     slug: []const u8,
 };
-
 
 const ProviderRow = struct {
     id: i32,
@@ -173,7 +169,6 @@ const ProviderIdRow = struct {
     id: i32,
 };
 
-
 const ProviderModelRow = struct {
     id: i32,
     provider_id: i32,
@@ -193,7 +188,6 @@ const ProviderModelForm = struct {
 const ProviderModelIdRow = struct {
     id: i32,
 };
-
 
 const StackRow = struct {
     id: i32,
@@ -223,7 +217,6 @@ const StackModelOptionRow = struct {
     model_identifier: []const u8,
     provider_name: []const u8,
 };
-
 
 const AgentRow = struct {
     id: i32,
@@ -261,7 +254,6 @@ const AgentStackOptionRow = struct {
     runtime_tool: []const u8,
     model_name: []const u8,
 };
-
 
 const SquadRow = struct {
     id: i32,
@@ -313,7 +305,6 @@ const SquadMemberAgentIdRow = struct {
     agent_id: i32,
 };
 
-
 const WorkspacePaneRow = struct {
     id: i32,
     workspace_id: i32,
@@ -332,7 +323,6 @@ const WorkspacePaneRow = struct {
     agent_role: []const u8,
     stack_name: []const u8,
 };
-
 
 const WorkspacePaneControlRow = struct {
     id: i32,
@@ -369,12 +359,20 @@ const OpenCodeTextPart = struct {
     text: []const u8,
 };
 
+const OpenCodePromptModel = struct {
+    providerID: []const u8,
+    modelID: []const u8,
+};
+
 const OpenCodeBootstrapMessageRequest = struct {
     noReply: bool,
     parts: []const OpenCodeTextPart,
 };
 
-
+const open_code_prompt_model = OpenCodePromptModel{
+    .providerID = "github-copilot",
+    .modelID = "gpt-5.4-mini",
+};
 
 const MissionRow = struct {
     id: i32,
@@ -435,7 +433,6 @@ const MissionRow = struct {
     next_step_detected_at_label: []const u8,
 };
 
-
 const WorkspaceMissionPreviewRow = struct {
     id: i32,
     workspace_id: i32,
@@ -452,7 +449,6 @@ const WorkspaceMissionPreviewRow = struct {
     mission_final_verdict: []const u8,
     mission_operational_closed_at_label: []const u8,
 };
-
 
 const ActiveMissionPanelRow = struct {
     id: i32,
@@ -488,7 +484,6 @@ const ActiveMissionPanelRow = struct {
     next_step_detected_at_label: []const u8,
 };
 
-
 const WorkspaceMissionPaneDispatchRow = struct {
     id: i32,
     role_name: []const u8,
@@ -498,6 +493,7 @@ const WorkspaceMissionPaneDispatchRow = struct {
 };
 
 const OpenCodePromptAsyncRequest = struct {
+    model: OpenCodePromptModel,
     parts: []const OpenCodeTextPart,
 };
 
@@ -527,7 +523,6 @@ const MissionActivationTargetRow = struct {
     mission_operational_closure_status: []const u8,
 };
 
-
 const MissionPilotDispatchTraceRow = struct {
     pilot_dispatch_user_message_id: []const u8,
 };
@@ -547,7 +542,6 @@ const MissionScoutDispatchTraceRow = struct {
 const MissionBuilderDispatchTraceRow = struct {
     builder_dispatch_user_message_id: []const u8,
 };
-
 
 const MissionExecutorDispatchTraceRow = struct {
     executor_dispatch_user_message_id: []const u8,
@@ -589,7 +583,6 @@ const MissionClosureFinalizeRow = struct {
     mission_operational_closure_status: []const u8,
 };
 
-
 const MissionEventRow = struct {
     id: i32,
     event_type: []const u8,
@@ -597,6 +590,38 @@ const MissionEventRow = struct {
     message: []const u8,
     created_at_label: []const u8,
 };
+
+fn isSupervisedExecutionEventType(event_type: []const u8) bool {
+    return std.mem.eql(u8, event_type, "mission-next-step-detected") or
+        std.mem.eql(u8, event_type, "mission-operationally-closed") or
+        std.mem.indexOf(u8, event_type, "dispatch") != null or
+        std.mem.indexOf(u8, event_type, "captured") != null;
+}
+
+fn collectSupervisedExecutionEvents(
+    allocator: std.mem.Allocator,
+    events: []const MissionEventRow,
+) ![]MissionEventRow {
+    var supervised_count: usize = 0;
+
+    for (events) |event| {
+        if (isSupervisedExecutionEventType(event.event_type)) {
+            supervised_count += 1;
+        }
+    }
+
+    const supervised_events = try allocator.alloc(MissionEventRow, supervised_count);
+
+    var supervised_index: usize = 0;
+    for (events) |event| {
+        if (isSupervisedExecutionEventType(event.event_type)) {
+            supervised_events[supervised_index] = event;
+            supervised_index += 1;
+        }
+    }
+
+    return supervised_events;
+}
 
 const MissionWorkspaceOptionRow = struct {
     id: i32,
@@ -606,7 +631,6 @@ const MissionWorkspaceOptionRow = struct {
     default_squad_id: i32,
     squad_name: []const u8,
 };
-
 
 const DashboardCountRow = struct {
     total: i64,
@@ -628,7 +652,6 @@ const DashboardMissionRow = struct {
     priority: []const u8,
 };
 
-
 const WorkspaceRuntimeRow = struct {
     workspace_id: i32,
     state: []const u8,
@@ -643,7 +666,6 @@ const WorkspaceRuntimeCountRow = struct {
     total: i64,
 };
 
-
 const WorkspaceRuntimeControlRow = struct {
     workspace_id: i32,
     local_path: []const u8,
@@ -651,14 +673,12 @@ const WorkspaceRuntimeControlRow = struct {
     state: []const u8,
 };
 
-
 const WorkspaceRuntimeEventRow = struct {
     id: i32,
     event_type: []const u8,
     title: []const u8,
     message: []const u8,
 };
-
 
 const WorkspaceRuntimeLogRow = struct {
     id: i32,
@@ -669,7 +689,6 @@ const WorkspaceRuntimeLogRow = struct {
     stdout_excerpt: []const u8,
     stderr_excerpt: []const u8,
 };
-
 
 const WorkspacePaneSessionHistoryRow = struct {
     id: i32,
@@ -689,7 +708,6 @@ const RuntimeCommandResult = struct {
     stderr: []const u8,
 };
 
-
 fn loadWorkspaceSquads(c: *spider.Ctx) ![]WorkspaceSquadOptionRow {
     return db.query(
         WorkspaceSquadOptionRow,
@@ -698,11 +716,10 @@ fn loadWorkspaceSquads(c: *spider.Ctx) ![]WorkspaceSquadOptionRow {
         \\FROM squads
         \\WHERE is_active = TRUE
         \\ORDER BY is_default DESC, name ASC
-        ,
+    ,
         .{},
     );
 }
-
 
 fn loadWorkspaceSquadsForSelected(c: *spider.Ctx, selected_squad_id: i32) ![]WorkspaceSquadOptionRow {
     return db.query(
@@ -714,8 +731,8 @@ fn loadWorkspaceSquadsForSelected(c: *spider.Ctx, selected_squad_id: i32) ![]Wor
         \\ORDER BY CASE WHEN id = $1 THEN 0 ELSE 1 END,
         \\         is_default DESC,
         \\         name ASC
-        ,
-        .{ selected_squad_id },
+    ,
+        .{selected_squad_id},
     );
 }
 
@@ -743,8 +760,6 @@ fn openCodeSessionExists(
         session_url,
     });
 }
-
-
 
 fn extractLatestUserMessageIdMatchingText(
     allocator: std.mem.Allocator,
@@ -1036,10 +1051,9 @@ fn extractOpenCodeSessionId(raw: []const u8) ?[]const u8 {
 
     cursor += 1;
 
-    while (
-        cursor < raw.len and
-        (raw[cursor] == ' ' or raw[cursor] == '\n' or raw[cursor] == '\r' or raw[cursor] == '\t')
-    ) : (cursor += 1) {}
+    while (cursor < raw.len and
+        (raw[cursor] == ' ' or raw[cursor] == '\n' or raw[cursor] == '\r' or raw[cursor] == '\t')) : (cursor += 1)
+    {}
 
     if (cursor >= raw.len or raw[cursor] != '"') return null;
 
@@ -1107,7 +1121,7 @@ fn insertRuntimeCommandLog(
         \\    stderr_excerpt
         \\)
         \\VALUES ($1, $2, $3, $4, $5, $6, $7)
-        ,
+    ,
         .{
             workspace_id,
             action,
@@ -1131,7 +1145,6 @@ fn commandSucceeded(c: *spider.Ctx, argv: []const []const u8) bool {
     };
 }
 
-
 fn ensureWorkspaceLocalPath(c: *spider.Ctx, local_path: []const u8) bool {
     if (local_path.len == 0) {
         return false;
@@ -1153,7 +1166,7 @@ fn waitForOpenCodeHealth(c: *spider.Ctx, server_url: []const u8) bool {
     const health_url = std.fmt.allocPrint(
         c.arena,
         "{s}/global/health",
-        .{ server_url },
+        .{server_url},
     ) catch return false;
 
     var attempt: usize = 0;
@@ -1189,7 +1202,7 @@ fn insertRuntimeEvent(
         \\    message
         \\)
         \\VALUES ($1, $2, $3, $4)
-        ,
+    ,
         .{
             workspace_id,
             event_type,
@@ -1227,8 +1240,8 @@ fn reconcileWorkspacePaneSessions(
         \\AND session_external_id <> ''
         \\AND pane_state IN ('active', 'closed')
         \\ORDER BY id ASC
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     for (panes) |pane| {
@@ -1250,7 +1263,7 @@ fn reconcileWorkspacePaneSessions(
             \\    updated_at = NOW()
             \\WHERE id = $1
             \\AND workspace_id = $2
-            ,
+        ,
             .{ pane.id, workspace_id },
         );
 
@@ -1304,8 +1317,8 @@ fn reconcileWorkspaceRuntimeState(
                 \\    status_message = 'O container do runtime não foi encontrado no Docker.',
                 \\    updated_at = NOW()
                 \\WHERE workspace_id = $1
-                ,
-                .{ runtime.workspace_id },
+            ,
+                .{runtime.workspace_id},
             );
 
             try insertRuntimeEvent(
@@ -1353,8 +1366,8 @@ fn reconcileWorkspaceRuntimeState(
             \\    status_message = 'Estado reconciliado: o container está em execução no Docker.',
             \\    updated_at = NOW()
             \\WHERE workspace_id = $1
-            ,
-            .{ runtime.workspace_id },
+        ,
+            .{runtime.workspace_id},
         );
 
         try insertRuntimeEvent(
@@ -1373,8 +1386,8 @@ fn reconcileWorkspaceRuntimeState(
             \\    status_message = 'Estado reconciliado: o container está parado no Docker.',
             \\    updated_at = NOW()
             \\WHERE workspace_id = $1
-            ,
-            .{ runtime.workspace_id },
+        ,
+            .{runtime.workspace_id},
         );
 
         try insertRuntimeEvent(
@@ -1417,8 +1430,8 @@ fn loadWorkspaceRuntime(c: *spider.Ctx, workspace_id: i32) ![]WorkspaceRuntimeRo
         \\LEFT JOIN workspace_runtimes r ON r.workspace_id = w.id
         \\WHERE w.id = $1
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 }
 
@@ -1428,7 +1441,7 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\SELECT COUNT(*)::bigint AS total
         \\FROM workspaces
-        ,
+    ,
         .{},
     );
 
@@ -1437,7 +1450,7 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\SELECT COUNT(*)::bigint AS total
         \\FROM missions
-        ,
+    ,
         .{},
     );
 
@@ -1447,7 +1460,7 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         \\SELECT COUNT(*)::bigint AS total
         \\FROM missions
         \\WHERE status <> 'completed'
-        ,
+    ,
         .{},
     );
 
@@ -1456,7 +1469,7 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\SELECT COUNT(*)::bigint AS total
         \\FROM agents
-        ,
+    ,
         .{},
     );
 
@@ -1465,7 +1478,7 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\SELECT COUNT(*)::bigint AS total
         \\FROM squads
-        ,
+    ,
         .{},
     );
 
@@ -1474,7 +1487,7 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\SELECT COUNT(*)::bigint AS total
         \\FROM providers
-        ,
+    ,
         .{},
     );
 
@@ -1483,7 +1496,7 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\SELECT COUNT(*)::bigint AS total
         \\FROM stacks
-        ,
+    ,
         .{},
     );
 
@@ -1499,7 +1512,7 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = w.default_squad_id
         \\ORDER BY w.id DESC
         \\LIMIT 4
-        ,
+    ,
         .{},
     );
 
@@ -1610,7 +1623,7 @@ fn dashboard(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = m.squad_id
         \\ORDER BY m.id DESC
         \\LIMIT 4
-        ,
+    ,
         .{},
     );
 
@@ -1662,7 +1675,7 @@ fn workspaces(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = w.default_squad_id
         \\LEFT JOIN workspace_runtimes r ON r.workspace_id = w.id
         \\ORDER BY w.id DESC
-        ,
+    ,
         .{},
     );
 
@@ -1710,7 +1723,7 @@ fn workspaces(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = w.default_squad_id
         \\LEFT JOIN workspace_runtimes r ON r.workspace_id = w.id
         \\ORDER BY w.id DESC
-        ,
+    ,
         .{},
     );
 
@@ -1720,7 +1733,7 @@ fn workspaces(c: *spider.Ctx) !spider.Response {
         \\SELECT COUNT(*)::bigint AS total
         \\FROM workspace_runtimes
         \\WHERE state = 'running'
-        ,
+    ,
         .{},
     );
 
@@ -1730,7 +1743,7 @@ fn workspaces(c: *spider.Ctx) !spider.Response {
         \\SELECT COUNT(*)::bigint AS total
         \\FROM missions
         \\WHERE status <> 'completed'
-        ,
+    ,
         .{},
     );
 
@@ -1771,7 +1784,6 @@ fn workspaceNew(c: *spider.Ctx) !spider.Response {
     }, .{});
 }
 
-
 fn workspaceEdit(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
         return c.text("Workspace não informado.", .{ .status = .bad_request });
@@ -1794,8 +1806,8 @@ fn workspaceEdit(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = w.default_squad_id
         \\WHERE w.id = $1
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     if (rows.len == 0) {
@@ -1848,8 +1860,8 @@ fn workspaceUpdate(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = w.default_squad_id
         \\WHERE w.id = $1
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     if (current_rows.len == 0) {
@@ -1864,7 +1876,7 @@ fn workspaceUpdate(c: *spider.Ctx) !spider.Response {
         \\WHERE local_path = $1
         \\AND id <> $2
         \\LIMIT 1
-        ,
+    ,
         .{ form.local_path, workspace_id },
     );
 
@@ -1906,8 +1918,8 @@ fn workspaceUpdate(c: *spider.Ctx) !spider.Response {
         \\WHERE id = $1
         \\AND is_active = TRUE
         \\LIMIT 1
-        ,
-        .{ default_squad_id },
+    ,
+        .{default_squad_id},
     );
 
     if (selected_squad_rows.len == 0) {
@@ -1971,7 +1983,7 @@ fn workspaceUpdate(c: *spider.Ctx) !spider.Response {
         \\    default_squad = $4,
         \\    default_squad_id = $5
         \\WHERE id = $6
-        ,
+    ,
         .{
             form.name,
             form.local_path,
@@ -2034,8 +2046,8 @@ fn workspaceRuntimeLiveStatus(c: *spider.Ctx) !spider.Response {
         \\WHERE workspace_id = $1
         \\ORDER BY id DESC
         \\LIMIT 8
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     const runtime_logs = try db.query(
@@ -2053,8 +2065,8 @@ fn workspaceRuntimeLiveStatus(c: *spider.Ctx) !spider.Response {
         \\WHERE workspace_id = $1
         \\ORDER BY id DESC
         \\LIMIT 8
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     const workspace_panes = try db.query(
@@ -2082,8 +2094,8 @@ fn workspaceRuntimeLiveStatus(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN stacks s ON s.id = a.default_stack_id
         \\WHERE wp.workspace_id = $1
         \\ORDER BY wp.display_order ASC
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     const pane_session_history = try db.query(
@@ -2102,8 +2114,8 @@ fn workspaceRuntimeLiveStatus(c: *spider.Ctx) !spider.Response {
         \\WHERE workspace_id = $1
         \\ORDER BY id DESC
         \\LIMIT 8
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     return c.json(.{
@@ -2146,8 +2158,8 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN workspace_runtimes r ON r.workspace_id = w.id
         \\WHERE w.id = $1
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     if (runtime_rows.len == 0) {
@@ -2165,8 +2177,8 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
             \\    status_message = 'Falha ao criar ou acessar o diretório local do workspace.',
             \\    updated_at = NOW()
             \\WHERE workspace_id = $1
-            ,
-            .{ workspace_id },
+        ,
+            .{workspace_id},
         );
 
         try insertRuntimeEvent(
@@ -2177,7 +2189,7 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
             "O Zivyar não conseguiu criar ou acessar o caminho local configurado para este workspace.",
         );
 
-        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
         return c.redirect(redirect_url);
     }
 
@@ -2186,8 +2198,8 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
     const internal_port = spider.env.getInt(i32, "ZIVYAR_RUNTIME_INTERNAL_PORT", 4096);
     const host_port = runtimeHostPort(workspace_id);
 
-    const host_port_text = try std.fmt.allocPrint(c.arena, "{d}", .{ host_port });
-    const internal_port_text = try std.fmt.allocPrint(c.arena, "{d}", .{ internal_port });
+    const host_port_text = try std.fmt.allocPrint(c.arena, "{d}", .{host_port});
+    const internal_port_text = try std.fmt.allocPrint(c.arena, "{d}", .{internal_port});
     const published_port = try std.fmt.allocPrint(
         c.arena,
         "127.0.0.1:{d}:{d}",
@@ -2196,12 +2208,12 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
     const volume_mount = try std.fmt.allocPrint(
         c.arena,
         "{s}:/workspace",
-        .{ runtime.local_path },
+        .{runtime.local_path},
     );
     const server_url = try std.fmt.allocPrint(
         c.arena,
         "http://127.0.0.1:{d}",
-        .{ host_port },
+        .{host_port},
     );
 
     try db.query(
@@ -2212,10 +2224,9 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
         \\    status_message = 'Preparando imagem e iniciando OpenCode Server...',
         \\    updated_at = NOW()
         \\WHERE workspace_id = $1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
-
 
     try insertRuntimeEvent(
         c,
@@ -2258,10 +2269,9 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
                 \\    status_message = 'Falha ao construir a imagem do runtime Zivyar.',
                 \\    updated_at = NOW()
                 \\WHERE workspace_id = $1
-                ,
-                .{ workspace_id },
+            ,
+                .{workspace_id},
             );
-
 
             try insertRuntimeEvent(
                 c,
@@ -2271,7 +2281,7 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
                 "O Docker não conseguiu construir a imagem zivyar-opencode-runtime:latest.",
             );
 
-            const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+            const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
             return c.redirect(redirect_url);
         }
     }
@@ -2342,10 +2352,9 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
             \\    status_message = 'Falha ao criar ou iniciar o container do runtime.',
             \\    updated_at = NOW()
             \\WHERE workspace_id = $1
-            ,
-            .{ workspace_id },
+        ,
+            .{workspace_id},
         );
-
 
         try insertRuntimeEvent(
             c,
@@ -2355,7 +2364,7 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
             "O Docker não conseguiu criar ou iniciar o container associado a este workspace.",
         );
 
-        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
         return c.redirect(redirect_url);
     }
 
@@ -2385,10 +2394,9 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
             \\    status_message = 'Container iniciou, mas o healthcheck do OpenCode não respondeu.',
             \\    updated_at = NOW()
             \\WHERE workspace_id = $3
-            ,
+        ,
             .{ host_port, server_url, workspace_id },
         );
-
 
         try insertRuntimeEvent(
             c,
@@ -2398,7 +2406,7 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
             "O container iniciou, porém o endpoint de saúde do OpenCode não respondeu dentro da janela esperada.",
         );
 
-        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
         return c.redirect(redirect_url);
     }
 
@@ -2412,10 +2420,9 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
         \\    status_message = 'OpenCode Server em execução e validado com sucesso.',
         \\    updated_at = NOW()
         \\WHERE workspace_id = $3
-        ,
+    ,
         .{ host_port, server_url, workspace_id },
     );
-
 
     try insertRuntimeEvent(
         c,
@@ -2428,7 +2435,8 @@ fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
     _ = host_port_text;
     _ = internal_port_text;
 
-    const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+    const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
+
     return c.redirect(redirect_url);
 }
 
@@ -2451,8 +2459,8 @@ fn workspaceRuntimeStop(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN workspace_runtimes r ON r.workspace_id = w.id
         \\WHERE w.id = $1
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     if (runtime_rows.len == 0) {
@@ -2484,10 +2492,9 @@ fn workspaceRuntimeStop(c: *spider.Ctx) !spider.Response {
             \\    status_message = 'Falha ao parar o container do runtime.',
             \\    updated_at = NOW()
             \\WHERE workspace_id = $1
-            ,
-            .{ workspace_id },
+        ,
+            .{workspace_id},
         );
-
 
         try insertRuntimeEvent(
             c,
@@ -2505,10 +2512,9 @@ fn workspaceRuntimeStop(c: *spider.Ctx) !spider.Response {
             \\    status_message = 'Runtime parado pelo usuário.',
             \\    updated_at = NOW()
             \\WHERE workspace_id = $1
-            ,
-            .{ workspace_id },
+        ,
+            .{workspace_id},
         );
-
 
         try insertRuntimeEvent(
             c,
@@ -2519,7 +2525,7 @@ fn workspaceRuntimeStop(c: *spider.Ctx) !spider.Response {
         );
     }
 
-    const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+    const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
     return c.redirect(redirect_url);
 }
 
@@ -2537,8 +2543,8 @@ fn workspaceRuntimePrepare(c: *spider.Ctx) !spider.Response {
         \\FROM workspaces
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     if (workspace_rows.len == 0) {
@@ -2548,7 +2554,7 @@ fn workspaceRuntimePrepare(c: *spider.Ctx) !spider.Response {
     const container_name = try std.fmt.allocPrint(
         c.arena,
         "zivyar_workspace_{d}",
-        .{ workspace_id },
+        .{workspace_id},
     );
 
     try db.query(
@@ -2569,7 +2575,7 @@ fn workspaceRuntimePrepare(c: *spider.Ctx) !spider.Response {
         \\    container_name = EXCLUDED.container_name,
         \\    status_message = 'Runtime preparado, aguardando inicialização.',
         \\    updated_at = NOW()
-        ,
+    ,
         .{ workspace_id, container_name },
     );
 
@@ -2584,12 +2590,11 @@ fn workspaceRuntimePrepare(c: *spider.Ctx) !spider.Response {
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
         "/workspaces/{d}",
-        .{ workspace_id },
+        .{workspace_id},
     );
 
     return c.redirect(redirect_url);
 }
-
 
 fn workspaceConfirmLocalPathChange(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
@@ -2624,8 +2629,8 @@ fn workspaceConfirmLocalPathChange(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = w.default_squad_id
         \\WHERE w.id = $1
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     if (current_rows.len == 0) {
@@ -2642,7 +2647,7 @@ fn workspaceConfirmLocalPathChange(c: *spider.Ctx) !spider.Response {
         \\WHERE local_path = $1
         \\AND id <> $2
         \\LIMIT 1
-        ,
+    ,
         .{ form.local_path, workspace_id },
     );
 
@@ -2684,8 +2689,8 @@ fn workspaceConfirmLocalPathChange(c: *spider.Ctx) !spider.Response {
         \\WHERE id = $1
         \\AND is_active = TRUE
         \\LIMIT 1
-        ,
-        .{ default_squad_id },
+    ,
+        .{default_squad_id},
     );
 
     if (selected_squad_rows.len == 0) {
@@ -2730,8 +2735,8 @@ fn workspaceConfirmLocalPathChange(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN workspace_runtimes r ON r.workspace_id = w.id
         \\WHERE w.id = $1
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     if (runtime_rows.len > 0) {
@@ -2787,7 +2792,7 @@ fn workspaceConfirmLocalPathChange(c: *spider.Ctx) !spider.Response {
         \\    default_squad = $4,
         \\    default_squad_id = $5
         \\WHERE id = $6
-        ,
+    ,
         .{
             form.name,
             form.local_path,
@@ -2809,8 +2814,8 @@ fn workspaceConfirmLocalPathChange(c: *spider.Ctx) !spider.Response {
             \\    status_message = 'Caminho local alterado. O runtime precisa ser iniciado novamente para montar a nova pasta.',
             \\    updated_at = NOW()
             \\WHERE workspace_id = $1
-            ,
-            .{ workspace_id },
+        ,
+            .{workspace_id},
         );
 
         try db.query(
@@ -2827,8 +2832,8 @@ fn workspaceConfirmLocalPathChange(c: *spider.Ctx) !spider.Response {
             \\    END,
             \\    updated_at = NOW()
             \\WHERE workspace_id = $1
-            ,
-            .{ workspace_id },
+        ,
+            .{workspace_id},
         );
     }
 
@@ -2849,7 +2854,7 @@ fn workspaceConfirmLocalPathChange(c: *spider.Ctx) !spider.Response {
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
         "/workspaces/{d}",
-        .{ workspace_id },
+        .{workspace_id},
     );
 
     return c.redirect(redirect_url);
@@ -2867,8 +2872,8 @@ fn workspaceDelete(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\DELETE FROM workspaces
         \\WHERE id = $1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     return c.redirect("/workspaces?deleted=1");
@@ -2895,7 +2900,7 @@ fn workspacePaneCloseSession(c: *spider.Ctx) !spider.Response {
         \\WHERE id = $1
         \\AND workspace_id = $2
         \\LIMIT 1
-        ,
+    ,
         .{ pane_id, workspace_id },
     );
 
@@ -2906,7 +2911,7 @@ fn workspacePaneCloseSession(c: *spider.Ctx) !spider.Response {
     const pane = pane_rows[0];
 
     if (!std.mem.eql(u8, pane.pane_state, "active")) {
-        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
         return c.redirect(redirect_url);
     }
 
@@ -2918,7 +2923,7 @@ fn workspacePaneCloseSession(c: *spider.Ctx) !spider.Response {
         \\    updated_at = NOW()
         \\WHERE id = $1
         \\AND workspace_id = $2
-        ,
+    ,
         .{ pane_id, workspace_id },
     );
 
@@ -2936,7 +2941,7 @@ fn workspacePaneCloseSession(c: *spider.Ctx) !spider.Response {
         close_message,
     );
 
-    const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+    const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
     return c.redirect(redirect_url);
 }
 
@@ -2961,7 +2966,7 @@ fn workspacePaneResumeSession(c: *spider.Ctx) !spider.Response {
         \\WHERE id = $1
         \\AND workspace_id = $2
         \\LIMIT 1
-        ,
+    ,
         .{ pane_id, workspace_id },
     );
 
@@ -2972,14 +2977,14 @@ fn workspacePaneResumeSession(c: *spider.Ctx) !spider.Response {
     const pane = pane_rows[0];
 
     if (!std.mem.eql(u8, pane.pane_state, "closed") or pane.session_external_id.len == 0) {
-        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
         return c.redirect(redirect_url);
     }
 
     const runtime_rows = try loadWorkspaceRuntime(c, workspace_id);
 
     if (runtime_rows.len == 0) {
-        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
         return c.redirect(redirect_url);
     }
 
@@ -2988,14 +2993,14 @@ fn workspacePaneResumeSession(c: *spider.Ctx) !spider.Response {
     const refreshed_runtime_rows = try loadWorkspaceRuntime(c, workspace_id);
 
     if (refreshed_runtime_rows.len == 0) {
-        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
         return c.redirect(redirect_url);
     }
 
     const runtime = refreshed_runtime_rows[0];
 
     if (!std.mem.eql(u8, runtime.state, "running")) {
-        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
         return c.redirect(redirect_url);
     }
 
@@ -3022,7 +3027,7 @@ fn workspacePaneResumeSession(c: *spider.Ctx) !spider.Response {
             \\    updated_at = NOW()
             \\WHERE id = $1
             \\AND workspace_id = $2
-            ,
+        ,
             .{ pane_id, workspace_id },
         );
 
@@ -3040,7 +3045,7 @@ fn workspacePaneResumeSession(c: *spider.Ctx) !spider.Response {
             stale_message,
         );
 
-        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
         return c.redirect(redirect_url);
     }
 
@@ -3052,7 +3057,7 @@ fn workspacePaneResumeSession(c: *spider.Ctx) !spider.Response {
         \\    updated_at = NOW()
         \\WHERE id = $1
         \\AND workspace_id = $2
-        ,
+    ,
         .{ pane_id, workspace_id },
     );
 
@@ -3070,10 +3075,9 @@ fn workspacePaneResumeSession(c: *spider.Ctx) !spider.Response {
         resume_message,
     );
 
-    const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+    const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
     return c.redirect(redirect_url);
 }
-
 
 fn workspacePaneRecreateSession(c: *spider.Ctx) !spider.Response {
     const workspace_id_raw = c.params.get("id") orelse
@@ -3102,7 +3106,7 @@ fn workspacePaneRecreateSession(c: *spider.Ctx) !spider.Response {
         \\WHERE id = $1
         \\AND workspace_id = $2
         \\LIMIT 1
-        ,
+    ,
         .{ pane_id, workspace_id },
     );
 
@@ -3128,7 +3132,7 @@ fn workspacePaneRecreateSession(c: *spider.Ctx) !spider.Response {
         \\    updated_at = NOW()
         \\WHERE id = $1
         \\AND workspace_id = $2
-        ,
+    ,
         .{ pane_id, workspace_id },
     );
 
@@ -3166,7 +3170,7 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
         \\WHERE id = $1
         \\AND workspace_id = $2
         \\LIMIT 1
-        ,
+    ,
         .{ pane_id, workspace_id },
     );
 
@@ -3178,12 +3182,11 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
     const is_recreating_stale_session = std.mem.eql(u8, pane.pane_state, "stale");
     const is_recreating_outdated_context = std.mem.eql(u8, pane.context_state, "outdated");
 
-    if (
-        pane.session_external_id.len > 0 and
+    if (pane.session_external_id.len > 0 and
         !is_recreating_stale_session and
-        !is_recreating_outdated_context
-    ) {
-        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        !is_recreating_outdated_context)
+    {
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
         return c.redirect(redirect_url);
     }
 
@@ -3198,7 +3201,7 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
             "O runtime deste workspace ainda não foi preparado.",
         );
 
-        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
         return c.redirect(redirect_url);
     }
 
@@ -3207,7 +3210,7 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
     const refreshed_runtime_rows = try loadWorkspaceRuntime(c, workspace_id);
 
     if (refreshed_runtime_rows.len == 0) {
-        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
         return c.redirect(redirect_url);
     }
 
@@ -3222,7 +3225,7 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
             "O Runtime precisa estar em execução para abrir uma sessão de pane.",
         );
 
-        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
         return c.redirect(redirect_url);
     }
 
@@ -3241,7 +3244,7 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
     const session_url = try std.fmt.allocPrint(
         c.arena,
         "{s}/session",
-        .{ runtime.server_url_label },
+        .{runtime.server_url_label},
     );
 
     const create_session_result = runRuntimeCommand(c, &.{
@@ -3273,7 +3276,7 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
             "A chamada ao OpenCode Server não concluiu com sucesso.",
         );
 
-        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
         return c.redirect(redirect_url);
     }
 
@@ -3286,7 +3289,7 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
             "O OpenCode respondeu, mas o Zivyar não encontrou o identificador da sessão.",
         );
 
-        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+        const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
         return c.redirect(redirect_url);
     };
 
@@ -3316,7 +3319,7 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
         \\WHERE wp.id = $1
         \\AND wp.workspace_id = $2
         \\LIMIT 1
-        ,
+    ,
         .{ pane_id, workspace_id },
     );
 
@@ -3436,10 +3439,9 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
         else
             "";
 
-    if (
-        pane.session_external_id.len > 0 and
-        (is_recreating_stale_session or is_recreating_outdated_context)
-    ) {
+    if (pane.session_external_id.len > 0 and
+        (is_recreating_stale_session or is_recreating_outdated_context))
+    {
         const replacement_reason =
             if (is_recreating_stale_session)
                 "stale_recovery"
@@ -3463,7 +3465,7 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
             \\    replacement_reason
             \\)
             \\VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-            ,
+        ,
             .{
                 workspace_id,
                 pane_id,
@@ -3493,7 +3495,7 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
         \\    updated_at = NOW()
         \\WHERE id = $4
         \\AND workspace_id = $5
-        ,
+    ,
         .{ session_id, pane.agent_id, session_agent_handle, pane_id, workspace_id },
     );
 
@@ -3535,10 +3537,9 @@ fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
         event_message,
     );
 
-    const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{ workspace_id });
+    const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
     return c.redirect(redirect_url);
 }
-
 
 fn workspaceMissionActivate(c: *spider.Ctx) !spider.Response {
     const workspace_id_raw = c.params.get("id") orelse
@@ -3563,7 +3564,7 @@ fn workspaceMissionActivate(c: *spider.Ctx) !spider.Response {
         \\WHERE id = $1
         \\AND workspace_id = $2
         \\LIMIT 1
-        ,
+    ,
         .{ mission_id, workspace_id },
     );
 
@@ -3584,7 +3585,7 @@ fn workspaceMissionActivate(c: *spider.Ctx) !spider.Response {
         \\UPDATE workspaces
         \\SET active_mission_id = $1
         \\WHERE id = $2
-        ,
+    ,
         .{ mission_id, workspace_id },
     );
 
@@ -3605,19 +3606,18 @@ fn workspaceMissionActivate(c: *spider.Ctx) !spider.Response {
         \\    'Missão ativada no Cockpit',
         \\    'Esta missão foi definida como foco operacional ativo do workspace.'
         \\)
-        ,
+    ,
         .{ mission_id, workspace_id },
     );
 
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
         "/workspaces/{d}",
-        .{ workspace_id },
+        .{workspace_id},
     );
 
     return c.redirect(redirect_url);
 }
-
 
 fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
     const workspace_id_raw = c.params.get("id") orelse
@@ -3743,7 +3743,7 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
         \\WHERE w.id = $1
         \\AND m.id = $2
         \\LIMIT 1
-        ,
+    ,
         .{ workspace_id, mission_id },
     );
 
@@ -3776,8 +3776,8 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
         \\WHERE workspace_id = $1
         \\AND role_name = 'Piloto'
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     if (pilot_rows.len == 0) {
@@ -3874,6 +3874,7 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
     const prompt_body = try std.json.Stringify.valueAlloc(
         c.arena,
         OpenCodePromptAsyncRequest{
+            .model = open_code_prompt_model,
             .parts = prompt_parts[0..],
         },
         .{},
@@ -3912,8 +3913,8 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
             \\UPDATE missions
             \\SET pilot_dispatch_status = 'error'
             \\WHERE id = $1
-            ,
-            .{ mission_id },
+        ,
+            .{mission_id},
         );
 
         try insertRuntimeEvent(
@@ -3941,7 +3942,7 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
             \\    'Falha ao enviar missão ao Piloto',
             \\    'O despacho assíncrono ao pane Piloto não foi confirmado pelo OpenCode Server.'
             \\)
-            ,
+        ,
             .{ mission_id, workspace_id },
         );
 
@@ -3997,7 +3998,7 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
         \\    pilot_operational_brief_status = 'pending_capture',
         \\    pilot_operational_brief_captured_at = NULL
         \\WHERE id = $3
-        ,
+    ,
         .{ pilot.session_external_id, dispatch_user_message_id, mission_id },
     );
 
@@ -4032,7 +4033,7 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
         \\    'Missão enviada ao Piloto',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, workspace_id, event_message },
     );
 
@@ -4044,7 +4045,6 @@ fn workspaceMissionDispatchToPilot(c: *spider.Ctx) !spider.Response {
 
     return c.redirect(pilot_session_url);
 }
-
 
 fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response {
     const workspace_id_raw = c.params.get("id") orelse
@@ -4170,7 +4170,7 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
         \\WHERE w.id = $1
         \\AND m.id = $2
         \\LIMIT 1
-        ,
+    ,
         .{ workspace_id, mission_id },
     );
 
@@ -4190,10 +4190,9 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
         );
     }
 
-    if (
-        mission.pilot_operational_brief.len == 0 or
-        !std.mem.eql(u8, mission.pilot_operational_brief_status, "captured")
-    ) {
+    if (mission.pilot_operational_brief.len == 0 or
+        !std.mem.eql(u8, mission.pilot_operational_brief_status, "captured"))
+    {
         return c.text(
             "Capture o Briefing Operacional do Piloto antes de enviá-lo ao Planner.",
             .{ .status = .bad_request },
@@ -4213,8 +4212,8 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
         \\WHERE workspace_id = $1
         \\AND role_name = 'Planner'
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     if (planner_rows.len == 0) {
@@ -4312,6 +4311,7 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
     const prompt_body = try std.json.Stringify.valueAlloc(
         c.arena,
         OpenCodePromptAsyncRequest{
+            .model = open_code_prompt_model,
             .parts = prompt_parts[0..],
         },
         .{},
@@ -4350,8 +4350,8 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
             \\UPDATE missions
             \\SET planner_dispatch_status = 'error'
             \\WHERE id = $1
-            ,
-            .{ mission_id },
+        ,
+            .{mission_id},
         );
 
         try insertRuntimeEvent(
@@ -4379,7 +4379,7 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
             \\    'Falha ao enviar briefing ao Planner',
             \\    'O despacho assíncrono do briefing ao pane Planner não foi confirmado pelo OpenCode Server.'
             \\)
-            ,
+        ,
             .{ mission_id, workspace_id },
         );
 
@@ -4431,7 +4431,7 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
         \\    planner_operational_plan_status = 'pending_capture',
         \\    planner_operational_plan_captured_at = NULL
         \\WHERE id = $3
-        ,
+    ,
         .{ planner.session_external_id, planner_dispatch_user_message_id, mission_id },
     );
 
@@ -4466,7 +4466,7 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
         \\    'Briefing enviado ao Planner',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, workspace_id, event_message },
     );
 
@@ -4478,7 +4478,6 @@ fn workspaceMissionDispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response 
 
     return c.redirect(planner_session_url);
 }
-
 
 fn workspaceMissionDispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
     const workspace_id_raw = c.params.get("id") orelse
@@ -4604,7 +4603,7 @@ fn workspaceMissionDispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
         \\WHERE w.id = $1
         \\AND m.id = $2
         \\LIMIT 1
-        ,
+    ,
         .{ workspace_id, mission_id },
     );
 
@@ -4624,10 +4623,9 @@ fn workspaceMissionDispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
         );
     }
 
-    if (
-        mission.planner_operational_plan.len == 0 or
-        !std.mem.eql(u8, mission.planner_operational_plan_status, "captured")
-    ) {
+    if (mission.planner_operational_plan.len == 0 or
+        !std.mem.eql(u8, mission.planner_operational_plan_status, "captured"))
+    {
         return c.text(
             "Capture o Plano Operacional do Planner antes de enviá-lo ao Scout.",
             .{ .status = .bad_request },
@@ -4647,8 +4645,8 @@ fn workspaceMissionDispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
         \\WHERE workspace_id = $1
         \\AND role_name = 'Scout'
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     if (scout_rows.len == 0) {
@@ -4752,6 +4750,7 @@ fn workspaceMissionDispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
     const prompt_body = try std.json.Stringify.valueAlloc(
         c.arena,
         OpenCodePromptAsyncRequest{
+            .model = open_code_prompt_model,
             .parts = prompt_parts[0..],
         },
         .{},
@@ -4790,8 +4789,8 @@ fn workspaceMissionDispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
             \\UPDATE missions
             \\SET scout_dispatch_status = 'error'
             \\WHERE id = $1
-            ,
-            .{ mission_id },
+        ,
+            .{mission_id},
         );
 
         try insertRuntimeEvent(
@@ -4819,7 +4818,7 @@ fn workspaceMissionDispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
             \\    'Falha ao enviar plano ao Scout',
             \\    'O despacho assíncrono do plano ao pane Scout não foi confirmado pelo OpenCode Server.'
             \\)
-            ,
+        ,
             .{ mission_id, workspace_id },
         );
 
@@ -4871,7 +4870,7 @@ fn workspaceMissionDispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
         \\    scout_report_status = 'pending_capture',
         \\    scout_report_captured_at = NULL
         \\WHERE id = $3
-        ,
+    ,
         .{ scout.session_external_id, scout_dispatch_user_message_id, mission_id },
     );
 
@@ -4906,7 +4905,7 @@ fn workspaceMissionDispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
         \\    'Plano enviado ao Scout',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, workspace_id, event_message },
     );
 
@@ -4918,7 +4917,6 @@ fn workspaceMissionDispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
 
     return c.redirect(scout_session_url);
 }
-
 
 fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response {
     const workspace_id_raw = c.params.get("id") orelse
@@ -5044,7 +5042,7 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
         \\WHERE w.id = $1
         \\AND m.id = $2
         \\LIMIT 1
-        ,
+    ,
         .{ workspace_id, mission_id },
     );
 
@@ -5064,10 +5062,9 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
         );
     }
 
-    if (
-        mission.scout_report.len == 0 or
-        !std.mem.eql(u8, mission.scout_report_status, "captured")
-    ) {
+    if (mission.scout_report.len == 0 or
+        !std.mem.eql(u8, mission.scout_report_status, "captured"))
+    {
         return c.text(
             "Capture o Scout Report antes de enviá-lo ao Builder.",
             .{ .status = .bad_request },
@@ -5087,8 +5084,8 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
         \\WHERE workspace_id = $1
         \\AND role_name = 'Builder'
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     if (builder_rows.len == 0) {
@@ -5192,6 +5189,7 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
     const prompt_body = try std.json.Stringify.valueAlloc(
         c.arena,
         OpenCodePromptAsyncRequest{
+            .model = open_code_prompt_model,
             .parts = prompt_parts[0..],
         },
         .{},
@@ -5230,8 +5228,8 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
             \\UPDATE missions
             \\SET builder_dispatch_status = 'error'
             \\WHERE id = $1
-            ,
-            .{ mission_id },
+        ,
+            .{mission_id},
         );
 
         try insertRuntimeEvent(
@@ -5259,7 +5257,7 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
             \\    'Falha ao enviar pacote ao Builder',
             \\    'O despacho assíncrono do pacote de execução ao pane Builder não foi confirmado pelo OpenCode Server.'
             \\)
-            ,
+        ,
             .{ mission_id, workspace_id },
         );
 
@@ -5312,7 +5310,7 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
         \\    builder_implementation_report_captured_at = NULL,
         \\    status = 'active'
         \\WHERE id = $3
-        ,
+    ,
         .{ builder.session_external_id, builder_dispatch_user_message_id, mission_id },
     );
 
@@ -5347,7 +5345,7 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
         \\    'Pacote enviado ao Builder',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, workspace_id, event_message },
     );
 
@@ -5359,7 +5357,6 @@ fn workspaceMissionDispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response
 
     return c.redirect(builder_session_url);
 }
-
 
 fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Response {
     const workspace_id_raw = c.params.get("id") orelse
@@ -5485,7 +5482,7 @@ fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Respo
         \\WHERE w.id = $1
         \\AND m.id = $2
         \\LIMIT 1
-        ,
+    ,
         .{ workspace_id, mission_id },
     );
 
@@ -5505,10 +5502,9 @@ fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Respo
         );
     }
 
-    if (
-        mission.builder_implementation_report.len == 0 or
-        !std.mem.eql(u8, mission.builder_implementation_report_status, "captured")
-    ) {
+    if (mission.builder_implementation_report.len == 0 or
+        !std.mem.eql(u8, mission.builder_implementation_report_status, "captured"))
+    {
         return c.text(
             "Capture o Implementation Report do Builder antes de enviá-lo ao Reviewer.",
             .{ .status = .bad_request },
@@ -5528,8 +5524,8 @@ fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Respo
         \\WHERE workspace_id = $1
         \\AND role_name = 'Reviewer'
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     if (reviewer_rows.len == 0) {
@@ -5637,6 +5633,7 @@ fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Respo
     const prompt_body = try std.json.Stringify.valueAlloc(
         c.arena,
         OpenCodePromptAsyncRequest{
+            .model = open_code_prompt_model,
             .parts = prompt_parts[0..],
         },
         .{},
@@ -5675,8 +5672,8 @@ fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Respo
             \\UPDATE missions
             \\SET reviewer_dispatch_status = 'error'
             \\WHERE id = $1
-            ,
-            .{ mission_id },
+        ,
+            .{mission_id},
         );
 
         try insertRuntimeEvent(
@@ -5704,7 +5701,7 @@ fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Respo
             \\    'Falha ao enviar relatório ao Reviewer',
             \\    'O despacho assíncrono do Implementation Report ao pane Reviewer não foi confirmado pelo OpenCode Server.'
             \\)
-            ,
+        ,
             .{ mission_id, workspace_id },
         );
 
@@ -5757,7 +5754,7 @@ fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Respo
         \\    reviewer_review_report_captured_at = NULL,
         \\    status = 'review'
         \\WHERE id = $3
-        ,
+    ,
         .{ reviewer.session_external_id, reviewer_dispatch_user_message_id, mission_id },
     );
 
@@ -5792,7 +5789,7 @@ fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Respo
         \\    'Implementation Report enviado ao Reviewer',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, workspace_id, event_message },
     );
 
@@ -5804,7 +5801,6 @@ fn workspaceMissionDispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Respo
 
     return c.redirect(reviewer_session_url);
 }
-
 
 fn workspaceMissionDispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Response {
     const workspace_id_raw = c.params.get("id") orelse
@@ -5930,7 +5926,7 @@ fn workspaceMissionDispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Resp
         \\WHERE w.id = $1
         \\AND m.id = $2
         \\LIMIT 1
-        ,
+    ,
         .{ workspace_id, mission_id },
     );
 
@@ -5950,10 +5946,9 @@ fn workspaceMissionDispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Resp
         );
     }
 
-    if (
-        mission.reviewer_review_report.len == 0 or
-        !std.mem.eql(u8, mission.reviewer_review_report_status, "captured")
-    ) {
+    if (mission.reviewer_review_report.len == 0 or
+        !std.mem.eql(u8, mission.reviewer_review_report_status, "captured"))
+    {
         return c.text(
             "Capture o Review Report do Reviewer antes de enviá-lo ao Executor.",
             .{ .status = .bad_request },
@@ -5973,8 +5968,8 @@ fn workspaceMissionDispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Resp
         \\WHERE workspace_id = $1
         \\AND role_name = 'Executor'
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     if (executor_rows.len == 0) {
@@ -6085,6 +6080,7 @@ fn workspaceMissionDispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Resp
     const prompt_body = try std.json.Stringify.valueAlloc(
         c.arena,
         OpenCodePromptAsyncRequest{
+            .model = open_code_prompt_model,
             .parts = prompt_parts[0..],
         },
         .{},
@@ -6123,8 +6119,8 @@ fn workspaceMissionDispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Resp
             \\UPDATE missions
             \\SET executor_dispatch_status = 'error'
             \\WHERE id = $1
-            ,
-            .{ mission_id },
+        ,
+            .{mission_id},
         );
 
         try insertRuntimeEvent(
@@ -6152,7 +6148,7 @@ fn workspaceMissionDispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Resp
             \\    'Falha ao enviar pacote ao Executor',
             \\    'O despacho assíncrono do Review Report ao pane Executor não foi confirmado pelo OpenCode Server.'
             \\)
-            ,
+        ,
             .{ mission_id, workspace_id },
         );
 
@@ -6204,7 +6200,7 @@ fn workspaceMissionDispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Resp
         \\    executor_verification_report_status = 'pending_capture',
         \\    executor_verification_report_captured_at = NULL
         \\WHERE id = $3
-        ,
+    ,
         .{ executor.session_external_id, executor_dispatch_user_message_id, mission_id },
     );
 
@@ -6239,7 +6235,7 @@ fn workspaceMissionDispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Resp
         \\    'Review Report enviado ao Executor',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, workspace_id, event_message },
     );
 
@@ -6251,8 +6247,6 @@ fn workspaceMissionDispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Resp
 
     return c.redirect(executor_session_url);
 }
-
-
 
 fn workspaceMissionDispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Response {
     const workspace_id_raw = c.params.get("id") orelse
@@ -6378,7 +6372,7 @@ fn workspaceMissionDispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Respons
         \\WHERE w.id = $1
         \\AND m.id = $2
         \\LIMIT 1
-        ,
+    ,
         .{ workspace_id, mission_id },
     );
 
@@ -6398,10 +6392,9 @@ fn workspaceMissionDispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Respons
         );
     }
 
-    if (
-        mission.executor_verification_report.len == 0 or
-        !std.mem.eql(u8, mission.executor_verification_report_status, "captured")
-    ) {
+    if (mission.executor_verification_report.len == 0 or
+        !std.mem.eql(u8, mission.executor_verification_report_status, "captured"))
+    {
         return c.text(
             "Capture o Verification Report do Executor antes de enviá-lo ao Piloto.",
             .{ .status = .bad_request },
@@ -6421,8 +6414,8 @@ fn workspaceMissionDispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Respons
         \\WHERE workspace_id = $1
         \\AND role_name = 'Piloto'
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     if (pilot_rows.len == 0) {
@@ -6534,6 +6527,7 @@ fn workspaceMissionDispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Respons
     const prompt_body = try std.json.Stringify.valueAlloc(
         c.arena,
         OpenCodePromptAsyncRequest{
+            .model = open_code_prompt_model,
             .parts = prompt_parts[0..],
         },
         .{},
@@ -6572,8 +6566,8 @@ fn workspaceMissionDispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Respons
             \\UPDATE missions
             \\SET pilot_delivery_dispatch_status = 'error'
             \\WHERE id = $1
-            ,
-            .{ mission_id },
+        ,
+            .{mission_id},
         );
 
         try insertRuntimeEvent(
@@ -6601,7 +6595,7 @@ fn workspaceMissionDispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Respons
             \\    'Falha ao enviar Verification Report ao Piloto',
             \\    'O despacho assíncrono do Verification Report ao pane Piloto não foi confirmado pelo OpenCode Server.'
             \\)
-            ,
+        ,
             .{ mission_id, workspace_id },
         );
 
@@ -6653,7 +6647,7 @@ fn workspaceMissionDispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Respons
         \\    pilot_delivery_report_status = 'pending_capture',
         \\    pilot_delivery_report_captured_at = NULL
         \\WHERE id = $3
-        ,
+    ,
         .{ pilot.session_external_id, pilot_delivery_dispatch_user_message_id, mission_id },
     );
 
@@ -6688,7 +6682,7 @@ fn workspaceMissionDispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Respons
         \\    'Verification Report enviado ao Piloto',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, workspace_id, event_message },
     );
 
@@ -6723,8 +6717,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = w.default_squad_id
         \\WHERE w.id = $1
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     if (rows.len == 0) {
@@ -6757,8 +6751,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\WHERE workspace_id = $1
         \\ORDER BY id DESC
         \\LIMIT 8
-        ,
-        .{ workspace.id },
+    ,
+        .{workspace.id},
     );
 
     const runtime_logs = try db.query(
@@ -6776,8 +6770,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\WHERE workspace_id = $1
         \\ORDER BY id DESC
         \\LIMIT 8
-        ,
-        .{ workspace.id },
+    ,
+        .{workspace.id},
     );
 
     const pane_session_history = try db.query(
@@ -6796,8 +6790,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\WHERE workspace_id = $1
         \\ORDER BY id DESC
         \\LIMIT 8
-        ,
-        .{ workspace.id },
+    ,
+        .{workspace.id},
     );
 
     const workspace_missions = try db.query(
@@ -6838,8 +6832,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\ORDER BY
         \\    CASE WHEN w.active_mission_id = m.id THEN 0 ELSE 1 END,
         \\    m.id DESC
-        ,
-        .{ workspace.id },
+    ,
+        .{workspace.id},
     );
 
     const active_missions = try db.query(
@@ -6887,8 +6881,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = m.squad_id
         \\WHERE w.id = $1
         \\LIMIT 1
-        ,
-        .{ workspace.id },
+    ,
+        .{workspace.id},
     );
 
     const members = try db.query(
@@ -6909,8 +6903,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN stacks s ON s.id = a.default_stack_id
         \\WHERE sm.squad_id = $1
         \\ORDER BY sm.display_order ASC
-        ,
-        .{ linked_squad_id },
+    ,
+        .{linked_squad_id},
     );
 
     if (linked_squad_id <= 0) {
@@ -6919,8 +6913,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
             c.arena,
             \\DELETE FROM workspace_panes
             \\WHERE workspace_id = $1
-            ,
-            .{ workspace.id },
+        ,
+            .{workspace.id},
         );
     } else {
         try db.query(
@@ -6934,7 +6928,7 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
             \\    WHERE sm.squad_id = $2
             \\    AND sm.role_name = wp.role_name
             \\)
-            ,
+        ,
             .{ workspace.id, linked_squad_id },
         );
 
@@ -6964,7 +6958,7 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
                 \\    END,
                 \\    display_order = EXCLUDED.display_order,
                 \\    updated_at = NOW()
-                ,
+            ,
                 .{
                     workspace.id,
                     member.role_name,
@@ -7001,8 +6995,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN stacks s ON s.id = a.default_stack_id
         \\WHERE wp.workspace_id = $1
         \\ORDER BY wp.display_order ASC
-        ,
-        .{ workspace.id },
+    ,
+        .{workspace.id},
     );
 
     return c.view("workspaces/show", .{
@@ -7025,19 +7019,16 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .runtime_log_count = runtime_logs.len,
         .pane_session_history = pane_session_history,
         .pane_session_history_count = pane_session_history.len,
-        .notice =
-            if (c.query("mission_created") != null)
-                "Missão criada com sucesso e vinculada a este workspace."
-            else
-                "",
-        .next_step_ready_notice =
-            if (c.query("next_step_ready") != null)
-                "Próxima etapa pronta para execução supervisionada. Confirme a ação operacional abaixo."
-            else
-                "",
+        .notice = if (c.query("mission_created") != null)
+            "Missão criada com sucesso e vinculada a este workspace."
+        else
+            "",
+        .next_step_ready_notice = if (c.query("next_step_ready") != null)
+            "Próxima etapa pronta para execução supervisionada. Confirme a ação operacional abaixo."
+        else
+            "",
     }, .{});
 }
-
 
 fn workspaceCreate(c: *spider.Ctx) !spider.Response {
     const form = try c.parseForm(WorkspaceForm);
@@ -7051,8 +7042,8 @@ fn workspaceCreate(c: *spider.Ctx) !spider.Response {
         \\FROM workspaces
         \\WHERE local_path = $1
         \\LIMIT 1
-        ,
-        .{ form.local_path },
+    ,
+        .{form.local_path},
     );
 
     if (duplicated.len > 0) {
@@ -7083,8 +7074,8 @@ fn workspaceCreate(c: *spider.Ctx) !spider.Response {
         \\WHERE id = $1
         \\AND is_active = TRUE
         \\LIMIT 1
-        ,
-        .{ default_squad_id },
+    ,
+        .{default_squad_id},
     );
 
     if (squad_rows.len == 0) {
@@ -7118,7 +7109,7 @@ fn workspaceCreate(c: *spider.Ctx) !spider.Response {
         \\    default_squad_id
         \\)
         \\VALUES ($1, $2, $3, $4, $5)
-        ,
+    ,
         .{
             form.name,
             form.local_path,
@@ -7241,7 +7232,7 @@ fn missions(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN workspaces w ON w.id = m.workspace_id
         \\LEFT JOIN squads s ON s.id = m.squad_id
         \\ORDER BY m.id DESC
-        ,
+    ,
         .{},
     );
 
@@ -7273,7 +7264,6 @@ fn countOpenMissions(rows: []const MissionRow) usize {
     }
     return total;
 }
-
 
 fn countOpenWorkspaceMissions(rows: []const WorkspaceMissionPreviewRow) usize {
     var total: usize = 0;
@@ -7314,7 +7304,7 @@ fn loadMissionWorkspaces(c: *spider.Ctx) ![]MissionWorkspaceOptionRow {
         \\INNER JOIN squads s ON s.id = w.default_squad_id
         \\WHERE w.default_squad_id IS NOT NULL
         \\ORDER BY w.name ASC
-        ,
+    ,
         .{},
     );
 }
@@ -7330,11 +7320,10 @@ fn missionNew(c: *spider.Ctx) !spider.Response {
         .form = .{
             .workspace_id = c.query("workspace_id") orelse "",
             .context_workspace_id = c.query("workspace_id") orelse "",
-            .cancel_url =
-                if (c.query("workspace_id")) |workspace_id|
-                    try std.fmt.allocPrint(c.arena, "/workspaces/{s}", .{ workspace_id })
-                else
-                    "/missions",
+            .cancel_url = if (c.query("workspace_id")) |workspace_id|
+                try std.fmt.allocPrint(c.arena, "/workspaces/{s}", .{workspace_id})
+            else
+                "/missions",
             .title = "",
             .objective = "",
             .status = "briefing",
@@ -7373,8 +7362,8 @@ fn missionCreate(c: *spider.Ctx) !spider.Response {
         \\WHERE w.id = $1
         \\AND w.default_squad_id IS NOT NULL
         \\LIMIT 1
-        ,
-        .{ workspace_id },
+    ,
+        .{workspace_id},
     );
 
     if (selected_workspace.len == 0) {
@@ -7400,7 +7389,7 @@ fn missionCreate(c: *spider.Ctx) !spider.Response {
         \\)
         \\VALUES ($1, $2, $3, $4, $5, $6)
         \\RETURNING id
-        ,
+    ,
         .{
             workspace_id,
             selected_workspace[0].default_squad_id,
@@ -7429,8 +7418,8 @@ fn missionCreate(c: *spider.Ctx) !spider.Response {
             \\INNER JOIN missions m ON m.id = w.active_mission_id
             \\WHERE w.id = $1
             \\LIMIT 1
-            ,
-            .{ workspace_id },
+        ,
+            .{workspace_id},
         );
 
         const should_activate =
@@ -7444,7 +7433,7 @@ fn missionCreate(c: *spider.Ctx) !spider.Response {
                 \\UPDATE workspaces
                 \\SET active_mission_id = $1
                 \\WHERE id = $2
-                ,
+            ,
                 .{ created_mission_id, workspace_id },
             );
 
@@ -7465,7 +7454,7 @@ fn missionCreate(c: *spider.Ctx) !spider.Response {
                 \\    'Missão ativada no Cockpit',
                 \\    'Esta missão foi criada a partir do workspace e definida automaticamente como foco operacional ativo.'
                 \\)
-                ,
+            ,
                 .{ created_mission_id, workspace_id },
             );
         }
@@ -7473,7 +7462,7 @@ fn missionCreate(c: *spider.Ctx) !spider.Response {
         const redirect_url = try std.fmt.allocPrint(
             c.arena,
             "/workspaces/{d}?mission_created=1",
-            .{ workspace_id },
+            .{workspace_id},
         );
 
         return c.redirect(redirect_url);
@@ -7481,7 +7470,6 @@ fn missionCreate(c: *spider.Ctx) !spider.Response {
 
     return c.redirect("/missions?created=1");
 }
-
 
 fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
@@ -7600,8 +7588,8 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = m.squad_id
         \\WHERE m.id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
     if (mission_rows.len == 0) {
@@ -7630,8 +7618,8 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
         \\WHERE workspace_id = $1
         \\AND role_name = 'Piloto'
         \\LIMIT 1
-        ,
-        .{ mission.workspace_id },
+    ,
+        .{mission.workspace_id},
     );
 
     if (pilot_rows.len == 0 or pilot_rows[0].session_external_id.len == 0) {
@@ -7647,8 +7635,8 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
         \\FROM missions
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
     if (dispatch_trace_rows.len == 0 or dispatch_trace_rows[0].pilot_dispatch_user_message_id.len == 0) {
@@ -7725,14 +7713,14 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
         \\    next_step_detected_at = NULL,
         \\    pilot_operational_brief_captured_at = NOW()
         \\WHERE id = $2
-        ,
+    ,
         .{ brief_text, mission_id },
     );
 
     const event_message = try std.fmt.allocPrint(
         c.arena,
         "O Briefing Operacional do Piloto foi capturado a partir da sessão {s}.",
-        .{ pilot.session_external_id },
+        .{pilot.session_external_id},
     );
 
     try db.query(
@@ -7752,19 +7740,18 @@ fn missionCapturePilotOperationalBrief(c: *spider.Ctx) !spider.Response {
         \\    'Briefing do Piloto capturado',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, mission.workspace_id, event_message },
     );
 
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
         "/missions/{d}",
-        .{ mission_id },
+        .{mission_id},
     );
 
     return c.redirect(redirect_url);
 }
-
 
 fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
@@ -7883,8 +7870,8 @@ fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = m.squad_id
         \\WHERE m.id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
     if (mission_rows.len == 0) {
@@ -7913,8 +7900,8 @@ fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
         \\WHERE workspace_id = $1
         \\AND role_name = 'Planner'
         \\LIMIT 1
-        ,
-        .{ mission.workspace_id },
+    ,
+        .{mission.workspace_id},
     );
 
     if (planner_rows.len == 0 or planner_rows[0].session_external_id.len == 0) {
@@ -7933,14 +7920,13 @@ fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
         \\FROM missions
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
-    if (
-        dispatch_trace_rows.len == 0 or
-        dispatch_trace_rows[0].planner_dispatch_user_message_id.len == 0
-    ) {
+    if (dispatch_trace_rows.len == 0 or
+        dispatch_trace_rows[0].planner_dispatch_user_message_id.len == 0)
+    {
         return c.text(
             "Esta missão ainda não possui rastreio do despacho ao Planner. Reenvie o briefing antes de capturar o plano.",
             .{ .status = .bad_request },
@@ -7982,11 +7968,37 @@ fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, planner.session_external_id },
     );
 
-    const messages_result = runRuntimeCommand(c, &.{
-        "curl",
-        "-fsS",
-        messages_url,
-    });
+    const max_message_attempts: usize = 8;
+    var messages_result: RuntimeCommandResult = .{
+        .ok = false,
+        .exit_code = -1,
+        .stdout = "",
+        .stderr = "",
+    };
+    var plan_text: ?[]const u8 = null;
+    var message_attempt: usize = 0;
+
+    while (message_attempt < max_message_attempts and plan_text == null) : (message_attempt += 1) {
+        messages_result = runRuntimeCommand(c, &.{
+            "curl",
+            "-fsS",
+            messages_url,
+        });
+
+        if (!messages_result.ok) {
+            break;
+        }
+
+        plan_text = try extractAssistantTextForParentMessage(
+            c.arena,
+            messages_result.stdout,
+            dispatch_trace.planner_dispatch_user_message_id,
+        );
+
+        if (plan_text == null and message_attempt + 1 < max_message_attempts) {
+            std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
+        }
+    }
 
     try insertRuntimeCommandLog(
         c,
@@ -8003,11 +8015,7 @@ fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
         );
     }
 
-    const plan_text = try extractAssistantTextForParentMessage(
-        c.arena,
-        messages_result.stdout,
-        dispatch_trace.planner_dispatch_user_message_id,
-    ) orelse {
+    const plan_text_value = plan_text orelse {
         return c.text(
             "Nenhuma resposta textual vinculada ao último despacho rastreado foi encontrada. Aguarde o Planner concluir a resposta e tente novamente.",
             .{ .status = .bad_request },
@@ -8027,14 +8035,14 @@ fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
         \\    planner_operational_plan_captured_at = NOW(),
         \\    status = 'planned'
         \\WHERE id = $2
-        ,
-        .{ plan_text, mission_id },
+    ,
+        .{ plan_text_value, mission_id },
     );
 
     const event_message = try std.fmt.allocPrint(
         c.arena,
         "O Plano Operacional do Planner foi capturado a partir da sessão {s}.",
-        .{ planner.session_external_id },
+        .{planner.session_external_id},
     );
 
     try db.query(
@@ -8054,19 +8062,18 @@ fn missionCapturePlannerOperationalPlan(c: *spider.Ctx) !spider.Response {
         \\    'Plano do Planner capturado',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, mission.workspace_id, event_message },
     );
 
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
         "/missions/{d}",
-        .{ mission_id },
+        .{mission_id},
     );
 
     return c.redirect(redirect_url);
 }
-
 
 fn missionCaptureScoutReport(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
@@ -8185,8 +8192,8 @@ fn missionCaptureScoutReport(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = m.squad_id
         \\WHERE m.id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
     if (mission_rows.len == 0) {
@@ -8215,8 +8222,8 @@ fn missionCaptureScoutReport(c: *spider.Ctx) !spider.Response {
         \\WHERE workspace_id = $1
         \\AND role_name = 'Scout'
         \\LIMIT 1
-        ,
-        .{ mission.workspace_id },
+    ,
+        .{mission.workspace_id},
     );
 
     if (scout_rows.len == 0 or scout_rows[0].session_external_id.len == 0) {
@@ -8235,14 +8242,13 @@ fn missionCaptureScoutReport(c: *spider.Ctx) !spider.Response {
         \\FROM missions
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
-    if (
-        dispatch_trace_rows.len == 0 or
-        dispatch_trace_rows[0].scout_dispatch_user_message_id.len == 0
-    ) {
+    if (dispatch_trace_rows.len == 0 or
+        dispatch_trace_rows[0].scout_dispatch_user_message_id.len == 0)
+    {
         return c.text(
             "Esta missão ainda não possui rastreio do despacho ao Scout. Reenvie o plano ao Scout antes de capturar o relatório.",
             .{ .status = .bad_request },
@@ -8328,14 +8334,14 @@ fn missionCaptureScoutReport(c: *spider.Ctx) !spider.Response {
         \\    next_step_detected_at = NULL,
         \\    scout_report_captured_at = NOW()
         \\WHERE id = $2
-        ,
+    ,
         .{ scout_report_text, mission_id },
     );
 
     const event_message = try std.fmt.allocPrint(
         c.arena,
         "O Scout Report foi capturado a partir da sessão {s}.",
-        .{ scout.session_external_id },
+        .{scout.session_external_id},
     );
 
     try db.query(
@@ -8355,19 +8361,18 @@ fn missionCaptureScoutReport(c: *spider.Ctx) !spider.Response {
         \\    'Scout Report capturado',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, mission.workspace_id, event_message },
     );
 
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
         "/missions/{d}",
-        .{ mission_id },
+        .{mission_id},
     );
 
     return c.redirect(redirect_url);
 }
-
 
 fn missionCaptureBuilderImplementationReport(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
@@ -8486,8 +8491,8 @@ fn missionCaptureBuilderImplementationReport(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = m.squad_id
         \\WHERE m.id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
     if (mission_rows.len == 0) {
@@ -8516,8 +8521,8 @@ fn missionCaptureBuilderImplementationReport(c: *spider.Ctx) !spider.Response {
         \\WHERE workspace_id = $1
         \\AND role_name = 'Builder'
         \\LIMIT 1
-        ,
-        .{ mission.workspace_id },
+    ,
+        .{mission.workspace_id},
     );
 
     if (builder_rows.len == 0 or builder_rows[0].session_external_id.len == 0) {
@@ -8536,14 +8541,13 @@ fn missionCaptureBuilderImplementationReport(c: *spider.Ctx) !spider.Response {
         \\FROM missions
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
-    if (
-        dispatch_trace_rows.len == 0 or
-        dispatch_trace_rows[0].builder_dispatch_user_message_id.len == 0
-    ) {
+    if (dispatch_trace_rows.len == 0 or
+        dispatch_trace_rows[0].builder_dispatch_user_message_id.len == 0)
+    {
         return c.text(
             "Esta missão ainda não possui rastreio do despacho ao Builder. Reenvie o pacote antes de capturar o Implementation Report.",
             .{ .status = .bad_request },
@@ -8629,14 +8633,14 @@ fn missionCaptureBuilderImplementationReport(c: *spider.Ctx) !spider.Response {
         \\    next_step_detected_at = NULL,
         \\    builder_implementation_report_captured_at = NOW()
         \\WHERE id = $2
-        ,
+    ,
         .{ implementation_report_text, mission_id },
     );
 
     const event_message = try std.fmt.allocPrint(
         c.arena,
         "O Implementation Report do Builder foi capturado a partir da sessão {s}.",
-        .{ builder.session_external_id },
+        .{builder.session_external_id},
     );
 
     try db.query(
@@ -8656,19 +8660,18 @@ fn missionCaptureBuilderImplementationReport(c: *spider.Ctx) !spider.Response {
         \\    'Implementation Report capturado',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, mission.workspace_id, event_message },
     );
 
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
         "/missions/{d}",
-        .{ mission_id },
+        .{mission_id},
     );
 
     return c.redirect(redirect_url);
 }
-
 
 fn missionCaptureReviewerReviewReport(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
@@ -8787,8 +8790,8 @@ fn missionCaptureReviewerReviewReport(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = m.squad_id
         \\WHERE m.id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
     if (mission_rows.len == 0) {
@@ -8817,8 +8820,8 @@ fn missionCaptureReviewerReviewReport(c: *spider.Ctx) !spider.Response {
         \\WHERE workspace_id = $1
         \\AND role_name = 'Reviewer'
         \\LIMIT 1
-        ,
-        .{ mission.workspace_id },
+    ,
+        .{mission.workspace_id},
     );
 
     if (reviewer_rows.len == 0 or reviewer_rows[0].session_external_id.len == 0) {
@@ -8837,14 +8840,13 @@ fn missionCaptureReviewerReviewReport(c: *spider.Ctx) !spider.Response {
         \\FROM missions
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
-    if (
-        dispatch_trace_rows.len == 0 or
-        dispatch_trace_rows[0].reviewer_dispatch_user_message_id.len == 0
-    ) {
+    if (dispatch_trace_rows.len == 0 or
+        dispatch_trace_rows[0].reviewer_dispatch_user_message_id.len == 0)
+    {
         return c.text(
             "Esta missão ainda não possui rastreio do despacho ao Reviewer. Reenvie o relatório antes de capturar o review.",
             .{ .status = .bad_request },
@@ -8931,14 +8933,14 @@ fn missionCaptureReviewerReviewReport(c: *spider.Ctx) !spider.Response {
         \\    next_step_detected_at = NULL,
         \\    reviewer_review_report_captured_at = NOW()
         \\WHERE id = $2
-        ,
+    ,
         .{ review_text, mission_id },
     );
 
     const event_message = try std.fmt.allocPrint(
         c.arena,
         "O Review Report do Reviewer foi capturado a partir da sessão {s}.",
-        .{ reviewer.session_external_id },
+        .{reviewer.session_external_id},
     );
 
     try db.query(
@@ -8958,19 +8960,18 @@ fn missionCaptureReviewerReviewReport(c: *spider.Ctx) !spider.Response {
         \\    'Review Report do Reviewer capturado',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, mission.workspace_id, event_message },
     );
 
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
         "/missions/{d}",
-        .{ mission_id },
+        .{mission_id},
     );
 
     return c.redirect(redirect_url);
 }
-
 
 fn missionCaptureExecutorVerificationReport(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
@@ -9089,8 +9090,8 @@ fn missionCaptureExecutorVerificationReport(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = m.squad_id
         \\WHERE m.id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
     if (mission_rows.len == 0) {
@@ -9119,8 +9120,8 @@ fn missionCaptureExecutorVerificationReport(c: *spider.Ctx) !spider.Response {
         \\WHERE workspace_id = $1
         \\AND role_name = 'Executor'
         \\LIMIT 1
-        ,
-        .{ mission.workspace_id },
+    ,
+        .{mission.workspace_id},
     );
 
     if (executor_rows.len == 0 or executor_rows[0].session_external_id.len == 0) {
@@ -9139,14 +9140,13 @@ fn missionCaptureExecutorVerificationReport(c: *spider.Ctx) !spider.Response {
         \\FROM missions
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
-    if (
-        dispatch_trace_rows.len == 0 or
-        dispatch_trace_rows[0].executor_dispatch_user_message_id.len == 0
-    ) {
+    if (dispatch_trace_rows.len == 0 or
+        dispatch_trace_rows[0].executor_dispatch_user_message_id.len == 0)
+    {
         return c.text(
             "Esta missão ainda não possui rastreio do despacho ao Executor. Reenvie o Review Report antes de capturar a verificação.",
             .{ .status = .bad_request },
@@ -9233,14 +9233,14 @@ fn missionCaptureExecutorVerificationReport(c: *spider.Ctx) !spider.Response {
         \\    next_step_detected_at = NULL,
         \\    executor_verification_report_captured_at = NOW()
         \\WHERE id = $2
-        ,
+    ,
         .{ verification_report_text, mission_id },
     );
 
     const event_message = try std.fmt.allocPrint(
         c.arena,
         "O Verification Report do Executor foi capturado a partir da sessão {s}.",
-        .{ executor.session_external_id },
+        .{executor.session_external_id},
     );
 
     try db.query(
@@ -9260,20 +9260,18 @@ fn missionCaptureExecutorVerificationReport(c: *spider.Ctx) !spider.Response {
         \\    'Verification Report do Executor capturado',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, mission.workspace_id, event_message },
     );
 
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
         "/missions/{d}",
-        .{ mission_id },
+        .{mission_id},
     );
 
     return c.redirect(redirect_url);
 }
-
-
 
 fn missionCapturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
@@ -9392,8 +9390,8 @@ fn missionCapturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = m.squad_id
         \\WHERE m.id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
     if (mission_rows.len == 0) {
@@ -9422,8 +9420,8 @@ fn missionCapturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\WHERE workspace_id = $1
         \\AND role_name = 'Piloto'
         \\LIMIT 1
-        ,
-        .{ mission.workspace_id },
+    ,
+        .{mission.workspace_id},
     );
 
     if (pilot_rows.len == 0 or pilot_rows[0].session_external_id.len == 0) {
@@ -9442,14 +9440,13 @@ fn missionCapturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\FROM missions
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
-    if (
-        dispatch_trace_rows.len == 0 or
-        dispatch_trace_rows[0].pilot_delivery_dispatch_user_message_id.len == 0
-    ) {
+    if (dispatch_trace_rows.len == 0 or
+        dispatch_trace_rows[0].pilot_delivery_dispatch_user_message_id.len == 0)
+    {
         return c.text(
             "Esta missão ainda não possui rastreio do despacho final ao Piloto. Reenvie o Verification Report antes de capturar a entrega.",
             .{ .status = .bad_request },
@@ -9536,14 +9533,14 @@ fn missionCapturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\    next_step_detected_at = NULL,
         \\    pilot_delivery_report_captured_at = NOW()
         \\WHERE id = $2
-        ,
+    ,
         .{ delivery_text, mission_id },
     );
 
     const event_message = try std.fmt.allocPrint(
         c.arena,
         "O Final Delivery Report do Piloto foi capturado a partir da sessão {s}.",
-        .{ pilot.session_external_id },
+        .{pilot.session_external_id},
     );
 
     try db.query(
@@ -9563,20 +9560,18 @@ fn missionCapturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\    'Final Delivery Report do Piloto capturado',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, mission.workspace_id, event_message },
     );
 
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
         "/missions/{d}",
-        .{ mission_id },
+        .{mission_id},
     );
 
     return c.redirect(redirect_url);
 }
-
-
 
 fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
@@ -9611,8 +9606,8 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
         \\FROM missions
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
     if (rows.len == 0) {
@@ -9717,33 +9712,33 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
         if (std.mem.eql(u8, next_action_code, "dispatch_pilot"))
             try std.fmt.allocPrint(c.arena, "/workspaces/{d}/missions/{d}/dispatch/pilot", .{ mission.workspace_id, mission_id })
         else if (std.mem.eql(u8, next_action_code, "capture_pilot_brief"))
-            try std.fmt.allocPrint(c.arena, "/missions/{d}/capture/pilot-brief", .{ mission_id })
+            try std.fmt.allocPrint(c.arena, "/missions/{d}/capture/pilot-brief", .{mission_id})
         else if (std.mem.eql(u8, next_action_code, "dispatch_planner"))
             try std.fmt.allocPrint(c.arena, "/workspaces/{d}/missions/{d}/dispatch/planner", .{ mission.workspace_id, mission_id })
         else if (std.mem.eql(u8, next_action_code, "capture_planner_plan"))
-            try std.fmt.allocPrint(c.arena, "/missions/{d}/capture/planner-plan", .{ mission_id })
+            try std.fmt.allocPrint(c.arena, "/missions/{d}/capture/planner-plan", .{mission_id})
         else if (std.mem.eql(u8, next_action_code, "dispatch_scout"))
             try std.fmt.allocPrint(c.arena, "/workspaces/{d}/missions/{d}/dispatch/scout", .{ mission.workspace_id, mission_id })
         else if (std.mem.eql(u8, next_action_code, "capture_scout_report"))
-            try std.fmt.allocPrint(c.arena, "/missions/{d}/capture/scout-report", .{ mission_id })
+            try std.fmt.allocPrint(c.arena, "/missions/{d}/capture/scout-report", .{mission_id})
         else if (std.mem.eql(u8, next_action_code, "dispatch_builder"))
             try std.fmt.allocPrint(c.arena, "/workspaces/{d}/missions/{d}/dispatch/builder", .{ mission.workspace_id, mission_id })
         else if (std.mem.eql(u8, next_action_code, "capture_builder_report"))
-            try std.fmt.allocPrint(c.arena, "/missions/{d}/capture/builder-report", .{ mission_id })
+            try std.fmt.allocPrint(c.arena, "/missions/{d}/capture/builder-report", .{mission_id})
         else if (std.mem.eql(u8, next_action_code, "dispatch_reviewer"))
             try std.fmt.allocPrint(c.arena, "/workspaces/{d}/missions/{d}/dispatch/reviewer", .{ mission.workspace_id, mission_id })
         else if (std.mem.eql(u8, next_action_code, "capture_reviewer_report"))
-            try std.fmt.allocPrint(c.arena, "/missions/{d}/capture/reviewer-report", .{ mission_id })
+            try std.fmt.allocPrint(c.arena, "/missions/{d}/capture/reviewer-report", .{mission_id})
         else if (std.mem.eql(u8, next_action_code, "dispatch_executor"))
             try std.fmt.allocPrint(c.arena, "/workspaces/{d}/missions/{d}/dispatch/executor", .{ mission.workspace_id, mission_id })
         else if (std.mem.eql(u8, next_action_code, "capture_executor_report"))
-            try std.fmt.allocPrint(c.arena, "/missions/{d}/capture/executor-report", .{ mission_id })
+            try std.fmt.allocPrint(c.arena, "/missions/{d}/capture/executor-report", .{mission_id})
         else if (std.mem.eql(u8, next_action_code, "dispatch_pilot_delivery"))
             try std.fmt.allocPrint(c.arena, "/workspaces/{d}/missions/{d}/dispatch/pilot-delivery", .{ mission.workspace_id, mission_id })
         else if (std.mem.eql(u8, next_action_code, "capture_pilot_delivery_report"))
-            try std.fmt.allocPrint(c.arena, "/missions/{d}/capture/pilot-delivery-report", .{ mission_id })
+            try std.fmt.allocPrint(c.arena, "/missions/{d}/capture/pilot-delivery-report", .{mission_id})
         else
-            try std.fmt.allocPrint(c.arena, "/missions/{d}/finalize", .{ mission_id });
+            try std.fmt.allocPrint(c.arena, "/missions/{d}/finalize", .{mission_id});
 
     const event_message = if (std.mem.eql(u8, mission.execution_mode, "autopilot"))
         try std.fmt.allocPrint(
@@ -9767,7 +9762,7 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
         \\    next_step_detected_route = $3,
         \\    next_step_detected_at = NOW()
         \\WHERE id = $4
-        ,
+    ,
         .{ next_action, next_action_code, next_action_route, mission_id },
     );
 
@@ -9788,7 +9783,7 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
         \\    'Próxima etapa detectada',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, mission.workspace_id, event_message },
     );
 
@@ -9797,97 +9792,97 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_ready=dispatch_pilot",
-                .{ mission_id },
+                .{mission_id},
             )
         else if (std.mem.eql(u8, next_action_code, "capture_pilot_brief"))
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_ready=capture_pilot_brief",
-                .{ mission_id },
+                .{mission_id},
             )
         else if (std.mem.eql(u8, next_action_code, "dispatch_planner"))
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_ready=dispatch_planner",
-                .{ mission_id },
+                .{mission_id},
             )
         else if (std.mem.eql(u8, next_action_code, "capture_planner_plan"))
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_ready=capture_planner_plan",
-                .{ mission_id },
+                .{mission_id},
             )
         else if (std.mem.eql(u8, next_action_code, "dispatch_scout"))
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_ready=dispatch_scout",
-                .{ mission_id },
+                .{mission_id},
             )
         else if (std.mem.eql(u8, next_action_code, "capture_scout_report"))
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_ready=capture_scout_report",
-                .{ mission_id },
+                .{mission_id},
             )
         else if (std.mem.eql(u8, next_action_code, "dispatch_builder"))
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_ready=dispatch_builder",
-                .{ mission_id },
+                .{mission_id},
             )
         else if (std.mem.eql(u8, next_action_code, "capture_builder_report"))
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_ready=capture_builder_report",
-                .{ mission_id },
+                .{mission_id},
             )
         else if (std.mem.eql(u8, next_action_code, "dispatch_reviewer"))
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_ready=dispatch_reviewer",
-                .{ mission_id },
+                .{mission_id},
             )
         else if (std.mem.eql(u8, next_action_code, "capture_reviewer_report"))
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_ready=capture_reviewer_report",
-                .{ mission_id },
+                .{mission_id},
             )
         else if (std.mem.eql(u8, next_action_code, "dispatch_executor"))
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_ready=dispatch_executor",
-                .{ mission_id },
+                .{mission_id},
             )
         else if (std.mem.eql(u8, next_action_code, "capture_executor_report"))
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_ready=capture_executor_report",
-                .{ mission_id },
+                .{mission_id},
             )
         else if (std.mem.eql(u8, next_action_code, "dispatch_pilot_delivery"))
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_ready=dispatch_pilot_delivery",
-                .{ mission_id },
+                .{mission_id},
             )
         else if (std.mem.eql(u8, next_action_code, "capture_pilot_delivery_report"))
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_ready=capture_pilot_delivery_report",
-                .{ mission_id },
+                .{mission_id},
             )
         else if (std.mem.eql(u8, next_action_code, "finalize_mission"))
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_ready=finalize_mission",
-                .{ mission_id },
+                .{mission_id},
             )
         else
             try std.fmt.allocPrint(
                 c.arena,
                 "/missions/{d}?next_step_detected=1",
-                .{ mission_id },
+                .{mission_id},
             );
 
     if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
@@ -9902,7 +9897,6 @@ fn missionRunNextStep(c: *spider.Ctx) !spider.Response {
 
     return c.redirect(redirect_url);
 }
-
 
 fn missionFinalizeFromPilotDeliveryReport(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
@@ -9925,8 +9919,8 @@ fn missionFinalizeFromPilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\FROM missions
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
     if (rows.len == 0) {
@@ -9935,10 +9929,9 @@ fn missionFinalizeFromPilotDeliveryReport(c: *spider.Ctx) !spider.Response {
 
     const mission = rows[0];
 
-    if (
-        mission.pilot_delivery_report.len == 0 or
-        !std.mem.eql(u8, mission.pilot_delivery_report_status, "captured")
-    ) {
+    if (mission.pilot_delivery_report.len == 0 or
+        !std.mem.eql(u8, mission.pilot_delivery_report_status, "captured"))
+    {
         return c.text(
             "Capture o Final Delivery Report do Piloto antes de encerrar a missão.",
             .{ .status = .bad_request },
@@ -9949,7 +9942,7 @@ fn missionFinalizeFromPilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         const redirect_url = try std.fmt.allocPrint(
             c.arena,
             "/missions/{d}",
-            .{ mission_id },
+            .{mission_id},
         );
 
         return c.redirect(redirect_url);
@@ -9987,7 +9980,7 @@ fn missionFinalizeFromPilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\    mission_operational_closed_at = NOW(),
         \\    status = $2
         \\WHERE id = $3
-        ,
+    ,
         .{ final_verdict, formal_mission_status, mission_id },
     );
 
@@ -10014,7 +10007,7 @@ fn missionFinalizeFromPilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\    'Missão encerrada pelo Cockpit',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, mission.workspace_id, event_message },
     );
 
@@ -10025,14 +10018,14 @@ fn missionFinalizeFromPilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\SET active_mission_id = NULL
         \\WHERE id = $1
         \\AND active_mission_id = $2
-        ,
+    ,
         .{ mission.workspace_id, mission_id },
     );
 
     const release_event_message = try std.fmt.allocPrint(
         c.arena,
         "A missão \"{s}\" foi removida do foco ativo do workspace após o encerramento operacional.",
-        .{ mission.title },
+        .{mission.title},
     );
 
     try db.query(
@@ -10052,19 +10045,18 @@ fn missionFinalizeFromPilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         \\    'Missão removida do foco ativo',
         \\    $3
         \\)
-        ,
+    ,
         .{ mission_id, mission.workspace_id, release_event_message },
     );
 
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
         "/missions/{d}",
-        .{ mission_id },
+        .{mission_id},
     );
 
     return c.redirect(redirect_url);
 }
-
 
 fn missionShow(c: *spider.Ctx) !spider.Response {
     const id_raw = c.params.get("id") orelse
@@ -10183,8 +10175,8 @@ fn missionShow(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = m.squad_id
         \\WHERE m.id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
     if (rows.len == 0) {
@@ -10203,28 +10195,29 @@ fn missionShow(c: *spider.Ctx) !spider.Response {
         \\FROM mission_events
         \\WHERE mission_id = $1
         \\ORDER BY id DESC
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
+
+    const supervised_execution_events = try collectSupervisedExecutionEvents(c.arena, mission_events);
 
     return c.view("missions/show", .{
         .title = rows[0].title,
         .mission = rows[0],
-        .execution_controls_enabled =
-            std.mem.eql(u8, rows[0].execution_mode, "supervised_auto") or
+        .execution_controls_enabled = std.mem.eql(u8, rows[0].execution_mode, "supervised_auto") or
             std.mem.eql(u8, rows[0].execution_mode, "autopilot"),
         .mission_events = mission_events,
         .mission_event_count = mission_events.len,
-        .next_step_notice =
-            if (c.query("next_step_detected") != null)
-                "Próxima etapa detectada e registrada na timeline operacional."
-            else
-                "",
-        .next_step_ready_notice =
-            if (c.query("next_step_ready") != null)
-                "Próxima etapa pronta para execução supervisionada. Confirme a ação operacional abaixo."
-            else
-                "",
+        .supervised_execution_events = supervised_execution_events,
+        .supervised_execution_event_count = supervised_execution_events.len,
+        .next_step_notice = if (c.query("next_step_detected") != null)
+            "Próxima etapa detectada e registrada na timeline operacional."
+        else
+            "",
+        .next_step_ready_notice = if (c.query("next_step_ready") != null)
+            "Próxima etapa pronta para execução supervisionada. Confirme a ação operacional abaixo."
+        else
+            "",
     }, .{});
 }
 
@@ -10345,8 +10338,8 @@ fn missionEdit(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = m.squad_id
         \\WHERE m.id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
     if (rows.len == 0) {
@@ -10479,8 +10472,8 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
         \\LEFT JOIN squads s ON s.id = m.squad_id
         \\WHERE m.id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
     if (current_rows.len == 0) {
@@ -10494,11 +10487,10 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
         );
     }
 
-    if (
-        !std.mem.eql(u8, form.execution_mode, "manual") and
+    if (!std.mem.eql(u8, form.execution_mode, "manual") and
         !std.mem.eql(u8, form.execution_mode, "supervised_auto") and
-        !std.mem.eql(u8, form.execution_mode, "autopilot")
-    ) {
+        !std.mem.eql(u8, form.execution_mode, "autopilot"))
+    {
         return c.text(
             "Modo de execução inválido.",
             .{ .status = .bad_request },
@@ -10515,7 +10507,7 @@ fn missionUpdate(c: *spider.Ctx) !spider.Response {
         \\    priority = $4,
         \\    execution_mode = $5
         \\WHERE id = $6
-        ,
+    ,
         .{
             form.title,
             form.objective,
@@ -10550,8 +10542,8 @@ fn missionDelete(c: *spider.Ctx) !spider.Response {
         \\FROM missions
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
     if (mission_rows.len == 0) {
@@ -10570,8 +10562,8 @@ fn missionDelete(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\DELETE FROM missions
         \\WHERE id = $1
-        ,
-        .{ mission_id },
+    ,
+        .{mission_id},
     );
 
     return c.redirect("/missions?deleted=1");
@@ -10598,7 +10590,7 @@ fn agents(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN stacks s ON s.id = a.default_stack_id
         \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
         \\ORDER BY a.id DESC
-        ,
+    ,
         .{},
     );
 
@@ -10642,7 +10634,7 @@ fn agentNew(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
         \\WHERE s.is_active = TRUE
         \\ORDER BY s.name ASC
-        ,
+    ,
         .{},
     );
 
@@ -10676,8 +10668,8 @@ fn agentCreate(c: *spider.Ctx) !spider.Response {
         \\FROM agents
         \\WHERE handle = $1
         \\LIMIT 1
-        ,
-        .{ form.handle },
+    ,
+        .{form.handle},
     );
 
     const stacks_rows = try db.query(
@@ -10692,7 +10684,7 @@ fn agentCreate(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
         \\WHERE s.is_active = TRUE
         \\ORDER BY s.name ASC
-        ,
+    ,
         .{},
     );
 
@@ -10730,7 +10722,7 @@ fn agentCreate(c: *spider.Ctx) !spider.Response {
         \\    is_active
         \\)
         \\VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        ,
+    ,
         .{
             form.name,
             form.handle,
@@ -10774,8 +10766,8 @@ fn agentShow(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
         \\WHERE a.id = $1
         \\LIMIT 1
-        ,
-        .{ agent_id },
+    ,
+        .{agent_id},
     );
 
     if (rows.len == 0) {
@@ -10816,8 +10808,8 @@ fn agentEdit(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
         \\WHERE a.id = $1
         \\LIMIT 1
-        ,
-        .{ agent_id },
+    ,
+        .{agent_id},
     );
 
     if (rows.len == 0) {
@@ -10837,8 +10829,8 @@ fn agentEdit(c: *spider.Ctx) !spider.Response {
         \\WHERE s.is_active = TRUE
         \\ORDER BY CASE WHEN s.id = $1 THEN 0 ELSE 1 END,
         \\         s.name ASC
-        ,
-        .{ rows[0].default_stack_id },
+    ,
+        .{rows[0].default_stack_id},
     );
 
     return c.view("agents/edit", .{
@@ -10869,7 +10861,7 @@ fn agentUpdate(c: *spider.Ctx) !spider.Response {
         \\WHERE handle = $1
         \\AND id <> $2
         \\LIMIT 1
-        ,
+    ,
         .{ form.handle, agent_id },
     );
 
@@ -10894,8 +10886,8 @@ fn agentUpdate(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
         \\WHERE a.id = $1
         \\LIMIT 1
-        ,
-        .{ agent_id },
+    ,
+        .{agent_id},
     );
 
     if (current_rows.len == 0) {
@@ -10915,8 +10907,8 @@ fn agentUpdate(c: *spider.Ctx) !spider.Response {
         \\WHERE s.is_active = TRUE
         \\ORDER BY CASE WHEN s.id = $1 THEN 0 ELSE 1 END,
         \\         s.name ASC
-        ,
-        .{ stack_id },
+    ,
+        .{stack_id},
     );
 
     if (duplicated.len > 0) {
@@ -10967,7 +10959,7 @@ fn agentUpdate(c: *spider.Ctx) !spider.Response {
         \\    default_stack_id = $7,
         \\    is_active = $8
         \\WHERE id = $9
-        ,
+    ,
         .{
             form.name,
             form.handle,
@@ -10996,8 +10988,8 @@ fn agentDelete(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\DELETE FROM agents
         \\WHERE id = $1
-        ,
-        .{ agent_id },
+    ,
+        .{agent_id},
     );
 
     return c.redirect("/agents?deleted=1");
@@ -11010,7 +11002,7 @@ fn squads(c: *spider.Ctx) !spider.Response {
         \\SELECT id, name, slug, summary, is_default, is_active
         \\FROM squads
         \\ORDER BY is_default DESC, id DESC
-        ,
+    ,
         .{},
     );
 
@@ -11048,7 +11040,7 @@ fn providers(c: *spider.Ctx) !spider.Response {
         \\SELECT id, name, provider_type, base_url, api_key, is_active
         \\FROM providers
         \\ORDER BY id DESC
-        ,
+    ,
         .{},
     );
 
@@ -11067,7 +11059,7 @@ fn providers(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\SELECT id
         \\FROM provider_models
-        ,
+    ,
         .{},
     );
 
@@ -11113,8 +11105,8 @@ fn providerCreate(c: *spider.Ctx) !spider.Response {
         \\FROM providers
         \\WHERE name = $1
         \\LIMIT 1
-        ,
-        .{ form.name },
+    ,
+        .{form.name},
     );
 
     if (duplicated.len > 0) {
@@ -11132,7 +11124,7 @@ fn providerCreate(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\INSERT INTO providers (name, provider_type, base_url, api_key, is_active)
         \\VALUES ($1, $2, $3, $4, $5)
-        ,
+    ,
         .{
             form.name,
             form.provider_type,
@@ -11159,8 +11151,8 @@ fn providerShow(c: *spider.Ctx) !spider.Response {
         \\FROM providers
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ provider_id },
+    ,
+        .{provider_id},
     );
 
     if (providers_rows.len == 0) {
@@ -11174,8 +11166,8 @@ fn providerShow(c: *spider.Ctx) !spider.Response {
         \\FROM provider_models
         \\WHERE provider_id = $1
         \\ORDER BY id DESC
-        ,
-        .{ provider_id },
+    ,
+        .{provider_id},
     );
 
     const notice =
@@ -11211,8 +11203,8 @@ fn providerModelNew(c: *spider.Ctx) !spider.Response {
         \\FROM providers
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ provider_id },
+    ,
+        .{provider_id},
     );
 
     if (providers_rows.len == 0) {
@@ -11251,7 +11243,7 @@ fn providerModelCreate(c: *spider.Ctx) !spider.Response {
         \\WHERE provider_id = $1
         \\AND model_id = $2
         \\LIMIT 1
-        ,
+    ,
         .{ provider_id, form.model_id },
     );
 
@@ -11263,8 +11255,8 @@ fn providerModelCreate(c: *spider.Ctx) !spider.Response {
             \\FROM providers
             \\WHERE id = $1
             \\LIMIT 1
-            ,
-            .{ provider_id },
+        ,
+            .{provider_id},
         );
 
         return c.view("providers/models_new", .{
@@ -11280,7 +11272,7 @@ fn providerModelCreate(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\INSERT INTO provider_models (provider_id, model_name, model_id, context_window, is_active)
         \\VALUES ($1, $2, $3, $4, $5)
-        ,
+    ,
         .{
             provider_id,
             form.model_name,
@@ -11290,7 +11282,8 @@ fn providerModelCreate(c: *spider.Ctx) !spider.Response {
         },
     );
 
-    const redirect_url = try std.fmt.allocPrint(c.arena, "/providers/{d}?model_created=1", .{ provider_id });
+    const redirect_url = try std.fmt.allocPrint(c.arena, "/providers/{d}?model_created=1", .{provider_id});
+
     return c.redirect(redirect_url);
 }
 
@@ -11314,8 +11307,8 @@ fn providerModelEdit(c: *spider.Ctx) !spider.Response {
         \\FROM providers
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ provider_id },
+    ,
+        .{provider_id},
     );
 
     const model_rows = try db.query(
@@ -11326,7 +11319,7 @@ fn providerModelEdit(c: *spider.Ctx) !spider.Response {
         \\WHERE id = $1
         \\AND provider_id = $2
         \\LIMIT 1
-        ,
+    ,
         .{ model_row_id, provider_id },
     );
 
@@ -11368,7 +11361,7 @@ fn providerModelUpdate(c: *spider.Ctx) !spider.Response {
         \\AND model_id = $2
         \\AND id <> $3
         \\LIMIT 1
-        ,
+    ,
         .{ provider_id, form.model_id, model_row_id },
     );
 
@@ -11380,8 +11373,8 @@ fn providerModelUpdate(c: *spider.Ctx) !spider.Response {
             \\FROM providers
             \\WHERE id = $1
             \\LIMIT 1
-            ,
-            .{ provider_id },
+        ,
+            .{provider_id},
         );
 
         const model = ProviderModelRow{
@@ -11411,7 +11404,7 @@ fn providerModelUpdate(c: *spider.Ctx) !spider.Response {
         \\    is_active = $4
         \\WHERE id = $5
         \\AND provider_id = $6
-        ,
+    ,
         .{
             form.model_name,
             form.model_id,
@@ -11422,7 +11415,7 @@ fn providerModelUpdate(c: *spider.Ctx) !spider.Response {
         },
     );
 
-    const redirect_url = try std.fmt.allocPrint(c.arena, "/providers/{d}?model_updated=1", .{ provider_id });
+    const redirect_url = try std.fmt.allocPrint(c.arena, "/providers/{d}?model_updated=1", .{provider_id});
     return c.redirect(redirect_url);
 }
 
@@ -11445,11 +11438,11 @@ fn providerModelDelete(c: *spider.Ctx) !spider.Response {
         \\DELETE FROM provider_models
         \\WHERE id = $1
         \\AND provider_id = $2
-        ,
+    ,
         .{ model_row_id, provider_id },
     );
 
-    const redirect_url = try std.fmt.allocPrint(c.arena, "/providers/{d}?model_deleted=1", .{ provider_id });
+    const redirect_url = try std.fmt.allocPrint(c.arena, "/providers/{d}?model_deleted=1", .{provider_id});
     return c.redirect(redirect_url);
 }
 
@@ -11467,8 +11460,8 @@ fn providerEdit(c: *spider.Ctx) !spider.Response {
         \\FROM providers
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ provider_id },
+    ,
+        .{provider_id},
     );
 
     if (rows.len == 0) {
@@ -11499,7 +11492,7 @@ fn providerUpdate(c: *spider.Ctx) !spider.Response {
         \\WHERE name = $1
         \\AND id <> $2
         \\LIMIT 1
-        ,
+    ,
         .{ form.name, provider_id },
     );
 
@@ -11532,7 +11525,7 @@ fn providerUpdate(c: *spider.Ctx) !spider.Response {
         \\    api_key = $4,
         \\    is_active = $5
         \\WHERE id = $6
-        ,
+    ,
         .{
             form.name,
             form.provider_type,
@@ -11558,8 +11551,8 @@ fn providerDelete(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\DELETE FROM providers
         \\WHERE id = $1
-        ,
-        .{ provider_id },
+    ,
+        .{provider_id},
     );
 
     return c.redirect("/providers?deleted=1");
@@ -11573,11 +11566,10 @@ fn loadSquadAgents(c: *spider.Ctx) ![]SquadAgentOptionRow {
         \\FROM agents
         \\WHERE is_active = TRUE
         \\ORDER BY agent_role ASC, name ASC
-        ,
+    ,
         .{},
     );
 }
-
 
 fn loadSquadAgentsExcept(c: *spider.Ctx, excluded_agent_id: i32) ![]SquadAgentOptionRow {
     return db.query(
@@ -11588,8 +11580,8 @@ fn loadSquadAgentsExcept(c: *spider.Ctx, excluded_agent_id: i32) ![]SquadAgentOp
         \\WHERE is_active = TRUE
         \\AND id <> $1
         \\ORDER BY agent_role ASC, name ASC
-        ,
-        .{ excluded_agent_id },
+    ,
+        .{excluded_agent_id},
     );
 }
 
@@ -11628,8 +11620,8 @@ fn squadCreate(c: *spider.Ctx) !spider.Response {
         \\FROM squads
         \\WHERE slug = $1
         \\LIMIT 1
-        ,
-        .{ form.slug },
+    ,
+        .{form.slug},
     );
 
     if (duplicated.len > 0) {
@@ -11649,14 +11641,13 @@ fn squadCreate(c: *spider.Ctx) !spider.Response {
     const reviewer_agent_id = std.fmt.parseInt(i32, form.reviewer_agent_id, 10) catch 0;
     const executor_agent_id = std.fmt.parseInt(i32, form.executor_agent_id, 10) catch 0;
 
-    if (
-        pilot_agent_id <= 0 or
+    if (pilot_agent_id <= 0 or
         planner_agent_id <= 0 or
         scout_agent_id <= 0 or
         builder_agent_id <= 0 or
         reviewer_agent_id <= 0 or
-        executor_agent_id <= 0
-    ) {
+        executor_agent_id <= 0)
+    {
         return c.view("squads/new", .{
             .title = "Nova Squad",
             .agents = agents_rows,
@@ -11674,7 +11665,7 @@ fn squadCreate(c: *spider.Ctx) !spider.Response {
             void,
             c.arena,
             \\UPDATE squads SET is_default = FALSE
-            ,
+        ,
             .{},
         );
     }
@@ -11685,7 +11676,7 @@ fn squadCreate(c: *spider.Ctx) !spider.Response {
         \\INSERT INTO squads (name, slug, summary, is_default, is_active)
         \\VALUES ($1, $2, $3, $4, $5)
         \\RETURNING id
-        ,
+    ,
         .{
             form.name,
             form.slug,
@@ -11719,7 +11710,7 @@ fn insertSquadMember(
         c.arena,
         \\INSERT INTO squad_members (squad_id, role_name, agent_id, display_order)
         \\VALUES ($1, $2, $3, $4)
-        ,
+    ,
         .{ squad_id, role_name, agent_id, display_order },
     );
 }
@@ -11738,8 +11729,8 @@ fn squadShow(c: *spider.Ctx) !spider.Response {
         \\FROM squads
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ squad_id },
+    ,
+        .{squad_id},
     );
 
     if (squads_rows.len == 0) {
@@ -11764,8 +11755,8 @@ fn squadShow(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN stacks s ON s.id = a.default_stack_id
         \\WHERE sm.squad_id = $1
         \\ORDER BY sm.display_order ASC
-        ,
-        .{ squad_id },
+    ,
+        .{squad_id},
     );
 
     return c.view("squads/show", .{
@@ -11790,8 +11781,8 @@ fn squadEdit(c: *spider.Ctx) !spider.Response {
         \\FROM squads
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ squad_id },
+    ,
+        .{squad_id},
     );
 
     if (squads_rows.len == 0) {
@@ -11816,8 +11807,8 @@ fn squadEdit(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN stacks s ON s.id = a.default_stack_id
         \\WHERE sm.squad_id = $1
         \\ORDER BY sm.display_order ASC
-        ,
-        .{ squad_id },
+    ,
+        .{squad_id},
     );
 
     const pilot_agents = try loadSquadAgentsExcept(c, members[0].agent_id);
@@ -11860,7 +11851,7 @@ fn squadUpdate(c: *spider.Ctx) !spider.Response {
         \\WHERE slug = $1
         \\AND id <> $2
         \\LIMIT 1
-        ,
+    ,
         .{ form.slug, squad_id },
     );
 
@@ -11871,8 +11862,8 @@ fn squadUpdate(c: *spider.Ctx) !spider.Response {
         \\FROM squads
         \\WHERE id = $1
         \\LIMIT 1
-        ,
-        .{ squad_id },
+    ,
+        .{squad_id},
     );
 
     if (squads_rows.len == 0) {
@@ -11897,8 +11888,8 @@ fn squadUpdate(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN stacks s ON s.id = a.default_stack_id
         \\WHERE sm.squad_id = $1
         \\ORDER BY sm.display_order ASC
-        ,
-        .{ squad_id },
+    ,
+        .{squad_id},
     );
 
     if (duplicated.len > 0) {
@@ -11919,14 +11910,13 @@ fn squadUpdate(c: *spider.Ctx) !spider.Response {
     const reviewer_agent_id = std.fmt.parseInt(i32, form.reviewer_agent_id, 10) catch 0;
     const executor_agent_id = std.fmt.parseInt(i32, form.executor_agent_id, 10) catch 0;
 
-    if (
-        pilot_agent_id <= 0 or
+    if (pilot_agent_id <= 0 or
         planner_agent_id <= 0 or
         scout_agent_id <= 0 or
         builder_agent_id <= 0 or
         reviewer_agent_id <= 0 or
-        executor_agent_id <= 0
-    ) {
+        executor_agent_id <= 0)
+    {
         return c.view("squads/edit", .{
             .title = "Editar Squad",
             .squad = squads_rows[0],
@@ -11945,7 +11935,7 @@ fn squadUpdate(c: *spider.Ctx) !spider.Response {
             void,
             c.arena,
             \\UPDATE squads SET is_default = FALSE
-            ,
+        ,
             .{},
         );
     }
@@ -11960,7 +11950,7 @@ fn squadUpdate(c: *spider.Ctx) !spider.Response {
         \\    is_default = $4,
         \\    is_active = $5
         \\WHERE id = $6
-        ,
+    ,
         .{
             form.name,
             form.slug,
@@ -11976,8 +11966,8 @@ fn squadUpdate(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\DELETE FROM squad_members
         \\WHERE squad_id = $1
-        ,
-        .{ squad_id },
+    ,
+        .{squad_id},
     );
 
     try insertSquadMember(c, squad_id, "Piloto", pilot_agent_id, 1);
@@ -12002,8 +11992,8 @@ fn squadDelete(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\DELETE FROM squads
         \\WHERE id = $1
-        ,
-        .{ squad_id },
+    ,
+        .{squad_id},
     );
 
     return c.redirect("/squads?deleted=1");
@@ -12026,7 +12016,7 @@ fn stacks(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
         \\INNER JOIN providers p ON p.id = pm.provider_id
         \\ORDER BY s.id DESC
-        ,
+    ,
         .{},
     );
 
@@ -12071,7 +12061,7 @@ fn stackNew(c: *spider.Ctx) !spider.Response {
         \\WHERE pm.is_active = TRUE
         \\AND p.is_active = TRUE
         \\ORDER BY p.name ASC, pm.model_name ASC
-        ,
+    ,
         .{},
     );
 
@@ -12101,8 +12091,8 @@ fn stackCreate(c: *spider.Ctx) !spider.Response {
         \\FROM stacks
         \\WHERE name = $1
         \\LIMIT 1
-        ,
-        .{ form.name },
+    ,
+        .{form.name},
     );
 
     const models = try db.query(
@@ -12118,7 +12108,7 @@ fn stackCreate(c: *spider.Ctx) !spider.Response {
         \\WHERE pm.is_active = TRUE
         \\AND p.is_active = TRUE
         \\ORDER BY p.name ASC, pm.model_name ASC
-        ,
+    ,
         .{},
     );
 
@@ -12147,7 +12137,7 @@ fn stackCreate(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\INSERT INTO stacks (name, runtime_tool, provider_model_id, is_active)
         \\VALUES ($1, $2, $3, $4)
-        ,
+    ,
         .{
             form.name,
             form.runtime_tool,
@@ -12183,8 +12173,8 @@ fn stackEdit(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN providers p ON p.id = pm.provider_id
         \\WHERE s.id = $1
         \\LIMIT 1
-        ,
-        .{ stack_id },
+    ,
+        .{stack_id},
     );
 
     if (rows.len == 0) {
@@ -12206,8 +12196,8 @@ fn stackEdit(c: *spider.Ctx) !spider.Response {
         \\ORDER BY CASE WHEN pm.id = $1 THEN 0 ELSE 1 END,
         \\         p.name ASC,
         \\         pm.model_name ASC
-        ,
-        .{ rows[0].provider_model_id },
+    ,
+        .{rows[0].provider_model_id},
     );
 
     return c.view("stacks/edit", .{
@@ -12238,7 +12228,7 @@ fn stackUpdate(c: *spider.Ctx) !spider.Response {
         \\WHERE name = $1
         \\AND id <> $2
         \\LIMIT 1
-        ,
+    ,
         .{ form.name, stack_id },
     );
 
@@ -12255,7 +12245,7 @@ fn stackUpdate(c: *spider.Ctx) !spider.Response {
         \\WHERE pm.is_active = TRUE
         \\AND p.is_active = TRUE
         \\ORDER BY p.name ASC, pm.model_name ASC
-        ,
+    ,
         .{},
     );
 
@@ -12276,8 +12266,8 @@ fn stackUpdate(c: *spider.Ctx) !spider.Response {
         \\INNER JOIN providers p ON p.id = pm.provider_id
         \\WHERE s.id = $1
         \\LIMIT 1
-        ,
-        .{ stack_id },
+    ,
+        .{stack_id},
     );
 
     if (current_rows.len == 0) {
@@ -12324,7 +12314,7 @@ fn stackUpdate(c: *spider.Ctx) !spider.Response {
         \\    provider_model_id = $3,
         \\    is_active = $4
         \\WHERE id = $5
-        ,
+    ,
         .{
             form.name,
             form.runtime_tool,
@@ -12349,10 +12339,9 @@ fn stackDelete(c: *spider.Ctx) !spider.Response {
         c.arena,
         \\DELETE FROM stacks
         \\WHERE id = $1
-        ,
-        .{ stack_id },
+    ,
+        .{stack_id},
     );
 
     return c.redirect("/stacks?deleted=1");
 }
-

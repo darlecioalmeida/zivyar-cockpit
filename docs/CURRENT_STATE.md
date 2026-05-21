@@ -4,7 +4,7 @@
 
 O Zivyar Cockpit está com o Mission Engine funcional em modo supervisionado.
 
-A aplicação já consegue criar missões, vincular missões a workspaces, ativar uma missão no Cockpit, iniciar runtime Docker/OpenCode, abrir sessão do pane Piloto, enviar a missão ao Piloto e capturar o briefing retornado.
+A aplicação já consegue criar missões, vincular missões a workspaces, ativar uma missão no Cockpit, iniciar runtime Docker/OpenCode, abrir sessão do pane Piloto, enviar a missão ao Piloto, capturar o briefing retornado e encaminhar o briefing ao Planner.
 
 O sistema também já calcula e persiste a próxima etapa operacional com:
 
@@ -39,18 +39,27 @@ pilot_operational_brief_status = captured
 
 Isso significa que o briefing do Piloto já foi capturado e persistido.
 
+## Etapa operacional já preparada no código
+
+```text
+dispatch_planner
+capture_planner_plan
+```
+
+O fluxo do Planner já está presente em `src/main.zig` e o próximo bloco funcional do ciclo passa a ser o envio do Plano Operacional ao Scout.
+
 ---
 
 ## Próxima etapa técnica
 
 ```text
-dispatch_planner
+dispatch_scout
 ```
 
 Rota esperada:
 
 ```text
-POST /workspaces/3/missions/2/dispatch/planner
+POST /workspaces/3/missions/2/dispatch/scout
 ```
 
 ---

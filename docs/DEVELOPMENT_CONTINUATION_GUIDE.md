@@ -61,9 +61,11 @@ Etapas reais já validadas:
 ```text
 1. dispatch_pilot
 2. capture_pilot_brief
+3. dispatch_planner
+4. capture_planner_plan
 ```
 
-A missão já foi enviada ao Piloto e o briefing do Piloto foi capturado.
+A missão já foi enviada ao Piloto, o briefing do Piloto foi capturado e o fluxo do Planner já está consolidado no código.
 
 Estado esperado no banco:
 
@@ -165,6 +167,26 @@ Fluxo padrão:
 6. Validar no banco.
 7. Limpar diagnóstico antigo.
 8. Avançar para a próxima etapa.
+```
+
+Etapas já cobertas no código:
+
+```text
+dispatch_pilot
+capture_pilot_brief
+dispatch_planner
+capture_planner_plan
+dispatch_scout
+capture_scout_report
+dispatch_builder
+capture_builder_report
+dispatch_reviewer
+capture_reviewer_report
+dispatch_executor
+capture_executor_report
+dispatch_pilot_delivery
+capture_pilot_delivery_report
+finalize_mission
 ```
 
 A automação ainda não é totalmente autônoma.

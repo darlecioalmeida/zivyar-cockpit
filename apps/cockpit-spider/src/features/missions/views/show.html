@@ -1227,6 +1227,41 @@ if (next_step_ready_notice) {
   </div>
 
   if (mission_event_count > 0) {
+
+<section class="panel mission-timeline-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Execução supervisionada</span>
+      <h3>Histórico supervisionado</h3>
+    </div>
+    <span class="mini-badge">{ supervised_execution_event_count } eventos</span>
+  </div>
+
+  if (supervised_execution_event_count > 0) {
+    <div class="mission-timeline-list">
+      for (supervised_execution_events) |event| {
+        <article class="mission-timeline-card">
+          <div class="mission-timeline-dot"></div>
+
+          <div class="mission-timeline-content">
+            <div class="mission-timeline-head">
+              <strong>{ event.title }</strong>
+              <small>{ event.created_at_label }</small>
+            </div>
+
+            <span>{ event.event_type }</span>
+            <p>{ event.message }</p>
+          </div>
+        </article>
+      }
+    </div>
+  } else {
+    <div class="empty-inline-state">
+      <strong>Nenhuma execução supervisionada registrada.</strong>
+      <p>As ações detectadas e os despachos capturados aparecerão aqui.</p>
+    </div>
+  }
+</section>
     <div class="mission-timeline-list">
       for (mission_events) |event| {
         <article class="mission-timeline-card">

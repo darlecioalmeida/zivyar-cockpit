@@ -12,14 +12,16 @@ O fluxo atual permite:
 4. Controlar o ciclo operacional por etapas.
 5. Enviar missão ao Piloto.
 6. Capturar o Briefing Operacional do Piloto.
-7. Detectar a próxima etapa supervisionada.
-8. Persistir diagnóstico de próxima etapa:
+7. Enviar o briefing ao Planner.
+8. Capturar o Plano Operacional do Planner.
+9. Detectar a próxima etapa supervisionada.
+10. Persistir diagnóstico de próxima etapa:
    - ação legível;
    - código técnico;
    - rota alvo;
    - data/hora da detecção.
-9. Exibir diagnóstico na Mission Show e no Workspace.
-10. Executar etapas supervisionadas reais de forma progressiva.
+11. Exibir diagnóstico na Mission Show e no Workspace.
+12. Executar etapas supervisionadas reais de forma progressiva.
 
 ---
 
@@ -109,7 +111,7 @@ action="/workspaces/3/panes/745/session/recreate"
 
 ## Ciclo operacional atual
 
-O ciclo validado até agora chegou até a captura do briefing do Piloto.
+O ciclo validado até agora chegou até a captura do briefing do Piloto e o código já contém o fluxo operacional do Planner.
 
 ### Etapa 1 — Enviar missão ao Piloto
 
@@ -170,16 +172,16 @@ next_step_detected_route = vazio
 Após a captura do briefing do Piloto, a próxima etapa do ciclo é:
 
 ```text
-Ação: Enviar briefing ao Planner
-Código técnico: dispatch_planner
-Rota alvo: /workspaces/3/missions/2/dispatch/planner
+Ação: Enviar briefing ao Scout após o Planner
+Código técnico: dispatch_scout
+Rota alvo: /workspaces/3/missions/2/dispatch/scout
 ```
 
 A próxima evolução planejada é liberar execução supervisionada real para:
 
 ```text
-dispatch_planner
-capture_planner_plan
+dispatch_scout
+capture_scout_report
 ```
 
 ---
@@ -321,8 +323,12 @@ capture_planner_plan
 
 ### Sprint 4.74
 
-Melhorar o botão `Executar próxima etapa` para executar automaticamente a ação pronta quando o código já for suportado.
+Concluída.
+
+O botão `Executar próxima etapa` agora executa automaticamente a ação pronta quando o código já for suportado.
 
 ### Sprint 4.75
 
-Adicionar histórico específico de execuções supervisionadas.
+Concluída.
+
+A Mission Show agora exibe um histórico específico de execuções supervisionadas.
