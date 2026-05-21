@@ -3,6 +3,119 @@ const spider = @import("spider");
 const db = spider.pg;
 
 pub const spider_templates = @import("embedded_templates.zig").EmbeddedTemplates;
+fn workspaceGraphifyShow(c: *spider.Ctx) !spider.Response {
+    const id_raw = c.params.get("id") orelse
+        return c.text("Workspace não informado.", .{ .status = .bad_request });
+
+    const workspace_id = std.fmt.parseInt(i32, id_raw, 10) catch
+        return c.text("Workspace inválido.", .{ .status = .bad_request });
+
+    const rows = try db.query(
+        WorkspaceRow,
+        c.arena,
+        \\SELECT
+        \\    w.id,
+        \\    w.name,
+        \\    w.local_path,
+        \\    w.stack_name,
+        \\    w.default_squad_id,
+        \\    COALESCE(s.name, 'Sem squad vinculada') AS squad_name,
+        \\    w.status
+        \\FROM workspaces w
+        \\LEFT JOIN squads s ON s.id = w.default_squad_id
+        \\WHERE w.id = $1
+        \\LIMIT 1
+    ,
+        .{workspace_id},
+    );
+
+    if (rows.len == 0) {
+        return c.text("Workspace não encontrado.", .{ .status = .not_found });
+    }
+
+    const workspace = rows[0];
+
+    const workspace_memory_entries = try db.query(
+        WorkspaceMemoryEntryRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    title,
+        \\    content,
+        \\    TO_CHAR(created_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS') AS created_at_label
+        \\FROM workspace_memory_entries
+        \\WHERE workspace_id = $1
+        \\ORDER BY id DESC
+        \\LIMIT 8
+    ,
+        .{workspace.id},
+    );
+
+    const workspace_handoffs = try db.query(
+        WorkspaceHandoffRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    from_role,
+        \\    to_role,
+        \\    summary,
+        \\    context,
+        \\    TO_CHAR(created_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS') AS created_at_label
+        \\FROM workspace_handoffs
+        \\WHERE workspace_id = $1
+        \\ORDER BY id DESC
+        \\LIMIT 8
+    ,
+        .{workspace.id},
+    );
+
+    const workspace_decision_records = try db.query(
+        WorkspaceDecisionRecordRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    title,
+        \\    decision,
+        \\    rationale,
+        \\    TO_CHAR(created_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS') AS created_at_label
+        \\FROM workspace_decision_records
+        \\WHERE workspace_id = $1
+        \\ORDER BY id DESC
+        \\LIMIT 8
+    ,
+        .{workspace.id},
+    );
+
+    const workspace_snapshots = try db.query(
+        WorkspaceSnapshotRow,
+        c.arena,
+        \\SELECT
+        \\    id,
+        \\    title,
+        \\    scope,
+        \\    content,
+        \\    TO_CHAR(created_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS') AS created_at_label
+        \\FROM workspace_snapshots
+        \\WHERE workspace_id = $1
+        \\ORDER BY id DESC
+        \\LIMIT 8
+    ,
+        .{workspace.id},
+    );
+
+    return c.view("workspaces/graphify", .{
+        .title = workspace.name,
+        .workspace = workspace,
+        .workspace_memory_entries = workspace_memory_entries,
+        .workspace_memory_count = workspace_memory_entries.len,
+        .workspace_handoffs = workspace_handoffs,
+        .workspace_handoff_count = workspace_handoffs.len,
+        .workspace_decision_records = workspace_decision_records,
+        .workspace_decision_record_count = workspace_decision_records.len,
+        .workspace_snapshots = workspace_snapshots,
+        .workspace_snapshot_count = workspace_snapshots.len,
+    }, .{});
+}
 
 pub fn main(init: std.process.Init) !void {
     const arena = init.arena.allocator();
@@ -23,12 +136,14 @@ pub fn main(init: std.process.Init) !void {
     server
         .get("/", dashboard)
         .get("/workspaces", workspaces)
+        .get("/graphify", graphifyIndex)
         .get("/workspaces/new", workspaceNew)
         .post("/workspaces", workspaceCreate)
         .get("/workspaces/:id/edit", workspaceEdit)
         .post("/workspaces/:id/update", workspaceUpdate)
         .post("/workspaces/:id/local-path/confirm", workspaceConfirmLocalPathChange)
         .post("/workspaces/:id/delete", workspaceDelete)
+        .get("/workspaces/:id/graphify", workspaceGraphifyShow)
         .post("/workspaces/:id/memory", workspaceMemoryCreate)
         .post("/workspaces/:id/handoffs", workspaceHandoffCreate)
         .post("/workspaces/:id/decision-records", workspaceDecisionRecordCreate)
@@ -6942,6 +7057,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
     const workspace_id = std.fmt.parseInt(i32, id_raw, 10) catch
         return c.text("Workspace inválido.", .{ .status = .bad_request });
 
+    std.log.info("workspaceShow start id={d}", .{workspace_id});
+
     const rows = try db.query(
         WorkspaceRow,
         c.arena,
@@ -6966,14 +7083,19 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
     }
 
     const workspace = rows[0];
+    std.log.info("workspaceShow loaded workspace id={d}", .{workspace.id});
     const linked_squad_id = workspace.default_squad_id orelse 0;
     const runtime_rows = try loadWorkspaceRuntime(c, workspace.id);
+
+    std.log.info("workspaceShow runtime rows={d}", .{runtime_rows.len});
 
     if (runtime_rows.len > 0) {
         reconcileWorkspaceRuntimeState(c, runtime_rows[0]) catch {};
     }
 
     const refreshed_runtime_rows = try loadWorkspaceRuntime(c, workspace.id);
+
+    std.log.info("workspaceShow refreshed runtime rows={d}", .{refreshed_runtime_rows.len});
 
     if (refreshed_runtime_rows.len > 0) {
         reconcileWorkspacePaneSessions(c, workspace.id, refreshed_runtime_rows[0]) catch {};
@@ -6995,6 +7117,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .{workspace.id},
     );
 
+    std.log.info("workspaceShow runtime events={d}", .{runtime_events.len});
+
     const runtime_logs = try db.query(
         WorkspaceRuntimeLogRow,
         c.arena,
@@ -7013,6 +7137,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
     ,
         .{workspace.id},
     );
+
+    std.log.info("workspaceShow runtime logs={d}", .{runtime_logs.len});
 
     const pane_session_history = try db.query(
         WorkspacePaneSessionHistoryRow,
@@ -7033,6 +7159,8 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
     ,
         .{workspace.id},
     );
+
+    std.log.info("workspaceShow pane session history={d}", .{pane_session_history.len});
 
     const workspace_memory_entries = try db.query(
         WorkspaceMemoryEntryRow,
@@ -7370,6 +7498,49 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
     }, .{});
 }
 
+fn graphifyIndex(c: *spider.Ctx) !spider.Response {
+    const initial_rows = try db.query(
+        WorkspaceIndexRow,
+        c.arena,
+        \\SELECT
+        \\    w.id,
+        \\    w.name,
+        \\    w.local_path,
+        \\    w.stack_name,
+        \\    w.default_squad_id,
+        \\    COALESCE(s.name, 'Sem squad vinculada') AS squad_name,
+        \\    w.status,
+        \\    COALESCE(r.state, 'not_prepared') AS runtime_state,
+        \\    COALESCE(NULLIF(r.container_name, ''), 'Ainda não criado') AS runtime_container_name,
+        \\    CASE
+        \\        WHEN r.opencode_port IS NULL OR r.opencode_port = 0 THEN 'A definir'
+        \\        ELSE r.opencode_port::text
+        \\    END AS runtime_port_label,
+        \\    COALESCE(NULLIF(r.server_url, ''), 'A definir') AS runtime_server_url_label,
+        \\    CASE
+        \\        WHEN r.id IS NULL THEN FALSE
+        \\        ELSE TRUE
+        \\    END AS runtime_is_prepared,
+        \\    CASE
+        \\        WHEN r.state = 'running' THEN TRUE
+        \\        ELSE FALSE
+        \\    END AS runtime_is_running
+        \\FROM workspaces w
+        \\LEFT JOIN squads s ON s.id = w.default_squad_id
+        \\LEFT JOIN workspace_runtimes r ON r.workspace_id = w.id
+        \\ORDER BY w.id DESC
+    ,
+        .{},
+    );
+
+    return c.view("graphify/index", .{
+        .title = "Graphify",
+        .workspaces = initial_rows,
+        .workspace_count = initial_rows.len,
+        .running_workspace_count = countRunningWorkspaces(initial_rows),
+    }, .{});
+}
+
 fn workspaceCreate(c: *spider.Ctx) !spider.Response {
     const form = try c.parseForm(WorkspaceForm);
     const squads_rows = try loadWorkspaceSquads(c);
@@ -7622,6 +7793,18 @@ fn countClosedWorkspaceMissions(rows: []const WorkspaceMissionPreviewRow) usize 
 
     for (rows) |row| {
         if (std.mem.eql(u8, row.mission_operational_closure_status, "closed")) {
+            total += 1;
+        }
+    }
+
+    return total;
+}
+
+fn countRunningWorkspaces(rows: []const WorkspaceIndexRow) usize {
+    var total: usize = 0;
+
+    for (rows) |row| {
+        if (row.runtime_is_running) {
             total += 1;
         }
     }

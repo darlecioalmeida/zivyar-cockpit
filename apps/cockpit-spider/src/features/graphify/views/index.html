@@ -1,0 +1,115 @@
+extends "layout"
+
+<section class="page-head workspace-head">
+  <div>
+    <span class="eyebrow">Graphify</span>
+    <h2>Mapa de conhecimento do Cockpit</h2>
+    <p>
+      Entrada global para navegar entre workspaces, seus mapas de contexto e o
+      estado operacional já consolidado.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="primary-button" href="/workspaces">Abrir workspaces</a>
+  </div>
+</section>
+
+<section class="metric-grid">
+  <article class="metric-card">
+    <span>Workspaces mapeados</span>
+    <strong>{ workspace_count }</strong>
+    <small>Entradas prontas para navegação Graphify</small>
+  </article>
+  <article class="metric-card">
+    <span>Workspaces em execução</span>
+    <strong>{ running_workspace_count }</strong>
+    <small>Runtimes já ativos no cockpit</small>
+  </article>
+  <article class="metric-card">
+    <span>Entrada dedicada</span>
+    <strong>/graphify</strong>
+    <small>Hub global do mapa de conhecimento</small>
+  </article>
+</section>
+
+if (workspace_count > 0) {
+<section class="grid workspace-cards">
+  for (workspaces) |workspace| {
+    <article class="panel workspace-card">
+      <div class="workspace-card-head">
+        <div class="workspace-avatar">G</div>
+        <div>
+          <span class="eyebrow">Workspace #{ workspace.id }</span>
+          <h3>{ workspace.name }</h3>
+        </div>
+      </div>
+
+      <div class="workspace-meta">
+        <div>
+          <span>Caminho</span>
+          <strong>{ workspace.local_path }</strong>
+        </div>
+        <div>
+          <span>Stack</span>
+          <strong>{ workspace.stack_name }</strong>
+        </div>
+        <div>
+          <span>Squad padrão</span>
+          <strong>{ workspace.squad_name }</strong>
+        </div>
+        <div>
+          <span>Runtime</span>
+          <strong>{ workspace.runtime_state }</strong>
+        </div>
+      </div>
+
+      <div class="workspace-card-actions workspace-card-actions-expanded">
+        <a class="ghost-mini" href="/workspaces/{ workspace.id }/graphify">Abrir grafo</a>
+        <a class="ghost-mini" href="/workspaces/{ workspace.id }">Abrir cockpit</a>
+      </div>
+    </article>
+  }
+</section>
+} else {
+<section class="grid workspace-layout">
+  <article class="panel empty-state-panel">
+    <div class="empty-icon">⟡</div>
+    <span class="eyebrow">Mapa vazio</span>
+    <h3>Nenhum workspace disponível para graphify</h3>
+    <p>
+      Crie o primeiro workspace para começar a ligar memória, handoffs,
+      decisões e snapshots ao mapa de conhecimento.
+    </p>
+    <a class="primary-button inline" href="/workspaces/new">Cadastrar workspace</a>
+  </article>
+
+  <article class="panel architecture-panel">
+    <span class="eyebrow">Graphify</span>
+    <h3>Como o mapa funciona</h3>
+
+    <div class="runtime-flow">
+      <div class="runtime-step">
+        <strong>01</strong>
+        <span>Workspace</span>
+      </div>
+      <div class="runtime-arrow">→</div>
+      <div class="runtime-step">
+        <strong>02</strong>
+        <span>Context Engine</span>
+      </div>
+      <div class="runtime-arrow">→</div>
+      <div class="runtime-step">
+        <strong>03</strong>
+        <span>Graphify</span>
+      </div>
+    </div>
+
+    <ul class="feature-list">
+      <li>Memória, handoffs, decisões e snapshots formam os nós do mapa.</li>
+      <li>Cada workspace tem sua página Graphify dedicada.</li>
+      <li>O cockpit preserva a arquitetura e só expõe o grafo como leitura navegável.</li>
+    </ul>
+  </article>
+</section>
+}

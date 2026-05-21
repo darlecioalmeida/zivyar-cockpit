@@ -1,0 +1,215 @@
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Graphify</span>
+    <h2>{ workspace.name }</h2>
+    <p>
+      Mapa de conhecimento do workspace com navegação entre memória, handoff,
+      decisão e snapshot.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/workspaces/{ workspace.id }">Voltar ao workspace</a>
+  </div>
+</div>
+
+<section class="panel workspace-summary-panel" id="graphify-panel">
+  <div class="panel-title-row">
+    <div>
+      <span class="eyebrow">Workspace hub</span>
+      <h3>Mapa do contexto</h3>
+    </div>
+    <span class="mini-badge">Graphify</span>
+  </div>
+
+  <div class="graph-map">
+    <article class="graph-hub">
+      <span class="graph-node-label">Hub</span>
+      <strong>{ workspace.name }</strong>
+      <p>{ workspace.local_path }</p>
+
+      <div class="graph-hub-stats">
+        <div>
+          <span>Memórias</span>
+          <strong>{ workspace_memory_count }</strong>
+        </div>
+        <div>
+          <span>Handoffs</span>
+          <strong>{ workspace_handoff_count }</strong>
+        </div>
+        <div>
+          <span>Decisões</span>
+          <strong>{ workspace_decision_record_count }</strong>
+        </div>
+        <div>
+          <span>Snapshots</span>
+          <strong>{ workspace_snapshot_count }</strong>
+        </div>
+      </div>
+    </article>
+
+    <div class="graph-node-grid">
+      <a class="graph-node graph-node-link" data-tone="cyan" href="#memory-node">
+        <span class="graph-node-label">Memory</span>
+        if (workspace_memory_count > 0) {
+          <strong>{ workspace_memory_entries[0].title }</strong>
+          <p>{ workspace_memory_entries[0].content }</p>
+        } else {
+          <strong>Sem memória recente</strong>
+          <p>Registre contexto operacional para alimentar o grafo.</p>
+        }
+        <small>Regras, fatos e notas persistentes do workspace.</small>
+      </a>
+
+      <a class="graph-node graph-node-link" data-tone="green" href="#handoff-node">
+        <span class="graph-node-label">Handoff</span>
+        if (workspace_handoff_count > 0) {
+          <strong>{ workspace_handoffs[0].from_role } → { workspace_handoffs[0].to_role }</strong>
+          <p>{ workspace_handoffs[0].summary }</p>
+        } else {
+          <strong>Sem handoff recente</strong>
+          <p>Passagens de contexto aparecem aqui quando registradas.</p>
+        }
+        <small>Transições entre papéis, agentes e panes.</small>
+      </a>
+
+      <a class="graph-node graph-node-link" data-tone="amber" href="#decision-node">
+        <span class="graph-node-label">Decision</span>
+        if (workspace_decision_record_count > 0) {
+          <strong>{ workspace_decision_records[0].title }</strong>
+          <p>{ workspace_decision_records[0].decision }</p>
+        } else {
+          <strong>Sem decisão recente</strong>
+          <p>Decisões fixas do cockpit aparecem aqui.</p>
+        }
+        <small>Escolhas, racional e critérios operacionais.</small>
+      </a>
+
+      <a class="graph-node graph-node-link" data-tone="violet" href="#snapshot-node">
+        <span class="graph-node-label">Snapshot</span>
+        if (workspace_snapshot_count > 0) {
+          <strong>{ workspace_snapshots[0].title }</strong>
+          <p>{ workspace_snapshots[0].content }</p>
+        } else {
+          <strong>Sem snapshot recente</strong>
+          <p>Estados de retomada aparecem aqui quando registrados.</p>
+        }
+        <small>Estados congelados, escopo e checkpoints.</small>
+      </a>
+    </div>
+
+    <div class="graph-links">
+      <a href="#memory-node">Memory → Decision</a>
+      <a href="#decision-node">Decision → Snapshot</a>
+      <a href="#handoff-node">Handoff → Memory</a>
+      <a href="#graphify-panel">Snapshot → Hub</a>
+    </div>
+  </div>
+</section>
+
+<section class="grid workspace-intelligence-grid">
+  <article class="panel" id="memory-node">
+    <span class="eyebrow">Memory</span>
+    <h3>Memórias recentes</h3>
+    if (workspace_memory_count > 0) {
+      <div class="workspace-memory-list">
+        for (workspace_memory_entries) |memory_entry| {
+          <article class="workspace-memory-card">
+            <div class="panel-title-row">
+              <div>
+                <strong>{ memory_entry.title }</strong>
+                <small>{ memory_entry.created_at_label }</small>
+              </div>
+            </div>
+            <p>{ memory_entry.content }</p>
+          </article>
+        }
+      </div>
+    } else {
+      <div class="empty-inline-state">
+        <strong>Nenhuma memória registrada.</strong>
+        <p>Use o Workspace Show para persistir contexto e retornar a esta página.</p>
+      </div>
+    }
+  </article>
+
+  <article class="panel" id="handoff-node">
+    <span class="eyebrow">Handoff</span>
+    <h3>Passagens de contexto</h3>
+    if (workspace_handoff_count > 0) {
+      <div class="workspace-memory-list">
+        for (workspace_handoffs) |handoff| {
+          <article class="workspace-memory-card">
+            <div class="panel-title-row">
+              <div>
+                <strong>{ handoff.from_role } → { handoff.to_role }</strong>
+                <small>{ handoff.created_at_label }</small>
+              </div>
+            </div>
+            <p>{ handoff.summary }</p>
+            if (handoff.context.len > 0) {
+              <small>{ handoff.context }</small>
+            }
+          </article>
+        }
+      </div>
+    } else {
+      <div class="empty-inline-state">
+        <strong>Nenhum handoff registrado.</strong>
+        <p>Os handoffs aparecem aqui quando o contexto passa entre agentes ou panes.</p>
+      </div>
+    }
+  </article>
+
+  <article class="panel" id="decision-node">
+    <span class="eyebrow">Decision</span>
+    <h3>Decision records</h3>
+    if (workspace_decision_record_count > 0) {
+      <div class="workspace-memory-list">
+        for (workspace_decision_records) |decision_record| {
+          <article class="workspace-memory-card">
+            <div class="panel-title-row">
+              <div>
+                <strong>{ decision_record.title }</strong>
+                <small>{ decision_record.created_at_label }</small>
+              </div>
+            </div>
+            <p>{ decision_record.decision }</p>
+            <small>{ decision_record.rationale }</small>
+          </article>
+        }
+      </div>
+    } else {
+      <div class="empty-inline-state">
+        <strong>Nenhuma decisão registrada.</strong>
+        <p>Registre decisões persistentes para alimentar o grafo do workspace.</p>
+      </div>
+    }
+  </article>
+
+  <article class="panel" id="snapshot-node">
+    <span class="eyebrow">Snapshot</span>
+    <h3>Snapshots de contexto</h3>
+    if (workspace_snapshot_count > 0) {
+      <div class="workspace-memory-list">
+        for (workspace_snapshots) |snapshot| {
+          <article class="workspace-memory-card">
+            <div class="panel-title-row">
+              <div>
+                <strong>{ snapshot.title }</strong>
+                <small>{ snapshot.created_at_label }</small>
+              </div>
+            </div>
+            <p>{ snapshot.content }</p>
+            <small>{ snapshot.scope }</small>
+          </article>
+        }
+      </div>
+    } else {
+      <div class="empty-inline-state">
+        <strong>Nenhum snapshot registrado.</strong>
+        <p>Snapshots ajudam a congelar o estado do workspace para retomada segura.</p>
+      </div>
+    }
+  </article>
+</section>

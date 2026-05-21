@@ -58,7 +58,7 @@ if (snapshot_notice) {
 </section>
 }
 
-<section class="panel workspace-memory-panel">
+<section class="panel workspace-memory-panel" id="workspace-memory-panel">
   <div class="panel-title-row">
     <div>
       <span class="eyebrow">Context Engine</span>
@@ -108,7 +108,7 @@ if (snapshot_notice) {
   }
 </section>
 
-<section class="panel workspace-memory-panel">
+<section class="panel workspace-memory-panel" id="workspace-snapshots-panel">
   <div class="panel-title-row">
     <div>
       <span class="eyebrow">Context Engine</span>
@@ -163,7 +163,7 @@ if (snapshot_notice) {
   }
 </section>
 
-<section class="panel workspace-memory-panel">
+<section class="panel workspace-memory-panel" id="workspace-decision-records-panel">
   <div class="panel-title-row">
     <div>
       <span class="eyebrow">Context Engine</span>
@@ -218,7 +218,7 @@ if (snapshot_notice) {
   }
 </section>
 
-<section class="panel workspace-memory-panel">
+<section class="panel workspace-memory-panel" id="workspace-handoffs-panel">
   <div class="panel-title-row">
     <div>
       <span class="eyebrow">Context Engine</span>
@@ -281,7 +281,7 @@ if (snapshot_notice) {
 </section>
 
 <section class="workspace-detail-grid">
-  <article class="panel workspace-summary-panel">
+  <article class="panel workspace-summary-panel" id="workspace-summary-panel">
     <span class="eyebrow">Resumo</span>
     <h3>Identidade do workspace</h3>
 
@@ -1429,7 +1429,7 @@ if (snapshot_notice) {
 </section>
 
 <section class="grid workspace-intelligence-grid">
-  <article class="panel">
+  <article class="panel" id="graphify-panel">
     <span class="eyebrow">Contexto</span>
     <h3>Workspace Memory</h3>
     <p>
@@ -1442,11 +1442,113 @@ if (snapshot_notice) {
     <span class="eyebrow">Graphify</span>
     <h3>MAP do projeto</h3>
     <p>
-      A futura indexação exibirá relações entre arquivos, módulos e áreas de risco.
+      O mapa do workspace já consolida memória, handoffs, decisões e snapshots
+      de contexto para servir como base da indexação futura.
     </p>
+
+    <div class="graph-map">
+      <article class="graph-hub">
+        <span class="graph-node-label">Workspace hub</span>
+        <strong>{ workspace.name }</strong>
+        <p>Contexto operacional consolidado para indexação, decisão e entrega.</p>
+
+        <div class="graph-hub-stats">
+          <div>
+            <span>Memórias</span>
+            <strong>{ workspace_memory_count }</strong>
+          </div>
+          <div>
+            <span>Handoffs</span>
+            <strong>{ workspace_handoff_count }</strong>
+          </div>
+          <div>
+            <span>Decisões</span>
+            <strong>{ workspace_decision_record_count }</strong>
+          </div>
+          <div>
+            <span>Snapshots</span>
+            <strong>{ workspace_snapshot_count }</strong>
+          </div>
+        </div>
+      </article>
+
+      <div class="graph-node-grid">
+        <a class="graph-node graph-node-link" data-tone="cyan" href="#workspace-memory-panel">
+          <span class="graph-node-label">Memory</span>
+          if (workspace_memory_count > 0) {
+            <strong>{ workspace_memory_entries[0].title }</strong>
+            <p>{ workspace_memory_entries[0].content }</p>
+          } else {
+            <strong>Sem memória recente</strong>
+            <p>Registre contexto operacional para alimentar o mapa.</p>
+          }
+          <small>Conecta regras, fatos e lembranças do workspace.</small>
+        </a>
+
+        <a class="graph-node graph-node-link" data-tone="green" href="#workspace-handoffs-panel">
+          <span class="graph-node-label">Handoff</span>
+          if (workspace_handoff_count > 0) {
+            <strong>{ workspace_handoffs[0].from_role } → { workspace_handoffs[0].to_role }</strong>
+            <p>{ workspace_handoffs[0].summary }</p>
+          } else {
+            <strong>Sem handoff recente</strong>
+            <p>Use passagens de contexto para conectar papéis e panes.</p>
+          }
+          <small>Conecta agentes, papéis e transições de responsabilidade.</small>
+        </a>
+
+        <a class="graph-node graph-node-link" data-tone="amber" href="#workspace-decision-records-panel">
+          <span class="graph-node-label">Decision</span>
+          if (workspace_decision_record_count > 0) {
+            <strong>{ workspace_decision_records[0].title }</strong>
+            <p>{ workspace_decision_records[0].decision }</p>
+          } else {
+            <strong>Sem decisão recente</strong>
+            <p>Registre decisões que precisam ficar fixas no cockpit.</p>
+          }
+          <small>Conecta escolhas, racional e critérios de execução.</small>
+        </a>
+
+        <a class="graph-node graph-node-link" data-tone="violet" href="#workspace-snapshots-panel">
+          <span class="graph-node-label">Snapshot</span>
+          if (workspace_snapshot_count > 0) {
+            <strong>{ workspace_snapshots[0].title }</strong>
+            <p>{ workspace_snapshots[0].content }</p>
+          } else {
+            <strong>Sem snapshot recente</strong>
+            <p>Congele o estado do workspace quando precisar de handoff.</p>
+          }
+          <small>Conecta estados, escopos e marcos do contexto.</small>
+        </a>
+      </div>
+
+      <div class="graph-links">
+        <a href="#workspace-memory-panel">Memory → Decision</a>
+        <a href="#workspace-decision-records-panel">Decision → Snapshot</a>
+        <a href="#workspace-handoffs-panel">Handoff → Memory</a>
+        <a href="#graphify-panel">Snapshot → Workspace hub</a>
+        <a href="/workspaces/{ workspace.id }/graphify">Open Graphify page</a>
+      </div>
+    </div>
   </article>
 
-  <article class="panel">
+  <article class="panel" id="workspace-ecosystem-panel">
+    <span class="eyebrow">Ecosystem</span>
+    <h3>Referências do cockpit</h3>
+    <p>
+      O Graphify usa essas fontes para manter método, design e segurança
+      alinhados sem trocar a arquitetura do projeto.
+    </p>
+
+    <ul class="feature-list">
+      <li><strong>GSD</strong> define o ciclo de execução, verificação e entrega por fase.</li>
+      <li><strong>awesome-design-md</strong> orienta a leitura de DESIGN.md e os tokens visuais.</li>
+      <li><strong>UI UX Pro Max</strong> orienta estilo, atmosfera e sistemas de decisão visual.</li>
+      <li><strong>ECC</strong> orienta skills, agentes, hooks, segurança e harness patterns.</li>
+    </ul>
+  </article>
+
+  <article class="panel" id="workspace-design-panel">
     <span class="eyebrow">Design</span>
     <h3>DESIGN.md</h3>
     <p>
