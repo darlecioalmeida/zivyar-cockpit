@@ -339,6 +339,21 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
   overflow-wrap: anywhere;
 }
 
+/* Graphify / Context Engine specific tweaks */
+.context-engine-panel { padding: 20px; }
+.context-engine-panel .panel-title-row { align-items: center; justify-content: space-between; gap: 12px; }
+.context-engine-panel .panel { border: none; background: transparent; padding: 0; }
+.context-engine-panel .panel .panel-title-row { padding: 0 0 12px 0; }
+.context-engine-panel .workspace-memory-panel { border-radius: 18px; border: 1px solid var(--border); background: rgba(17,24,39,.85); padding: 18px; }
+.context-engine-panel .workspace-memory-list { display: grid; gap: 12px; }
+.workspace-memory-card { border: 1px solid var(--border); border-radius: 14px; padding: 12px; background: rgba(10,15,22,.5); }
+
+.graph-map { display: grid; grid-template-columns: 1fr 320px; gap: 18px; align-items: start; }
+.graph-hub { border: 1px solid var(--border); border-radius: 18px; padding: 18px; background: rgba(17,24,39,.9); }
+.graph-node-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.graph-node { display: block; padding: 14px; border-radius: 12px; border: 1px solid var(--border); background: rgba(10,15,22,.55); text-decoration: none; color: var(--text); }
+.graph-node .graph-node-label { display:block; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+
 .workspace-card-actions {
   display: flex;
   gap: 10px;
