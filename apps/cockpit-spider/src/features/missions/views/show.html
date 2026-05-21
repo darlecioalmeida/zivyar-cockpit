@@ -285,8 +285,7 @@ if (next_step_ready_notice) {
     }
       if (
       mission.mission_operational_closure_status != "closed" and
-      mission.execution_mode == "supervised_auto" or
-      mission.execution_mode == "autopilot"
+      execution_controls_enabled
     ) {
       <div class="mission-next-step-actions">
         <form method="post" action="/missions/{ mission.id }/next-step" class="inline-form">
@@ -296,7 +295,7 @@ if (next_step_ready_notice) {
       </div>
     }
     if (
-      (mission.execution_mode == "supervised_auto" or mission.execution_mode == "autopilot") and
+      execution_controls_enabled and
       mission.next_step_detected_code == "capture_pilot_brief" and
       mission.next_step_detected_route
     ) {
@@ -316,7 +315,7 @@ if (next_step_ready_notice) {
     }
 
     if (
-      (mission.execution_mode == "supervised_auto" or mission.execution_mode == "autopilot") and
+      execution_controls_enabled and
       mission.next_step_detected_code == "dispatch_pilot" and
       mission.next_step_detected_route
     ) {
@@ -336,7 +335,7 @@ if (next_step_ready_notice) {
       </div>
     }
     if (
-      (mission.execution_mode == "supervised_auto" or mission.execution_mode == "autopilot") and
+      execution_controls_enabled and
       mission.next_step_detected_code == "dispatch_planner" and
       mission.next_step_detected_route
     ) {
@@ -356,7 +355,7 @@ if (next_step_ready_notice) {
       </div>
     }
     if (
-      (mission.execution_mode == "supervised_auto" or mission.execution_mode == "autopilot") and
+      execution_controls_enabled and
       mission.next_step_detected_code == "capture_planner_plan" and
       mission.next_step_detected_route
     ) {
@@ -375,7 +374,7 @@ if (next_step_ready_notice) {
       </div>
     }
     if (
-      (mission.execution_mode == "supervised_auto" or mission.execution_mode == "autopilot") and
+      execution_controls_enabled and
       mission.next_step_detected_code == "dispatch_scout" and
       mission.next_step_detected_route
     ) {
@@ -395,7 +394,7 @@ if (next_step_ready_notice) {
       </div>
     }
     if (
-      (mission.execution_mode == "supervised_auto" or mission.execution_mode == "autopilot") and
+      execution_controls_enabled and
       mission.next_step_detected_code == "capture_scout_report" and
       mission.next_step_detected_route
     ) {
@@ -414,7 +413,7 @@ if (next_step_ready_notice) {
       </div>
     }
     if (
-      (mission.execution_mode == "supervised_auto" or mission.execution_mode == "autopilot") and
+      execution_controls_enabled and
       mission.next_step_detected_code == "dispatch_builder" and
       mission.next_step_detected_route
     ) {
@@ -434,7 +433,7 @@ if (next_step_ready_notice) {
       </div>
     }
     if (
-      (mission.execution_mode == "supervised_auto" or mission.execution_mode == "autopilot") and
+      execution_controls_enabled and
       mission.next_step_detected_code == "capture_builder_report" and
       mission.next_step_detected_route
     ) {
@@ -453,7 +452,7 @@ if (next_step_ready_notice) {
       </div>
     }
     if (
-      (mission.execution_mode == "supervised_auto" or mission.execution_mode == "autopilot") and
+      execution_controls_enabled and
       mission.next_step_detected_code == "dispatch_reviewer" and
       mission.next_step_detected_route
     ) {
@@ -473,7 +472,7 @@ if (next_step_ready_notice) {
       </div>
     }
     if (
-      (mission.execution_mode == "supervised_auto" or mission.execution_mode == "autopilot") and
+      execution_controls_enabled and
       mission.next_step_detected_code == "capture_reviewer_report" and
       mission.next_step_detected_route
     ) {
@@ -492,7 +491,7 @@ if (next_step_ready_notice) {
       </div>
     }
     if (
-      (mission.execution_mode == "supervised_auto" or mission.execution_mode == "autopilot") and
+      execution_controls_enabled and
       mission.next_step_detected_code == "dispatch_executor" and
       mission.next_step_detected_route
     ) {
@@ -512,7 +511,7 @@ if (next_step_ready_notice) {
       </div>
     }
     if (
-      (mission.execution_mode == "supervised_auto" or mission.execution_mode == "autopilot") and
+      execution_controls_enabled and
       mission.next_step_detected_code == "capture_executor_report" and
       mission.next_step_detected_route
     ) {
@@ -531,7 +530,7 @@ if (next_step_ready_notice) {
       </div>
     }
     if (
-      (mission.execution_mode == "supervised_auto" or mission.execution_mode == "autopilot") and
+      execution_controls_enabled and
       mission.next_step_detected_code == "dispatch_pilot_delivery" and
       mission.next_step_detected_route
     ) {
@@ -551,7 +550,7 @@ if (next_step_ready_notice) {
       </div>
     }
     if (
-      (mission.execution_mode == "supervised_auto" or mission.execution_mode == "autopilot") and
+      execution_controls_enabled and
       mission.next_step_detected_code == "capture_pilot_delivery_report" and
       mission.next_step_detected_route
     ) {
@@ -570,7 +569,7 @@ if (next_step_ready_notice) {
       </div>
     }
     if (
-      (mission.execution_mode == "supervised_auto" or mission.execution_mode == "autopilot") and
+      execution_controls_enabled and
       mission.next_step_detected_code == "finalize_mission" and
       mission.next_step_detected_route
     ) {

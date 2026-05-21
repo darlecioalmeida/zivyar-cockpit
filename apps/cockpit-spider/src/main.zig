@@ -465,6 +465,7 @@ const ActiveMissionPanelRow = struct {
     status: []const u8,
     priority: []const u8,
     execution_mode: []const u8,
+    execution_controls_enabled: bool,
     pilot_dispatch_status: []const u8,
     pilot_session_external_id: []const u8,
     dispatched_to_pilot_at_label: []const u8,
@@ -6734,11 +6735,15 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
     const linked_squad_id = workspace.default_squad_id orelse 0;
     const runtime_rows = try loadWorkspaceRuntime(c, workspace.id);
 
-    try reconcileWorkspaceRuntimeState(c, runtime_rows[0]);
+    if (runtime_rows.len > 0) {
+        reconcileWorkspaceRuntimeState(c, runtime_rows[0]) catch {};
+    }
 
     const refreshed_runtime_rows = try loadWorkspaceRuntime(c, workspace.id);
 
-    try reconcileWorkspacePaneSessions(c, workspace.id, refreshed_runtime_rows[0]);
+    if (refreshed_runtime_rows.len > 0) {
+        reconcileWorkspacePaneSessions(c, workspace.id, refreshed_runtime_rows[0]) catch {};
+    }
 
     const runtime_events = try db.query(
         WorkspaceRuntimeEventRow,
@@ -7013,7 +7018,7 @@ fn workspaceShow(c: *spider.Ctx) !spider.Response {
         .closed_mission_count = countClosedWorkspaceMissions(workspace_missions),
         .active_missions = active_missions,
         .active_mission_count = active_missions.len,
-        .runtime = refreshed_runtime_rows[0],
+        .runtime = if (refreshed_runtime_rows.len > 0) refreshed_runtime_rows[0] else runtime_rows[0],
         .runtime_events = runtime_events,
         .runtime_event_count = runtime_events.len,
         .runtime_logs = runtime_logs,
@@ -10205,6 +10210,9 @@ fn missionShow(c: *spider.Ctx) !spider.Response {
     return c.view("missions/show", .{
         .title = rows[0].title,
         .mission = rows[0],
+        .execution_controls_enabled =
+            std.mem.eql(u8, rows[0].execution_mode, "supervised_auto") or
+            std.mem.eql(u8, rows[0].execution_mode, "autopilot"),
         .mission_events = mission_events,
         .mission_event_count = mission_events.len,
         .next_step_notice =
