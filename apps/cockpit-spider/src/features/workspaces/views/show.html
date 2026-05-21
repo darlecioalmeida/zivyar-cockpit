@@ -169,10 +169,10 @@ if (snapshot_notice) {
     </p>
 
     <div class="insert-action-grid">
-      <a class="ghost-mini" href="#workspace-memory-panel">Inserir memória</a>
-      <a class="ghost-mini" href="#workspace-handoffs-panel">Inserir handoff</a>
-      <a class="ghost-mini" href="#workspace-decision-records-panel">Inserir decisão</a>
-      <a class="ghost-mini" href="#workspace-snapshots-panel">Inserir snapshot</a>
+      <button class="ghost-mini" type="button" onclick="return window.openWorkspaceInsertPanelByClick('#workspace-memory-panel', event)">Inserir memória</button>
+      <button class="ghost-mini" type="button" onclick="return window.openWorkspaceInsertPanelByClick('#workspace-handoffs-panel', event)">Inserir handoff</button>
+      <button class="ghost-mini" type="button" onclick="return window.openWorkspaceInsertPanelByClick('#workspace-decision-records-panel', event)">Inserir decisão</button>
+      <button class="ghost-mini" type="button" onclick="return window.openWorkspaceInsertPanelByClick('#workspace-snapshots-panel', event)">Inserir snapshot</button>
     </div>
   </article>
 
@@ -1661,7 +1661,47 @@ if (snapshot_notice) {
 <script src="/js/runtime-live-status.js?v=20260520-1"></script>
 
 <script>
+  window.openWorkspaceInsertPanel = function (hash) {
+    if (!hash || !hash.startsWith("#")) return false;
+
+    const panel = document.querySelector(hash);
+    if (!panel) return false;
+
+    const details = panel.querySelector("details.insert-details");
+    if (!details) return false;
+
+    details.open = true;
+
+    const focusTarget = details.querySelector("input, textarea, button");
+    if (focusTarget) {
+      focusTarget.focus();
+    }
+
+    return true;
+  };
+
+  window.openWorkspaceInsertPanelByClick = function (hash, event) {
+    if (event) {
+      event.preventDefault();
+    }
+
+    const opened = window.openWorkspaceInsertPanel(hash);
+    if (opened) {
+      history.replaceState(null, "", hash);
+    }
+
+    return false;
+  };
+
   document.addEventListener("DOMContentLoaded", function () {
+    if (window.location.hash) {
+      window.openWorkspaceInsertPanel(window.location.hash);
+    }
+
+    window.addEventListener("hashchange", function () {
+      window.openWorkspaceInsertPanel(window.location.hash);
+    });
+
     const storageKey = "zivyar.workspaceMissionRoom.filter";
     const lists = document.querySelectorAll("[data-workspace-mission-filter]");
     const buttons = document.querySelectorAll("[data-filter-target]");
