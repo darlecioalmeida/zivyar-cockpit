@@ -58,16 +58,68 @@ if (snapshot_notice) {
 </section>
 }
 
-<section class="panel context-engine-panel">
-  <div class="panel-title-row">
-    <div>
-      <span class="eyebrow">Context Engine</span>
-      <h3>Context Engine</h3>
+<section class="workspace-focus-grid">
+  <article class="panel workspace-focus-panel">
+    <div class="panel-title-row">
+      <div>
+        <span class="eyebrow">Context Engine</span>
+        <h3>Inserções rápidas</h3>
+      </div>
+      <span class="mini-badge">Context</span>
     </div>
-    <span class="mini-badge">Context</span>
-  </div>
 
-  <div class="grid two">
+    <p>
+      O Context Engine fica como painel de ação. Use os botões para abrir o
+      formulário certo quando precisar inserir memória, handoff, decisão ou
+      snapshot.
+    </p>
+
+    <div class="insert-action-grid">
+      <a class="ghost-mini" href="#workspace-memory-panel">Inserir memória</a>
+      <a class="ghost-mini" href="#workspace-handoffs-panel">Inserir handoff</a>
+      <a class="ghost-mini" href="#workspace-decision-records-panel">Inserir decisão</a>
+      <a class="ghost-mini" href="#workspace-snapshots-panel">Inserir snapshot</a>
+    </div>
+  </article>
+
+  <article class="panel workspace-map-panel" id="workspace-graphify-map">
+    <div class="panel-title-row">
+      <div>
+        <span class="eyebrow">Graphify MAP do projeto</span>
+        <h3>Mapa do projeto</h3>
+      </div>
+      <span class="mini-badge">Graphify</span>
+    </div>
+
+    <p>
+      O MAP resume o estado do workspace e liga memória, handoffs, decisões e
+      snapshots em uma visão navegável.
+    </p>
+
+    <div class="graph-hub-stats graph-hub-stats-compact">
+      <div>
+        <span>Memórias</span>
+        <strong>{ workspace_memory_count }</strong>
+      </div>
+      <div>
+        <span>Handoffs</span>
+        <strong>{ workspace_handoff_count }</strong>
+      </div>
+      <div>
+        <span>Decisões</span>
+        <strong>{ workspace_decision_record_count }</strong>
+      </div>
+      <div>
+        <span>Snapshots</span>
+        <strong>{ workspace_snapshot_count }</strong>
+      </div>
+    </div>
+
+    <a class="primary-button inline" href="/workspaces/{ workspace.id }/graphify">Abrir Graphify MAP</a>
+  </article>
+</section>
+
+<section class="grid two workspace-context-records">
 
   <section class="panel workspace-memory-panel" id="workspace-memory-panel">
   <div class="panel-title-row">
@@ -77,23 +129,27 @@ if (snapshot_notice) {
     <span class="mini-badge">{ workspace_memory_count } registros</span>
   </div>
 
-  <form method="post" action="/workspaces/{ workspace.id }/memory" class="workspace-memory-form">
-    <div class="workspace-memory-form-grid">
-      <label>
-        <span>Título</span>
-        <input name="title" type="text" placeholder="Ex.: Decisão de arquitetura" required />
-      </label>
+  <details class="insert-details">
+    <summary class="ghost-mini">Inserir memória</summary>
 
-      <label>
-        <span>Conteúdo</span>
-        <textarea name="content" rows="4" placeholder="Registre aqui um contexto, decisão, observação ou handoff" required></textarea>
-      </label>
-    </div>
+    <form method="post" action="/workspaces/{ workspace.id }/memory" class="workspace-memory-form">
+      <div class="workspace-memory-form-grid">
+        <label>
+          <span>Título</span>
+          <input name="title" type="text" placeholder="Ex.: Decisão de arquitetura" required />
+        </label>
 
-    <div class="form-actions">
-      <button class="primary-button" type="submit">Salvar memória</button>
-    </div>
-  </form>
+        <label>
+          <span>Conteúdo</span>
+          <textarea name="content" rows="4" placeholder="Registre aqui um contexto, decisão, observação ou handoff" required></textarea>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button class="primary-button" type="submit">Salvar memória</button>
+      </div>
+    </form>
+  </details>
 
   if (workspace_memory_count > 0) {
     <div class="workspace-memory-list">
@@ -126,28 +182,32 @@ if (snapshot_notice) {
     <span class="mini-badge">{ workspace_snapshot_count } registros</span>
   </div>
 
-  <form method="post" action="/workspaces/{ workspace.id }/snapshots" class="workspace-memory-form">
-    <div class="workspace-memory-form-grid">
-      <label>
-        <span>Título</span>
-        <input name="title" type="text" placeholder="Ex.: Estado do workspace após handoff" required />
-      </label>
+  <details class="insert-details">
+    <summary class="ghost-mini">Inserir snapshot</summary>
 
-      <label>
-        <span>Escopo</span>
-        <input name="scope" type="text" placeholder="Ex.: workspace, mission engine, runtime" required />
-      </label>
+    <form method="post" action="/workspaces/{ workspace.id }/snapshots" class="workspace-memory-form">
+      <div class="workspace-memory-form-grid">
+        <label>
+          <span>Título</span>
+          <input name="title" type="text" placeholder="Ex.: Estado do workspace após handoff" required />
+        </label>
 
-      <label>
-        <span>Conteúdo</span>
-        <textarea name="content" rows="4" placeholder="Capture o estado relevante para retomada posterior" required></textarea>
-      </label>
-    </div>
+        <label>
+          <span>Escopo</span>
+          <input name="scope" type="text" placeholder="Ex.: workspace, mission engine, runtime" required />
+        </label>
 
-    <div class="form-actions">
-      <button class="primary-button" type="submit">Salvar snapshot</button>
-    </div>
-  </form>
+        <label>
+          <span>Conteúdo</span>
+          <textarea name="content" rows="4" placeholder="Capture o estado relevante para retomada posterior" required></textarea>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button class="primary-button" type="submit">Salvar snapshot</button>
+      </div>
+    </form>
+  </details>
 
   if (workspace_snapshot_count > 0) {
     <div class="workspace-memory-list">
@@ -180,28 +240,32 @@ if (snapshot_notice) {
     <span class="mini-badge">{ workspace_decision_record_count } registros</span>
   </div>
 
-  <form method="post" action="/workspaces/{ workspace.id }/decision-records" class="workspace-memory-form">
-    <div class="workspace-memory-form-grid">
-      <label>
-        <span>Título</span>
-        <input name="title" type="text" placeholder="Ex.: Stack aprovada para o workspace" required />
-      </label>
+  <details class="insert-details">
+    <summary class="ghost-mini">Inserir decisão</summary>
 
-      <label>
-        <span>Decisão</span>
-        <input name="decision" type="text" placeholder="Ex.: Usar runtime OpenCode com supervisão" required />
-      </label>
+    <form method="post" action="/workspaces/{ workspace.id }/decision-records" class="workspace-memory-form">
+      <div class="workspace-memory-form-grid">
+        <label>
+          <span>Título</span>
+          <input name="title" type="text" placeholder="Ex.: Stack aprovada para o workspace" required />
+        </label>
 
-      <label>
-        <span>Racional</span>
-        <textarea name="rationale" rows="4" placeholder="Explique por que essa decisão foi tomada" required></textarea>
-      </label>
-    </div>
+        <label>
+          <span>Decisão</span>
+          <input name="decision" type="text" placeholder="Ex.: Usar runtime OpenCode com supervisão" required />
+        </label>
 
-    <div class="form-actions">
-      <button class="primary-button" type="submit">Salvar decisão</button>
-    </div>
-  </form>
+        <label>
+          <span>Racional</span>
+          <textarea name="rationale" rows="4" placeholder="Explique por que essa decisão foi tomada" required></textarea>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button class="primary-button" type="submit">Salvar decisão</button>
+      </div>
+    </form>
+  </details>
 
   if (workspace_decision_record_count > 0) {
     <div class="workspace-memory-list">
@@ -234,33 +298,37 @@ if (snapshot_notice) {
     <span class="mini-badge">{ workspace_handoff_count } registros</span>
   </div>
 
-  <form method="post" action="/workspaces/{ workspace.id }/handoffs" class="workspace-memory-form">
-    <div class="workspace-memory-form-grid">
-      <label>
-        <span>Origem</span>
-        <input name="from_role" type="text" placeholder="Ex.: Planner" required />
-      </label>
+  <details class="insert-details">
+    <summary class="ghost-mini">Inserir handoff</summary>
 
-      <label>
-        <span>Destino</span>
-        <input name="to_role" type="text" placeholder="Ex.: Scout" required />
-      </label>
+    <form method="post" action="/workspaces/{ workspace.id }/handoffs" class="workspace-memory-form">
+      <div class="workspace-memory-form-grid">
+        <label>
+          <span>Origem</span>
+          <input name="from_role" type="text" placeholder="Ex.: Planner" required />
+        </label>
 
-      <label>
-        <span>Resumo</span>
-        <input name="summary" type="text" placeholder="Ex.: Plano operacional pronto para reconhecimento" required />
-      </label>
+        <label>
+          <span>Destino</span>
+          <input name="to_role" type="text" placeholder="Ex.: Scout" required />
+        </label>
 
-      <label>
-        <span>Contexto</span>
-        <textarea name="context" rows="4" placeholder="Detalhe a passagem de contexto entre agentes"></textarea>
-      </label>
-    </div>
+        <label>
+          <span>Resumo</span>
+          <input name="summary" type="text" placeholder="Ex.: Plano operacional pronto para reconhecimento" required />
+        </label>
 
-    <div class="form-actions">
-      <button class="primary-button" type="submit">Salvar handoff</button>
-    </div>
-  </form>
+        <label>
+          <span>Contexto</span>
+          <textarea name="context" rows="4" placeholder="Detalhe a passagem de contexto entre agentes"></textarea>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button class="primary-button" type="submit">Salvar handoff</button>
+      </div>
+    </form>
+  </details>
 
   if (workspace_handoff_count > 0) {
     <div class="workspace-memory-list">
