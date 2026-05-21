@@ -58,6 +58,100 @@ if (snapshot_notice) {
 </section>
 }
 
+<section class="workspace-detail-grid">
+  <article class="panel workspace-summary-panel" id="workspace-summary-panel">
+    <span class="eyebrow">Resumo</span>
+    <h3>Identidade do workspace</h3>
+
+    <div class="detail-meta-grid">
+      <div>
+        <span>Caminho local</span>
+        <strong>{ workspace.local_path }</strong>
+      </div>
+
+      <div>
+        <span>Stack principal</span>
+        <strong>{ workspace.stack_name }</strong>
+      </div>
+
+      <div>
+        <span>Squad padrão</span>
+        <strong>{ workspace.squad_name }</strong>
+      </div>
+
+      <div>
+        <span>Status atual</span>
+        <strong>{ workspace.status }</strong>
+      </div>
+    </div>
+  </article>
+
+  <article class="panel runtime-status-panel" id="workspace-runtime-panel" data-workspace-id="{ workspace.id }">
+    <span class="eyebrow">Runtime</span>
+    <h3>Docker + OpenCode Server</h3>
+
+    <div class="runtime-state-badge" id="runtime-live-state">
+      { runtime.state }
+    </div>
+
+    <p id="runtime-live-message">{ runtime.status_message }</p>
+
+    <div class="runtime-detail-grid">
+      <div>
+        <span>Container</span>
+        <strong id="runtime-live-container">{ runtime.container_name }</strong>
+      </div>
+
+      <div>
+        <span>Porta OpenCode</span>
+        <strong id="runtime-live-port">{ runtime.opencode_port_label }</strong>
+      </div>
+
+      <div>
+        <span>Servidor</span>
+        <strong id="runtime-live-server">{ runtime.server_url_label }</strong>
+      </div>
+    </div>
+
+    if (runtime.is_prepared) {
+      if (runtime.state == "running") {
+        <div class="form-actions runtime-actions">
+          <a class="primary-button" href="{ runtime.server_url_label }" target="_blank" rel="noreferrer">Abrir Server</a>
+
+          <form
+            method="post"
+            action="/workspaces/{ workspace.id }/runtime/stop"
+            class="inline-form runtime-action-form"
+            data-runtime-action="stop"
+          >
+            <button class="danger-button" type="submit">Parar Runtime</button>
+          </form>
+        </div>
+      } else {
+        <div class="form-actions runtime-actions">
+          <form
+            method="post"
+            action="/workspaces/{ workspace.id }/runtime/start"
+            class="inline-form runtime-action-form"
+            data-runtime-action="start"
+          >
+            <button class="primary-button" type="submit">Iniciar Runtime</button>
+          </form>
+        </div>
+      }
+    } else {
+      <form
+        method="post"
+        action="/workspaces/{ workspace.id }/runtime/prepare"
+        class="runtime-prepare-form runtime-action-form"
+        data-runtime-action="prepare"
+      >
+        <button class="primary-button" type="submit">Preparar Runtime</button>
+      </form>
+    }
+  </article>
+</section>
+
 <section class="workspace-focus-grid">
   <article class="panel workspace-focus-panel">
     <div class="panel-title-row">
@@ -356,100 +450,6 @@ if (snapshot_notice) {
 </section>
 
   </div>
-</section>
-
-<section class="workspace-detail-grid">
-  <article class="panel workspace-summary-panel" id="workspace-summary-panel">
-    <span class="eyebrow">Resumo</span>
-    <h3>Identidade do workspace</h3>
-
-    <div class="detail-meta-grid">
-      <div>
-        <span>Caminho local</span>
-        <strong>{ workspace.local_path }</strong>
-      </div>
-
-      <div>
-        <span>Stack principal</span>
-        <strong>{ workspace.stack_name }</strong>
-      </div>
-
-      <div>
-        <span>Squad padrão</span>
-        <strong>{ workspace.squad_name }</strong>
-      </div>
-
-      <div>
-        <span>Status atual</span>
-        <strong>{ workspace.status }</strong>
-      </div>
-    </div>
-  </article>
-
-  <article class="panel runtime-status-panel" id="workspace-runtime-panel" data-workspace-id="{ workspace.id }">
-    <span class="eyebrow">Runtime</span>
-    <h3>Docker + OpenCode Server</h3>
-
-    <div class="runtime-state-badge" id="runtime-live-state">
-      { runtime.state }
-    </div>
-
-    <p id="runtime-live-message">{ runtime.status_message }</p>
-
-    <div class="runtime-detail-grid">
-      <div>
-        <span>Container</span>
-        <strong id="runtime-live-container">{ runtime.container_name }</strong>
-      </div>
-
-      <div>
-        <span>Porta OpenCode</span>
-        <strong id="runtime-live-port">{ runtime.opencode_port_label }</strong>
-      </div>
-
-      <div>
-        <span>Servidor</span>
-        <strong id="runtime-live-server">{ runtime.server_url_label }</strong>
-      </div>
-    </div>
-
-    if (runtime.is_prepared) {
-      if (runtime.state == "running") {
-        <div class="form-actions runtime-actions">
-          <a class="primary-button" href="{ runtime.server_url_label }" target="_blank" rel="noreferrer">Abrir Server</a>
-
-          <form
-            method="post"
-            action="/workspaces/{ workspace.id }/runtime/stop"
-            class="inline-form runtime-action-form"
-            data-runtime-action="stop"
-          >
-            <button class="danger-button" type="submit">Parar Runtime</button>
-          </form>
-        </div>
-      } else {
-        <div class="form-actions runtime-actions">
-          <form
-            method="post"
-            action="/workspaces/{ workspace.id }/runtime/start"
-            class="inline-form runtime-action-form"
-            data-runtime-action="start"
-          >
-            <button class="primary-button" type="submit">Iniciar Runtime</button>
-          </form>
-        </div>
-      }
-    } else {
-      <form
-        method="post"
-        action="/workspaces/{ workspace.id }/runtime/prepare"
-        class="runtime-prepare-form runtime-action-form"
-        data-runtime-action="prepare"
-      >
-        <button class="primary-button" type="submit">Preparar Runtime</button>
-      </form>
-    }
-  </article>
 </section>
 
 <section class="panel runtime-history-panel">
