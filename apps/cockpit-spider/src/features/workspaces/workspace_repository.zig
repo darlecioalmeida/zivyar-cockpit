@@ -486,6 +486,26 @@ pub fn resetRuntimeOnPathChange(c: *spider.Ctx, workspace_id: i32) !void {
     );
 }
 
+pub fn markPanesStaleOnRuntimeRestart(c: *spider.Ctx, workspace_id: i32) !void {
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE workspace_panes
+        \\SET pane_state = CASE
+        \\        WHEN session_external_id <> '' THEN 'stale'
+        \\        ELSE pane_state
+        \\    END,
+        \\    stale_reason = CASE
+        \\        WHEN session_external_id <> '' THEN 'runtime_restarted'
+        \\        ELSE stale_reason
+        \\    END,
+        \\    updated_at = NOW()
+        \\WHERE workspace_id = $1
+    ,
+        .{workspace_id},
+    );
+}
+
 pub fn markPanesStaleOnPathChange(c: *spider.Ctx, workspace_id: i32) !void {
     try db.query(
         void,

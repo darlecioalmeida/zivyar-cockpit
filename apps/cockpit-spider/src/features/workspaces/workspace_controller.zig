@@ -13,36 +13,26 @@ fn syncProvidersToOpenCode(c: *spider.Ctx, workspace_id: i32, server_url: []cons
         if (!provider.is_active) continue;
 
         const opencode_provider_id = helpers.mapProviderTypeToOpenCode(provider.name, provider.provider_type);
-
         const auth_url = try std.fmt.allocPrint(c.arena, "{s}/auth/{s}", .{ server_url, opencode_provider_id });
         
-        // O OpenCode espera os campos de autenticação diretamente no objeto
-        // conforme o esquema de cada provedor.
-        var body_buf: std.ArrayList(u8) = .empty;
-        defer body_buf.deinit(c.arena);
-        try body_buf.append(c.arena, '{');
-        
-        if (std.mem.eql(u8, opencode_provider_id, "ollama")) {
-            try body_buf.appendSlice(c.arena, "\"host\":\"");
-            try body_buf.appendSlice(c.arena, if (provider.base_url.len > 0) provider.base_url else "http://localhost:11434");
-            try body_buf.append(c.arena, '\"');
-        } else {
-            try body_buf.appendSlice(c.arena, "\"apiKey\":\"");
-            try body_buf.appendSlice(c.arena, provider.api_key);
-            try body_buf.append(c.arena, '\"');
-            
-            if (provider.base_url.len > 0 and !std.mem.eql(u8, opencode_provider_id, "opencode")) {
-                try body_buf.appendSlice(c.arena, ",\"baseURL\":\"");
-                try body_buf.appendSlice(c.arena, provider.base_url);
-                try body_buf.append(c.arena, '\"');
-            }
-        }
-        try body_buf.append(c.arena, '}');
+        const metadata_json = if (std.mem.eql(u8, opencode_provider_id, "ollama")) blk: {
+            const host = if (provider.base_url.len > 0) provider.base_url else "http://localhost:11434";
+            break :blk try std.fmt.allocPrint(c.arena, "{{\"host\":\"{s}\"}}", .{host});
+        } else if (provider.base_url.len > 0 and !std.mem.eql(u8, opencode_provider_id, "opencode")) blk: {
+            break :blk try std.fmt.allocPrint(c.arena, "{{\"baseURL\":\"{s}\"}}", .{provider.base_url});
+        } else "{}";
+
+        const key = if (std.mem.eql(u8, opencode_provider_id, "ollama")) "ollama" else provider.api_key;
+
+        const body_buf = try std.fmt.allocPrint(c.arena, 
+            "{{\"type\":\"api\",\"key\":\"{s}\",\"metadata\":{s}}}",
+            .{ key, metadata_json }
+        );
 
         const result = core.runRuntimeCommand(c, &.{
             "curl", "-fsS", "-X", "PUT", auth_url,
             "-H", "Content-Type: application/json",
-            "-d", body_buf.items,
+            "-d", body_buf,
         });
 
         if (!result.ok) {
@@ -51,38 +41,7 @@ fn syncProvidersToOpenCode(c: *spider.Ctx, workspace_id: i32, server_url: []cons
             std.log.info("war_room: synced provider {s} to OpenCode", .{ provider.name });
         }
     }
-    
-    // Also set the default model globally if needed, or per session. 
-    // For now, syncing providers is the main goal.
     _ = workspace_id;
-}
-
-fn loadWorkspaceSquads(c: *spider.Ctx) ![]model.WorkspaceSquadOptionRow {
-    return repo.listSquads(c);
-}
-
-fn loadWorkspaceSquadsForSelected(c: *spider.Ctx, selected_squad_id: i32) ![]model.WorkspaceSquadOptionRow {
-    return repo.listSquadsForSelected(c, selected_squad_id);
-}
-
-fn countOpenWorkspaceMissions(rows: []const model.WorkspaceMissionPreviewRow) usize {
-    var total: usize = 0;
-    for (rows) |row| {
-        if (!std.mem.eql(u8, row.mission_operational_closure_status, "closed")) {
-            total += 1;
-        }
-    }
-    return total;
-}
-
-fn countClosedWorkspaceMissions(rows: []const model.WorkspaceMissionPreviewRow) usize {
-    var total: usize = 0;
-    for (rows) |row| {
-        if (std.mem.eql(u8, row.mission_operational_closure_status, "closed")) {
-            total += 1;
-        }
-    }
-    return total;
 }
 
 fn reconcileWorkspacePaneSessions(
@@ -233,6 +192,34 @@ fn reconcileWorkspaceRuntimeState(
         "docker inspect --format {{.State.Running}} <workspace-container>",
         inspect_result,
     );
+}
+
+fn loadWorkspaceSquads(c: *spider.Ctx) ![]model.WorkspaceSquadOptionRow {
+    return repo.listSquads(c);
+}
+
+fn loadWorkspaceSquadsForSelected(c: *spider.Ctx, selected_squad_id: i32) ![]model.WorkspaceSquadOptionRow {
+    return repo.listSquadsForSelected(c, selected_squad_id);
+}
+
+fn countOpenWorkspaceMissions(rows: []const model.WorkspaceMissionPreviewRow) usize {
+    var total: usize = 0;
+    for (rows) |row| {
+        if (!std.mem.eql(u8, row.mission_operational_closure_status, "closed")) {
+            total += 1;
+        }
+    }
+    return total;
+}
+
+fn countClosedWorkspaceMissions(rows: []const model.WorkspaceMissionPreviewRow) usize {
+    var total: usize = 0;
+    for (rows) |row| {
+        if (std.mem.eql(u8, row.mission_operational_closure_status, "closed")) {
+            total += 1;
+        }
+    }
+    return total;
 }
 
 pub fn workspaces(c: *spider.Ctx) !spider.Response {
@@ -702,9 +689,7 @@ pub fn workspaceShow(c: *spider.Ctx) !spider.Response {
         
         // Sincroniza provedores se o runtime estiver rodando
         if (std.mem.eql(u8, refreshed_runtime_rows[0].state, "running")) {
-            syncProvidersToOpenCode(c, workspace.id, refreshed_runtime_rows[0].server_url_label) catch |err| {
-                std.log.err("war_room: error syncing providers on workspaceShow: {}", .{err});
-            };
+            syncProvidersToOpenCode(c, workspace.id, refreshed_runtime_rows[0].server_url_label) catch {};
         }
     }
 
@@ -1206,8 +1191,6 @@ pub fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
     const internal_port = spider.env.getInt(i32, "ZIVYAR_RUNTIME_INTERNAL_PORT", 4096);
     const host_port = core.runtimeHostPort(workspace_id);
 
-    const host_port_text = try std.fmt.allocPrint(c.arena, "{d}", .{host_port});
-    const internal_port_text = try std.fmt.allocPrint(c.arena, "{d}", .{internal_port});
     const published_port = try std.fmt.allocPrint(
         c.arena,
         "127.0.0.1:{d}:{d}",
@@ -1286,6 +1269,9 @@ pub fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
     }
 
     try env_args.appendSlice(c.arena, &.{ "-v", volume_mount, "-w", "/workspace", image_name });
+
+    // Forçamos a limpeza de sessões antigas no banco ao reiniciar o runtime
+    try repo.markPanesStaleOnRuntimeRestart(c, workspace_id);
 
     try helpers.insertRuntimeEvent(
         c,
@@ -1428,9 +1414,7 @@ pub fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
     }
 
     // Sincroniza os provedores configurados no Cockpit com o servidor OpenCode recém-iniciado
-    syncProvidersToOpenCode(c, workspace_id, server_url) catch |err| {
-        std.log.err("war_room: error syncing providers after start: {}", .{err});
-    };
+    syncProvidersToOpenCode(c, workspace_id, server_url) catch {};
 
     try repo.updateRuntimeStateWithPort(
         c,
@@ -1448,9 +1432,6 @@ pub fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
         "Runtime em execução",
         "O container foi iniciado e o OpenCode Server respondeu ao healthcheck com sucesso.",
     );
-
-    _ = host_port_text;
-    _ = internal_port_text;
 
     const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
 
@@ -2113,5 +2094,3 @@ pub fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
     const redirect_url = try std.fmt.allocPrint(c.arena, "/workspaces/{d}", .{workspace_id});
     return c.redirect(redirect_url);
 }
-
-
