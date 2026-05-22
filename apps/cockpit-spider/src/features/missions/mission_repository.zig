@@ -124,32 +124,13 @@ const mission_from_active_join =
 ;
 
 pub fn getMissionById(c: *spider.Ctx, mission_id: i32) ![]model.MissionRow {
-    return db.query(
-        model.MissionRow,
-        c.arena,
-        \\SELECT
-        ++ mission_select_fields ++
-        mission_from_join ++
-        \\WHERE m.id = $1
-        \\LIMIT 1
-    ,
-        .{mission_id},
-    );
+    const sql = try std.fmt.allocPrint(c.arena, "SELECT {s} {s} WHERE m.id = $1 LIMIT 1", .{ mission_select_fields, mission_from_join });
+    return db.query(model.MissionRow, c.arena, sql, .{mission_id});
 }
 
 pub fn getActiveMissionForWorkspace(c: *spider.Ctx, workspace_id: i32, mission_id: i32) ![]model.MissionRow {
-    return db.query(
-        model.MissionRow,
-        c.arena,
-        \\SELECT
-        ++ mission_select_fields ++
-        mission_from_active_join ++
-        \\WHERE w.id = $1
-        \\AND m.id = $2
-        \\LIMIT 1
-    ,
-        .{ workspace_id, mission_id },
-    );
+    const sql = try std.fmt.allocPrint(c.arena, "SELECT {s} {s} WHERE w.id = $1 AND m.id = $2 LIMIT 1", .{ mission_select_fields, mission_from_active_join });
+    return db.query(model.MissionRow, c.arena, sql, .{ workspace_id, mission_id });
 }
 
 pub fn getMissionActivationTarget(c: *spider.Ctx, mission_id: i32, workspace_id: i32) ![]model.MissionActivationTargetRow {
@@ -169,16 +150,8 @@ pub fn getMissionActivationTarget(c: *spider.Ctx, mission_id: i32, workspace_id:
 }
 
 pub fn listMissions(c: *spider.Ctx) ![]model.MissionRow {
-    return db.query(
-        model.MissionRow,
-        c.arena,
-        \\SELECT
-        ++ mission_select_fields ++
-        mission_from_join ++
-        \\ORDER BY m.id DESC
-    ,
-        .{},
-    );
+    const sql = try std.fmt.allocPrint(c.arena, "SELECT {s} {s} ORDER BY m.id DESC", .{ mission_select_fields, mission_from_join });
+    return db.query(model.MissionRow, c.arena, sql, .{});
 }
 
 pub fn listMissionWorkspaces(c: *spider.Ctx) ![]model.MissionWorkspaceOptionRow {

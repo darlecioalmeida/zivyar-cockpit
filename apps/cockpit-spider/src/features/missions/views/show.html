@@ -289,9 +289,19 @@ if (next_step_ready_notice) {
     ) {
       <div class="mission-next-step-actions">
         <form method="post" action="/missions/{ mission.id }/next-step" class="inline-form">
-          <button class="primary-button compact" type="submit">Executar próxima etapa</button>
+          <button class="primary-button compact" type="submit">
+            if (mission.execution_mode == "autopilot") {
+              Iniciar execução automática
+            } else {
+              Executar próxima etapa
+            }
+          </button>
         </form>
-        <small>Modo diagnóstico: o Cockpit detecta a próxima etapa, mas ainda não executa automaticamente.</small>
+        if (mission.execution_mode == "autopilot") {
+          <small>Modo autopilot: uma vez iniciado, o Cockpit executa automaticamente todas as etapas operacionais até o encerramento da missão.</small>
+        } else {
+          <small>Modo diagnóstico: o Cockpit detecta a próxima etapa, mas ainda não executa automaticamente.</small>
+        }
       </div>
     }
     if (

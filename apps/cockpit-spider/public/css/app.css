@@ -456,6 +456,36 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
 .context-engine-panel .workspace-memory-list { margin-top: 12px; }
 .context-engine-panel .workspace-memory-card { padding: 12px; }
 .context-engine-panel .workspace-memory-card small { color: var(--muted); display: block; margin-top: 8px; }
+.workspace-memory-card-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.record-edit-details {
+  min-width: 0;
+}
+
+.record-edit-details > summary {
+  list-style: none;
+}
+
+.record-edit-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.record-edit-form {
+  margin-top: 12px;
+}
+
+.record-edit-form .form-actions {
+  padding-top: 0;
+}
+
+.workspace-memory-card .panel-title-row {
+  align-items: flex-start;
+}
 
 .context-engine-panel .panel { box-shadow: 0 6px 18px rgba(2,6,23,0.35); }
 

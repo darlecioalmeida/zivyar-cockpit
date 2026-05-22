@@ -128,16 +128,23 @@ pub fn show(c: *spider.Ctx) !spider.Response {
     const mission_id = std.fmt.parseInt(i32, id_raw, 10) catch
         return c.text("Missão inválida.", .{ .status = .bad_request });
 
+    std.log.info("show: calling getMissionById", .{});
     const rows = try repo.getMissionById(c, mission_id);
+    std.log.info("show: getMissionById ok rows={d}", .{rows.len});
 
     if (rows.len == 0) {
         return c.text("Missão não encontrada.", .{ .status = .not_found });
     }
 
+    std.log.info("show: calling listMissionEvents", .{});
     const mission_events = try repo.listMissionEvents(c, mission_id);
+    std.log.info("show: listMissionEvents ok count={d}", .{mission_events.len});
 
+    std.log.info("show: calling collectSupervisedExecutionEvents", .{});
     const supervised_execution_events = try model.collectSupervisedExecutionEvents(c.arena, mission_events);
+    std.log.info("show: collectSupervisedExecutionEvents ok count={d}", .{supervised_execution_events.len});
 
+    std.log.info("show: calling c.view", .{});
     return c.view("missions/show", .{
         .title = rows[0].title,
         .mission = rows[0],

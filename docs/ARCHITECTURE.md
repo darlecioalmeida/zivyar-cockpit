@@ -95,11 +95,15 @@ Ciclo:
 
 ## 7. Integrações planejadas
 
-- Graphify → mapa de conhecimento do workspace.
-- GSD → metodologia de execução de missão.
-- UI UX Pro Max Skill → design intelligence.
-- awesome-design-md → biblioteca de DESIGN.md.
-- ECC → referência para skills/agentes e segurança.
+- Graphify → mapa de conhecimento do workspace, indexação de contexto e hub global de navegação.
+- GSD → metodologia de execução, verificação e entrega por fase.
+- UI UX Pro Max Skill → inteligência de design para o cockpit e seus estados.
+- awesome-design-md → biblioteca de DESIGN.md para referências visuais e tokens.
+- ECC → referência para skills, agentes, hooks, segurança e organização do harness.
+
+Essas integrações entram como camadas de referência e padronização.
+Elas não substituem a arquitetura do Zivyar Cockpit; apenas alimentam o
+Context Engine, o Graphify e as decisões de UI/UX do projeto.
 
 ## 8. Riscos técnicos
 

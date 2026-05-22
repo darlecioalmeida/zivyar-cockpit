@@ -36,7 +36,7 @@ const workspacePaneCloseSession = features.workspaces.workspacePaneCloseSession;
 const workspacePaneResumeSession = features.workspaces.workspacePaneResumeSession;
 const workspacePaneRecreateSession = features.workspaces.workspacePaneRecreateSession;
 const workspaceShow = features.workspaces.workspaceShow;
-const workspaceMissionActivate = features.workspaces.workspaceMissionActivate;
+const workspaceMissionActivate = features.missions_dispatch.activate;
 
 const workspaceMissionDispatchToPilot = features.missions_dispatch.dispatchToPilot;
 const workspaceMissionDispatchPilotBriefToPlanner = features.missions_dispatch.dispatchPilotBriefToPlanner;

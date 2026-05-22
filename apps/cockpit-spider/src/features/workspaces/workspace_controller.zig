@@ -2011,41 +2011,4 @@ pub fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
     return c.redirect(redirect_url);
 }
 
-pub fn workspaceMissionActivate(c: *spider.Ctx) !spider.Response {
-    const workspace_id_raw = c.params.get("id") orelse
-        return c.text("Workspace não informado.", .{ .status = .bad_request });
 
-    const mission_id_raw = c.params.get("mission_id") orelse
-        return c.text("Missão não informada.", .{ .status = .bad_request });
-
-    const workspace_id = std.fmt.parseInt(i32, workspace_id_raw, 10) catch
-        return c.text("Workspace inválido.", .{ .status = .bad_request });
-
-    const mission_id = std.fmt.parseInt(i32, mission_id_raw, 10) catch
-        return c.text("Missão inválida.", .{ .status = .bad_request });
-
-    const mission_rows = try repo.getMissionActivationTarget(c, mission_id, workspace_id);
-
-    if (mission_rows.len == 0) {
-        return c.text("Missão não encontrada neste workspace.", .{ .status = .not_found });
-    }
-
-    if (std.mem.eql(u8, mission_rows[0].mission_operational_closure_status, "closed")) {
-        return c.text(
-            "Missões encerradas operacionalmente não podem ser reativadas no Cockpit.",
-            .{ .status = .bad_request },
-        );
-    }
-
-    try repo.setActiveMission(c, workspace_id, mission_id);
-
-    try repo.insertMissionEvent(c, mission_id, workspace_id);
-
-    const redirect_url = try std.fmt.allocPrint(
-        c.arena,
-        "/workspaces/{d}",
-        .{workspace_id},
-    );
-
-    return c.redirect(redirect_url);
-}

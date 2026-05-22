@@ -71,11 +71,35 @@ pub fn capturePilotBrief(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, pilot.session_external_id },
     );
 
-    const messages_result = core.runRuntimeCommand(c, &.{
-        "curl",
-        "-fsS",
-        messages_url,
-    });
+    const max_attempts: usize = 8;
+    var messages_result: core.RuntimeCommandResult = .{
+        .ok = false,
+        .exit_code = -1,
+        .stdout = "",
+        .stderr = "",
+    };
+    var brief_text: ?[]const u8 = null;
+    var attempt: usize = 0;
+
+    while (attempt < max_attempts and brief_text == null) : (attempt += 1) {
+        messages_result = core.runRuntimeCommand(c, &.{
+            "curl",
+            "-fsS",
+            messages_url,
+        });
+
+        if (!messages_result.ok) break;
+
+        brief_text = try helpers.extractAssistantTextForParentMessage(
+            c.arena,
+            messages_result.stdout,
+            dispatch_trace.pilot_dispatch_user_message_id,
+        );
+
+        if (brief_text == null and attempt + 1 < max_attempts) {
+            std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
+        }
+    }
 
     try repo.insertRuntimeCommandLog(
         c,
@@ -89,18 +113,14 @@ pub fn capturePilotBrief(c: *spider.Ctx) !spider.Response {
         return c.text("Falha ao consultar mensagens da sessão do Piloto.", .{ .status = .bad_request });
     }
 
-    const brief_text = try helpers.extractAssistantTextForParentMessage(
-        c.arena,
-        messages_result.stdout,
-        dispatch_trace.pilot_dispatch_user_message_id,
-    ) orelse {
+    const brief_text_value = brief_text orelse {
         return c.text(
             "Nenhuma resposta textual vinculada ao último despacho rastreado foi encontrada. Aguarde o Piloto concluir a resposta e tente novamente.",
             .{ .status = .bad_request },
         );
     };
 
-    try repo.updateMissionAfterPilotBriefCapture(c, brief_text, mission_id);
+    try repo.updateMissionAfterPilotBriefCapture(c, brief_text_value, mission_id);
 
     const event_message = try std.fmt.allocPrint(
         c.arena,
@@ -109,6 +129,11 @@ pub fn capturePilotBrief(c: *spider.Ctx) !spider.Response {
     );
 
     try repo.insertMissionEvent(c, mission_id, mission.workspace_id, "pilot-operational-brief-captured", "Briefing do Piloto capturado", event_message);
+
+    if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
+        const next_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/next-step", .{mission_id});
+        return c.redirect(next_url);
+    }
 
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
@@ -262,6 +287,11 @@ pub fn capturePlannerPlan(c: *spider.Ctx) !spider.Response {
 
     try repo.insertMissionEvent(c, mission_id, mission.workspace_id, "planner-operational-plan-captured", "Plano do Planner capturado", event_message);
 
+    if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
+        const next_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/next-step", .{mission_id});
+        return c.redirect(next_url);
+    }
+
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
         "/missions/{d}",
@@ -350,11 +380,35 @@ pub fn captureScoutReport(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, scout.session_external_id },
     );
 
-    const messages_result = core.runRuntimeCommand(c, &.{
-        "curl",
-        "-fsS",
-        messages_url,
-    });
+    const max_attempts: usize = 8;
+    var messages_result: core.RuntimeCommandResult = .{
+        .ok = false,
+        .exit_code = -1,
+        .stdout = "",
+        .stderr = "",
+    };
+    var scout_report_text: ?[]const u8 = null;
+    var attempt: usize = 0;
+
+    while (attempt < max_attempts and scout_report_text == null) : (attempt += 1) {
+        messages_result = core.runRuntimeCommand(c, &.{
+            "curl",
+            "-fsS",
+            messages_url,
+        });
+
+        if (!messages_result.ok) break;
+
+        scout_report_text = try helpers.extractAssistantTextForParentMessage(
+            c.arena,
+            messages_result.stdout,
+            dispatch_trace.scout_dispatch_user_message_id,
+        );
+
+        if (scout_report_text == null and attempt + 1 < max_attempts) {
+            std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
+        }
+    }
 
     try repo.insertRuntimeCommandLog(
         c,
@@ -371,18 +425,14 @@ pub fn captureScoutReport(c: *spider.Ctx) !spider.Response {
         );
     }
 
-    const scout_report_text = try helpers.extractAssistantTextForParentMessage(
-        c.arena,
-        messages_result.stdout,
-        dispatch_trace.scout_dispatch_user_message_id,
-    ) orelse {
+    const scout_report_text_value = scout_report_text orelse {
         return c.text(
             "Nenhuma resposta textual vinculada ao último despacho rastreado foi encontrada. Aguarde o Scout concluir a resposta e tente novamente.",
             .{ .status = .bad_request },
         );
     };
 
-    try repo.updateMissionAfterScoutReportCapture(c, scout_report_text, mission_id);
+    try repo.updateMissionAfterScoutReportCapture(c, scout_report_text_value, mission_id);
 
     const event_message = try std.fmt.allocPrint(
         c.arena,
@@ -391,6 +441,11 @@ pub fn captureScoutReport(c: *spider.Ctx) !spider.Response {
     );
 
     try repo.insertMissionEvent(c, mission_id, mission.workspace_id, "scout-report-captured", "Scout Report capturado", event_message);
+
+    if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
+        const next_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/next-step", .{mission_id});
+        return c.redirect(next_url);
+    }
 
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
@@ -480,11 +535,35 @@ pub fn captureBuilderReport(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, builder.session_external_id },
     );
 
-    const messages_result = core.runRuntimeCommand(c, &.{
-        "curl",
-        "-fsS",
-        messages_url,
-    });
+    const max_attempts: usize = 8;
+    var messages_result: core.RuntimeCommandResult = .{
+        .ok = false,
+        .exit_code = -1,
+        .stdout = "",
+        .stderr = "",
+    };
+    var implementation_report_text: ?[]const u8 = null;
+    var attempt: usize = 0;
+
+    while (attempt < max_attempts and implementation_report_text == null) : (attempt += 1) {
+        messages_result = core.runRuntimeCommand(c, &.{
+            "curl",
+            "-fsS",
+            messages_url,
+        });
+
+        if (!messages_result.ok) break;
+
+        implementation_report_text = try helpers.extractAssistantTextForParentMessage(
+            c.arena,
+            messages_result.stdout,
+            dispatch_trace.builder_dispatch_user_message_id,
+        );
+
+        if (implementation_report_text == null and attempt + 1 < max_attempts) {
+            std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
+        }
+    }
 
     try repo.insertRuntimeCommandLog(
         c,
@@ -501,18 +580,14 @@ pub fn captureBuilderReport(c: *spider.Ctx) !spider.Response {
         );
     }
 
-    const implementation_report_text = try helpers.extractAssistantTextForParentMessage(
-        c.arena,
-        messages_result.stdout,
-        dispatch_trace.builder_dispatch_user_message_id,
-    ) orelse {
+    const implementation_report_text_value = implementation_report_text orelse {
         return c.text(
             "Nenhuma resposta textual vinculada ao último despacho rastreado foi encontrada. Aguarde o Builder concluir a resposta e tente novamente.",
             .{ .status = .bad_request },
         );
     };
 
-    try repo.updateMissionAfterBuilderReportCapture(c, implementation_report_text, mission_id);
+    try repo.updateMissionAfterBuilderReportCapture(c, implementation_report_text_value, mission_id);
 
     const event_message = try std.fmt.allocPrint(
         c.arena,
@@ -521,6 +596,11 @@ pub fn captureBuilderReport(c: *spider.Ctx) !spider.Response {
     );
 
     try repo.insertMissionEvent(c, mission_id, mission.workspace_id, "builder-implementation-report-captured", "Implementation Report capturado", event_message);
+
+    if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
+        const next_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/next-step", .{mission_id});
+        return c.redirect(next_url);
+    }
 
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
@@ -611,11 +691,35 @@ pub fn captureReviewerReport(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, reviewer.session_external_id },
     );
 
-    const messages_result = core.runRuntimeCommand(c, &.{
-        "curl",
-        "-fsS",
-        messages_url,
-    });
+    const max_attempts: usize = 8;
+    var messages_result: core.RuntimeCommandResult = .{
+        .ok = false,
+        .exit_code = -1,
+        .stdout = "",
+        .stderr = "",
+    };
+    var review_text: ?[]const u8 = null;
+    var attempt: usize = 0;
+
+    while (attempt < max_attempts and review_text == null) : (attempt += 1) {
+        messages_result = core.runRuntimeCommand(c, &.{
+            "curl",
+            "-fsS",
+            messages_url,
+        });
+
+        if (!messages_result.ok) break;
+
+        review_text = try helpers.extractAssistantTextForParentMessage(
+            c.arena,
+            messages_result.stdout,
+            dispatch_trace.reviewer_dispatch_user_message_id,
+        );
+
+        if (review_text == null and attempt + 1 < max_attempts) {
+            std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
+        }
+    }
 
     try repo.insertRuntimeCommandLog(
         c,
@@ -632,18 +736,14 @@ pub fn captureReviewerReport(c: *spider.Ctx) !spider.Response {
         );
     }
 
-    const review_text = try helpers.extractAssistantTextForParentMessage(
-        c.arena,
-        messages_result.stdout,
-        dispatch_trace.reviewer_dispatch_user_message_id,
-    ) orelse {
+    const review_text_value = review_text orelse {
         return c.text(
             "Nenhuma resposta textual vinculada ao último despacho rastreado foi encontrada. Aguarde o Reviewer concluir a resposta e tente novamente.",
             .{ .status = .bad_request },
         );
     };
 
-    try repo.updateMissionAfterReviewerReportCapture(c, review_text, mission_id);
+    try repo.updateMissionAfterReviewerReportCapture(c, review_text_value, mission_id);
 
     const event_message = try std.fmt.allocPrint(
         c.arena,
@@ -652,6 +752,11 @@ pub fn captureReviewerReport(c: *spider.Ctx) !spider.Response {
     );
 
     try repo.insertMissionEvent(c, mission_id, mission.workspace_id, "reviewer-review-report-captured", "Review Report do Reviewer capturado", event_message);
+
+    if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
+        const next_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/next-step", .{mission_id});
+        return c.redirect(next_url);
+    }
 
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
@@ -742,11 +847,35 @@ pub fn captureExecutorReport(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, executor.session_external_id },
     );
 
-    const messages_result = core.runRuntimeCommand(c, &.{
-        "curl",
-        "-fsS",
-        messages_url,
-    });
+    const max_attempts: usize = 8;
+    var messages_result: core.RuntimeCommandResult = .{
+        .ok = false,
+        .exit_code = -1,
+        .stdout = "",
+        .stderr = "",
+    };
+    var verification_report_text: ?[]const u8 = null;
+    var attempt: usize = 0;
+
+    while (attempt < max_attempts and verification_report_text == null) : (attempt += 1) {
+        messages_result = core.runRuntimeCommand(c, &.{
+            "curl",
+            "-fsS",
+            messages_url,
+        });
+
+        if (!messages_result.ok) break;
+
+        verification_report_text = try helpers.extractAssistantTextForParentMessage(
+            c.arena,
+            messages_result.stdout,
+            dispatch_trace.executor_dispatch_user_message_id,
+        );
+
+        if (verification_report_text == null and attempt + 1 < max_attempts) {
+            std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
+        }
+    }
 
     try repo.insertRuntimeCommandLog(
         c,
@@ -763,18 +892,14 @@ pub fn captureExecutorReport(c: *spider.Ctx) !spider.Response {
         );
     }
 
-    const verification_report_text = try helpers.extractAssistantTextForParentMessage(
-        c.arena,
-        messages_result.stdout,
-        dispatch_trace.executor_dispatch_user_message_id,
-    ) orelse {
+    const verification_report_text_value = verification_report_text orelse {
         return c.text(
             "Nenhuma resposta textual vinculada ao último despacho rastreado foi encontrada. Aguarde o Executor concluir a resposta e tente novamente.",
             .{ .status = .bad_request },
         );
     };
 
-    try repo.updateMissionAfterExecutorReportCapture(c, verification_report_text, mission_id);
+    try repo.updateMissionAfterExecutorReportCapture(c, verification_report_text_value, mission_id);
 
     const event_message = try std.fmt.allocPrint(
         c.arena,
@@ -783,6 +908,11 @@ pub fn captureExecutorReport(c: *spider.Ctx) !spider.Response {
     );
 
     try repo.insertMissionEvent(c, mission_id, mission.workspace_id, "executor-verification-report-captured", "Verification Report do Executor capturado", event_message);
+
+    if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
+        const next_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/next-step", .{mission_id});
+        return c.redirect(next_url);
+    }
 
     const redirect_url = try std.fmt.allocPrint(
         c.arena,
@@ -873,11 +1003,35 @@ pub fn capturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, pilot.session_external_id },
     );
 
-    const messages_result = core.runRuntimeCommand(c, &.{
-        "curl",
-        "-fsS",
-        messages_url,
-    });
+    const max_attempts: usize = 8;
+    var messages_result: core.RuntimeCommandResult = .{
+        .ok = false,
+        .exit_code = -1,
+        .stdout = "",
+        .stderr = "",
+    };
+    var delivery_text: ?[]const u8 = null;
+    var attempt: usize = 0;
+
+    while (attempt < max_attempts and delivery_text == null) : (attempt += 1) {
+        messages_result = core.runRuntimeCommand(c, &.{
+            "curl",
+            "-fsS",
+            messages_url,
+        });
+
+        if (!messages_result.ok) break;
+
+        delivery_text = try helpers.extractAssistantTextForParentMessage(
+            c.arena,
+            messages_result.stdout,
+            dispatch_trace.pilot_delivery_dispatch_user_message_id,
+        );
+
+        if (delivery_text == null and attempt + 1 < max_attempts) {
+            std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
+        }
+    }
 
     try repo.insertRuntimeCommandLog(
         c,
@@ -894,18 +1048,14 @@ pub fn capturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         );
     }
 
-    const delivery_text = try helpers.extractAssistantTextForParentMessage(
-        c.arena,
-        messages_result.stdout,
-        dispatch_trace.pilot_delivery_dispatch_user_message_id,
-    ) orelse {
+    const delivery_text_value = delivery_text orelse {
         return c.text(
             "Nenhuma resposta textual vinculada ao último despacho final foi encontrada. Aguarde o Piloto concluir a entrega e tente novamente.",
             .{ .status = .bad_request },
         );
     };
 
-    try repo.updateMissionAfterPilotDeliveryReportCapture(c, delivery_text, mission_id);
+    try repo.updateMissionAfterPilotDeliveryReportCapture(c, delivery_text_value, mission_id);
 
     const event_message = try std.fmt.allocPrint(
         c.arena,
@@ -914,6 +1064,11 @@ pub fn capturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
     );
 
     try repo.insertMissionEvent(c, mission_id, mission.workspace_id, "pilot-delivery-report-captured", "Final Delivery Report do Piloto capturado", event_message);
+
+    if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
+        const next_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/next-step", .{mission_id});
+        return c.redirect(next_url);
+    }
 
     const redirect_url = try std.fmt.allocPrint(
         c.arena,

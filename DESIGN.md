@@ -71,3 +71,13 @@ O Zivyar Cockpit deve comunicar:
 ## Princípio de produto
 
 > A interface deve parecer uma sala de controle para desenvolvimento multiagente, não um chat genérico.
+
+## Referências de design e operação
+
+- [awesome-design-md](https://github.com/voltagent/awesome-design-md): biblioteca de DESIGN.md para manter tokens, atmosfera e regras visuais consistentes.
+- [UI UX Pro Max Skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill): referência de inteligência de design para escolher estilos, escalas e padrões visuais.
+- [GSD](https://github.com/gsd-build/get-shit-done): referência operacional para o ciclo de execução, verificação e entrega.
+- [ECC](https://github.com/affaan-m/ECC): referência de harness, skills, hooks e segurança para a camada de agente.
+
+Essas referências devem guiar o cockpit sem alterar o domínio do produto.
+O Zivyar continua sendo o sistema de orquestração, missão e contexto.

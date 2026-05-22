@@ -277,6 +277,10 @@ pub fn dispatchToPilot(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, pilot.session_external_id },
     );
 
+    if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
+        const next_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/next-step", .{mission_id});
+        return c.redirect(next_url);
+    }
     return c.redirect(pilot_session_url);
 }
 
@@ -522,6 +526,10 @@ pub fn dispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, planner.session_external_id },
     );
 
+    if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
+        const next_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/next-step", .{mission_id});
+        return c.redirect(next_url);
+    }
     return c.redirect(planner_session_url);
 }
 
@@ -773,6 +781,10 @@ pub fn dispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, scout.session_external_id },
     );
 
+    if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
+        const next_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/next-step", .{mission_id});
+        return c.redirect(next_url);
+    }
     return c.redirect(scout_session_url);
 }
 
@@ -1024,6 +1036,10 @@ pub fn dispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, builder.session_external_id },
     );
 
+    if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
+        const next_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/next-step", .{mission_id});
+        return c.redirect(next_url);
+    }
     return c.redirect(builder_session_url);
 }
 
@@ -1279,6 +1295,10 @@ pub fn dispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, reviewer.session_external_id },
     );
 
+    if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
+        const next_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/next-step", .{mission_id});
+        return c.redirect(next_url);
+    }
     return c.redirect(reviewer_session_url);
 }
 
@@ -1537,6 +1557,10 @@ pub fn dispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, executor.session_external_id },
     );
 
+    if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
+        const next_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/next-step", .{mission_id});
+        return c.redirect(next_url);
+    }
     return c.redirect(executor_session_url);
 }
 
@@ -1796,5 +1820,9 @@ pub fn dispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, pilot.session_external_id },
     );
 
+    if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
+        const next_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/next-step", .{mission_id});
+        return c.redirect(next_url);
+    }
     return c.redirect(pilot_session_url);
 }
