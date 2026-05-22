@@ -424,7 +424,7 @@ function updateModelSelectors(role, models, currentId) {
   if (sel.dataset.modelKeys === modelKeys && sel.dataset.current === currentId) return;
   
   const options = models.map(m => 
-    '<option value="' + m.id + '"' + (m.id === currentId ? ' selected' : '') + '>' + m.name + '</option>'
+    '<option value="' + m.id + '" data-provider="' + (m.provider_type || 'opencode') + '"' + (m.id === currentId ? ' selected' : '') + '>' + m.name + '</option>'
   );
   
   sel.innerHTML = options.join('');
@@ -432,14 +432,33 @@ function updateModelSelectors(role, models, currentId) {
   sel.dataset.current = currentId;
 }
 
-async function changeSessionModel(role, sessionId, modelId) {
-  if (!runtimeUrl || !sessionId || !modelId) return;
+async function sendToAgent(sessionId, text, role) {
+  if (!sessionId || !text) return false;
+  const card = document.querySelector('.card[data-role="' + role + '"]');
+  const chat = document.getElementById('chat-' + role);
+  const modelSelector = card ? card.querySelector('.model-selector') : null;
+  const modelId = modelSelector ? modelSelector.value : null;
+  const opt = modelSelector ? modelSelector.options[modelSelector.selectedIndex] : null;
+  const providerId = opt ? opt.dataset.provider : 'opencode';
+  
+  if (card) card.classList.add('thinking'); // Feedback visual imediato
+
+  if (chat) {
+    const row = document.createElement('div'); row.className = 'chat-row';
+    row.innerHTML = '<div style="display:flex;align-items:center;"><span class="chat-role user">user</span>' +
+                    '<span class="chat-time">agora</span></div>' +
+                    '<div class="chat-bubble user">' + escapeHtml(text) + '</div>';
+    const thinking = chat.querySelector('.thinking');
+    if (thinking) thinking.remove();
+    chat.appendChild(row);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
   try {
-    // Nota: O endpoint exato pode variar. Se for OpenAI compatible:
-    const r = await fetch(runtimeUrl + '/session/' + sessionId, {
-      method: 'PATCH',
+    const r = await fetch('/workspaces/' + WS_ID + '/war-room/prompt-agent', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: { modelID: modelId } })
+      body: JSON.stringify({ session_id: sessionId, text: text, model_id: modelId, provider_id: providerId }),
     });
     if (r.ok) {
       showToast("Modelo de " + role + " alterado para " + modelId);
@@ -542,6 +561,8 @@ async function sendToAgent(sessionId, text, role) {
   if (!sessionId || !text) return false;
   const card = document.querySelector('.card[data-role="' + role + '"]');
   const chat = document.getElementById('chat-' + role);
+  const modelSelector = card ? card.querySelector('.model-selector') : null;
+  const modelId = modelSelector ? modelSelector.value : null;
   
   if (card) card.classList.add('thinking'); // Feedback visual imediato
 
@@ -560,7 +581,7 @@ async function sendToAgent(sessionId, text, role) {
     const r = await fetch('/workspaces/' + WS_ID + '/war-room/prompt-agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session_id: sessionId, text: text }),
+      body: JSON.stringify({ session_id: sessionId, text: text, model_id: modelId }),
     });
     
     if (!r.ok) {
@@ -742,6 +763,10 @@ document.getElementById('cmd-all').addEventListener('click', async function(){
   const text = input.value.trim();
   if (!text) return;
   input.value = '';
+  
+  // No broadcast, não enviamos model_id fixo, o backend usa o default ou podemos pegar o primeiro disponível.
+  // Idealmente cada agente usa o seu modelo selecionado, mas o endpoint de broadcast atual é simplificado.
+  
   const log = document.getElementById('event-log');
   const entry = document.createElement('div'); entry.className = 'entry';
   entry.innerHTML = '<span class="time">agora</span> <span class="label">[Comandante]</span> <span class="msg">\u2192 ' + text + '</span>';

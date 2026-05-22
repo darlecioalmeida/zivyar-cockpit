@@ -65,6 +65,7 @@ pub fn prompt(c: *spider.Ctx) !spider.Response {
     const parsed = try c.bodyJson(struct {
         text: []const u8,
         target: []const u8,
+        model_id: ?[]const u8 = null,
     });
 
     const msg_text = parsed.text;
@@ -75,15 +76,22 @@ pub fn prompt(c: *spider.Ctx) !spider.Response {
         if (pane.session_external_id.len == 0) continue;
         const runtime = repo.loadRuntimeForPrompt(c, workspace_id) catch continue;
         if (runtime.server_url.len == 0) continue;
+        
+        const model_id = parsed.model_id orelse "big-pickle";
         const prompt_url = try std.fmt.allocPrint(c.arena, "{s}/session/{s}/prompt_async", .{ runtime.server_url, pane.session_external_id });
         const prompt_body = try std.fmt.allocPrint(c.arena,
-            \\{{"model":{{"providerID":"opencode","modelID":"big-pickle"}},"parts":[{{"type":"text","text":"{s}"}}]}}
-        , .{msg_text});
-        _ = core.runRuntimeCommand(c, &.{
+            \\{{"model":{{"providerID":"opencode","modelID":"{s}"}},"parts":[{{"type":"text","text":"{s}"}}]}}
+        , .{ model_id, msg_text });
+        
+        const result = core.runRuntimeCommand(c, &.{
             "curl", "-fsS", "-X", "POST", prompt_url,
             "-H", "Content-Type: application/json",
             "-d", prompt_body,
         });
+        
+        if (!result.ok) {
+            std.log.err("war_room: broadcast prompt failed for session {s}: {s}", .{ pane.session_external_id, result.stderr });
+        }
     }
 
     return c.json(.{ .ok = true }, .{});
@@ -119,6 +127,8 @@ pub fn promptAgent(c: *spider.Ctx) !spider.Response {
     const parsed = try c.bodyJson(struct {
         text: []const u8,
         session_id: []const u8,
+        model_id: ?[]const u8 = null,
+        provider_id: ?[]const u8 = null,
     });
 
     const msg_text = parsed.text;
@@ -131,15 +141,38 @@ pub fn promptAgent(c: *spider.Ctx) !spider.Response {
     if (runtime.server_url.len == 0)
         return c.json(.{ .ok = false, .err = "no runtime url" }, .{ .status = .bad_request });
 
+    const model_id = parsed.model_id orelse "big-pickle";
+    const provider_id = parsed.provider_id orelse "opencode";
+    
+    // Mapeamento simples de provedores para o que o OpenCode server espera
+    const opencode_provider = if (std.mem.eql(u8, provider_id, "Google")) 
+        "google" 
+    else if (std.mem.eql(u8, provider_id, "OpenRouter")) 
+        "openrouter" 
+    else if (std.mem.eql(u8, provider_id, "Groq")) 
+        "groq" 
+    else if (std.mem.eql(u8, provider_id, "Ollama")) 
+        "ollama" 
+    else 
+        "opencode";
+
     const prompt_url = try std.fmt.allocPrint(c.arena, "{s}/session/{s}/prompt_async", .{ runtime.server_url, parsed.session_id });
     const prompt_body = try std.fmt.allocPrint(c.arena,
-        \\{{"model":{{"providerID":"opencode","modelID":"big-pickle"}},"parts":[{{"type":"text","text":"{s}"}}]}}
-    , .{msg_text});
-    _ = core.runRuntimeCommand(c, &.{
-        "curl", "-fsS", "-X", "POST", prompt_url,
+        \\{{"model":{{"providerID":"{s}","modelID":"{s}"}},"parts":[{{"type":"text","text":"{s}"}}]}}
+    , .{ opencode_provider, model_id, msg_text });
+    
+    std.log.info("war_room: sending prompt to {s} using model {s}/{s}", .{ prompt_url, opencode_provider, model_id });
+    
+    const result = core.runRuntimeCommand(c, &.{
+        "curl", "-v", "-fsS", "-X", "POST", prompt_url,
         "-H", "Content-Type: application/json",
         "-d", prompt_body,
     });
+    
+    if (!result.ok) {
+        std.log.err("war_room: promptAgent failed: {s}", .{result.stderr});
+        return c.json(.{ .ok = false, .err = result.stderr }, .{ .status = .internal_server_error });
+    }
 
     return c.json(.{ .ok = true }, .{});
 }

@@ -79,17 +79,23 @@ pub fn loadWarRoomData(c: *spider.Ctx, workspace_id: i32) !model.WarRoomData {
             struct {
                 model_id: []const u8,
                 model_name: []const u8,
+                provider_type: []const u8,
             },
             c.arena,
-            \\SELECT model_id, model_name
-            \\FROM provider_models
-            \\WHERE provider_id = $1 AND is_active = TRUE
-            \\ORDER BY model_name ASC
+            \\SELECT pm.model_id, pm.model_name, p.provider_type
+            \\FROM provider_models pm
+            \\JOIN providers p ON p.id = pm.provider_id
+            \\WHERE pm.provider_id = $1 AND pm.is_active = TRUE
+            \\ORDER BY pm.model_name ASC
         , .{p.provider_id});
 
         const agent_models = try c.arena.alloc(model.ModelEntry, model_rows.len);
         for (model_rows, 0..) |m_row, i| {
-            agent_models[i] = .{ .id = m_row.model_id, .name = m_row.model_name };
+            agent_models[i] = .{ 
+                .id = m_row.model_id, 
+                .name = m_row.model_name,
+                .provider_type = m_row.provider_type,
+            };
         }
 
         agents[idx] = .{

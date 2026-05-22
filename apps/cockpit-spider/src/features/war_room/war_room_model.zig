@@ -34,4 +34,5 @@ pub const EventEntry = struct {
 pub const ModelEntry = struct {
     id: []const u8,
     name: []const u8,
+    provider_type: []const u8,
 };
