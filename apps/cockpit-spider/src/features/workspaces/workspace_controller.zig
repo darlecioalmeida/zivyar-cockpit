@@ -16,22 +16,26 @@ fn syncProvidersToOpenCode(c: *spider.Ctx, workspace_id: i32, server_url: []cons
 
         const auth_url = try std.fmt.allocPrint(c.arena, "{s}/auth/{s}", .{ server_url, opencode_provider_id });
         
-        // Build JSON body for authentication
+        // O OpenCode espera os campos de autenticação diretamente no objeto
+        // conforme o esquema de cada provedor.
         var body_buf: std.ArrayList(u8) = .empty;
         defer body_buf.deinit(c.arena);
         try body_buf.append(c.arena, '{');
-        var first = true;
-        if (provider.api_key.len > 0) {
+        
+        if (std.mem.eql(u8, opencode_provider_id, "ollama")) {
+            try body_buf.appendSlice(c.arena, "\"host\":\"");
+            try body_buf.appendSlice(c.arena, if (provider.base_url.len > 0) provider.base_url else "http://localhost:11434");
+            try body_buf.append(c.arena, '\"');
+        } else {
             try body_buf.appendSlice(c.arena, "\"apiKey\":\"");
             try body_buf.appendSlice(c.arena, provider.api_key);
             try body_buf.append(c.arena, '\"');
-            first = false;
-        }
-        if (provider.base_url.len > 0) {
-            if (!first) try body_buf.append(c.arena, ',');
-            try body_buf.appendSlice(c.arena, "\"baseURL\":\"");
-            try body_buf.appendSlice(c.arena, provider.base_url);
-            try body_buf.append(c.arena, '\"');
+            
+            if (provider.base_url.len > 0 and !std.mem.eql(u8, opencode_provider_id, "opencode")) {
+                try body_buf.appendSlice(c.arena, ",\"baseURL\":\"");
+                try body_buf.appendSlice(c.arena, provider.base_url);
+                try body_buf.append(c.arena, '\"');
+            }
         }
         try body_buf.append(c.arena, '}');
 
@@ -1249,7 +1253,7 @@ pub fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
         else if (std.mem.eql(u8, provider.provider_type, "OpenRouter"))
             "OPENROUTER_API_KEY"
         else if (std.mem.eql(u8, provider.provider_type, "Ollama"))
-            "OLLAMA_BASE_URL"
+            "OLLAMA_HOST"
         else if (std.mem.eql(u8, provider.name, "OpenCode Zen"))
             "OPENCODE_API_KEY"
         else if (std.mem.eql(u8, provider.provider_type, "OpenAI Compatible"))
@@ -1257,7 +1261,12 @@ pub fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
         else
             continue;
 
-        const env_str = try std.fmt.allocPrint(c.arena, "{s}={s}", .{ env_var, provider.api_key });
+        const val = if (std.mem.eql(u8, env_var, "OLLAMA_HOST") and provider.api_key.len == 0)
+            (if (provider.base_url.len > 0) provider.base_url else "http://localhost:11434")
+        else
+            provider.api_key;
+
+        const env_str = try std.fmt.allocPrint(c.arena, "{s}={s}", .{ env_var, val });
         try env_args.append(c.arena, "-e");
         try env_args.append(c.arena, env_str);
 
