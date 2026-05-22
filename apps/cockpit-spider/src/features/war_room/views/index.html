@@ -150,6 +150,15 @@ body { display: flex; flex-direction: column; }
 .chat-bubble.tool { background: rgba(210,153,34,.08); border-left: 2px solid var(--yellow); color: var(--yellow); font-style: italic; }
 .chat-bubble.error { background: rgba(248,81,73,.08); border-left: 2px solid var(--red); color: var(--red); }
 
+/* Markdown Styles */
+.chat-bubble code { background: rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 3px; font-family: var(--font); font-size: 0.9em; }
+.chat-bubble pre { background: #010409; padding: 8px; border-radius: 6px; margin: 4px 0; overflow-x: auto; border: 1px solid var(--border); }
+.chat-bubble pre code { background: none; padding: 0; display: block; white-space: pre; }
+.chat-bubble table { border-collapse: collapse; margin: 4px 0; width: 100%; font-size: 10px; }
+.chat-bubble th, .chat-bubble td { border: 1px solid var(--border); padding: 4px 8px; text-align: left; }
+.chat-bubble th { background: rgba(255,255,255,0.05); }
+.chat-bubble ul, .chat-bubble ol { padding-left: 20px; margin: 4px 0; }
+
 /* card input area */
 .card-input {
   display: flex; gap: 4px; padding: 4px 8px; border-top: 1px solid var(--border); flex-shrink: 0;
@@ -369,11 +378,31 @@ function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+function parseMarkdown(text) {
+  if (!text) return '';
+  let html = escapeHtml(text);
+
+  // Blocos de código: ```content```
+  html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+
+  // Código em linha: `content`
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // Negrito: **content**
+  html = html.replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>');
+
+  // Listas simples: * ou -
+  html = html.replace(/^\s*[\*\-]\s+(.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+
+  return html;
+}
+
 function formatPart(part) {
   if (part.type === 'text') {
     const text = (part.text || '').trim();
     if (!text) return null;
-    return '<div class="chat-bubble ' + part.role + '">' + escapeHtml(text) + '</div>';
+    return '<div class="chat-bubble ' + part.role + '">' + parseMarkdown(text) + '</div>';
   }
   if (part.type === 'tool-invocation') {
     const inv = part.toolInvocation || {};
