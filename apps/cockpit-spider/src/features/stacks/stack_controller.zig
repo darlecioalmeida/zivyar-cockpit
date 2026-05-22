@@ -5,9 +5,15 @@ const repo = @import("./stack_repository.zig");
 
 pub fn index(c: *spider.Ctx) !spider.Response {
     const stacks_list = try repo.listAll(c);
+    var active_count: i32 = 0;
+    for (stacks_list) |s| {
+        if (s.is_active) active_count += 1;
+    }
     return c.view("stacks/index", .{
         .title = "Stacks",
-        .stack_list = stacks_list,
+        .stacks = stacks_list,
+        .stack_count = stacks_list.len,
+        .active_count = active_count,
     }, .{});
 }
 

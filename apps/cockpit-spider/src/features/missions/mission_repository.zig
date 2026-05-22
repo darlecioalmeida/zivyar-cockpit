@@ -921,3 +921,17 @@ pub fn getPilotDeliveryDispatchTrace(c: *spider.Ctx, mission_id: i32) ![]model.M
         .{mission_id},
     );
 }
+
+pub fn updatePaneState(c: *spider.Ctx, pane_id: i32, workspace_id: i32, pane_state: []const u8) !void {
+    try db.query(
+        void,
+        c.arena,
+        \\UPDATE workspace_panes
+        \\SET pane_state = $1,
+        \\    updated_at = NOW()
+        \\WHERE id = $2
+        \\AND workspace_id = $3
+    ,
+        .{ pane_state, pane_id, workspace_id },
+    );
+}

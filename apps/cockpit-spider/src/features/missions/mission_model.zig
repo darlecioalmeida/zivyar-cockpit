@@ -16,8 +16,8 @@ pub const OpenCodeBootstrapMessageRequest = struct {
 };
 
 pub const open_code_prompt_model = OpenCodePromptModel{
-    .providerID = "github-copilot",
-    .modelID = "gpt-5.4-mini",
+    .providerID = "opencode",
+    .modelID = "big-pickle",
 };
 
 pub const MissionRow = struct {

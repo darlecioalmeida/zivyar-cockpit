@@ -50,6 +50,7 @@ pub fn loadWarRoomData(c: *spider.Ctx, workspace_id: i32) !model.WarRoomData {
             context_state: []const u8,
             session_agent_handle: ?[]const u8,
             provider_id: i32,
+            provider_name: []const u8,
         },
         c.arena,
         \\SELECT 
@@ -61,7 +62,8 @@ pub fn loadWarRoomData(c: *spider.Ctx, workspace_id: i32) !model.WarRoomData {
         \\  COALESCE(wp.session_external_id, '') AS session_external_id, 
         \\  wp.context_state, 
         \\  wp.session_agent_handle,
-        \\  p.id as provider_id
+        \\  p.id as provider_id,
+        \\  COALESCE(p.name, 'N/A') as provider_name
         \\FROM workspace_panes wp
         \\LEFT JOIN agents a ON a.id = wp.agent_id
         \\LEFT JOIN stacks s ON s.id = a.default_stack_id
@@ -100,6 +102,7 @@ pub fn loadWarRoomData(c: *spider.Ctx, workspace_id: i32) !model.WarRoomData {
             .context_state = p.context_state,
             .last_message = "",
             .model_id = p.session_agent_handle orelse "",
+            .provider_name = p.provider_name,
             .available_models = agent_models,
         };
     }

@@ -8,3 +8,4 @@ pub const squads = @import("./squads/squad_controller.zig");
 pub const providers = @import("./providers/provider_controller.zig");
 pub const stacks = @import("./stacks/stack_controller.zig");
 pub const graphify = @import("./graphify/graphify_controller.zig");
+pub const war_room = @import("./war_room/war_room_controller.zig");

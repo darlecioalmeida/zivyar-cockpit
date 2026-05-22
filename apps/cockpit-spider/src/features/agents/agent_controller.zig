@@ -6,9 +6,15 @@ const repo = @import("./agent_repository.zig");
 
 pub fn index(c: *spider.Ctx) !spider.Response {
     const agents_list = try repo.listAll(c);
+    var active_count: i32 = 0;
+    for (agents_list) |a| {
+        if (a.is_active) active_count += 1;
+    }
     return c.view("agents/index", .{
         .title = "Agentes",
-        .agent_list = agents_list,
+        .agents = agents_list,
+        .agent_count = agents_list.len,
+        .active_count = active_count,
     }, .{});
 }
 

@@ -5,9 +5,17 @@ const repo = @import("./provider_repository.zig");
 
 pub fn index(c: *spider.Ctx) !spider.Response {
     const providers_list = try repo.listProviders(c);
+    const model_count = try repo.countAllModels(c);
+    var active_count: i32 = 0;
+    for (providers_list) |p| {
+        if (p.is_active) active_count += 1;
+    }
     return c.view("providers/index", .{
         .title = "Provedores",
-        .provider_list = providers_list,
+        .providers = providers_list,
+        .provider_count = providers_list.len,
+        .active_count = active_count,
+        .model_count = model_count,
     }, .{});
 }
 
@@ -29,7 +37,8 @@ pub fn show(c: *spider.Ctx) !spider.Response {
     return c.view("providers/show", .{
         .title = provider.name,
         .provider = provider,
-        .model_list = models,
+        .models = models,
+        .model_count = models.len,
     }, .{});
 }
 

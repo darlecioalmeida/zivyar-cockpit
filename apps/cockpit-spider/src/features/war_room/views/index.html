@@ -207,7 +207,12 @@ body { display: flex; flex-direction: column; }
   font: 10px var(--font); padding: 2px 4px; border-radius: 3px; flex-shrink: 0;
 }
 .card-footer .copy:hover, .card-footer .export:hover { background: rgba(88,166,255,0.1); }
-.card-footer .sid { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-footer .sid { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.card-footer .prov-mod {
+  font-size: 9px; color: var(--accent); font-weight: 600;
+  background: rgba(88,166,255,0.1); padding: 1px 5px; border-radius: 3px;
+  max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .card::after {
   content: ''; position: absolute; bottom: 0; right: 0;
   width: 12px; height: 12px;
@@ -300,6 +305,9 @@ body { display: flex; flex-direction: column; }
       <button data-role="{ ag.role }">⏎</button>
     </div>
     <div class="card-footer">
+      <div class="prov-mod" title="Provedor e Modelo">
+        { ag.provider_name } / <span class="cur-model" id="mname-{ ag.role }">{ ag.model_id }</span>
+      </div>
       <span class="sid" title="ID da Sessão">{ ag.session_id }</span>
       <div class="usage-info" id="usage-{ ag.role }">
         <span class="tokens">--- tkn</span>
@@ -435,6 +443,8 @@ async function changeSessionModel(role, sessionId, modelId) {
     });
     if (r.ok) {
       showToast("Modelo de " + role + " alterado para " + modelId);
+      const mnameEl = document.getElementById('mname-' + role);
+      if (mnameEl) mnameEl.textContent = modelId;
     } else {
       showToast("Erro ao mudar modelo de " + role);
     }
@@ -842,6 +852,8 @@ async function pollMessages() {
           sel.value = status.modelID;
           sel.dataset.current = status.modelID;
         }
+        const mnameEl = document.getElementById('mname-' + role);
+        if (mnameEl) mnameEl.textContent = status.modelID;
       }
     }
 

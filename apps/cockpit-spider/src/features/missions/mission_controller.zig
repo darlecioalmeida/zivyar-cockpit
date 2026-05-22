@@ -502,7 +502,7 @@ pub fn runNextStep(c: *spider.Ctx) !spider.Response {
     );
 
     if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
-        const is_capture_or_finalize = std.mem.startsWith(u8, next_action_code, "capture_");
+        const is_capture_or_finalize = std.mem.startsWith(u8, next_action_code, "capture_") or std.mem.eql(u8, next_action_code, "finalize_mission");
 
         if (is_capture_or_finalize) {
             const autopilot_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/autopilot/step?code={s}", .{ mission_id, next_action_code });
@@ -564,10 +564,7 @@ pub fn finalize(c: *spider.Ctx) !spider.Response {
     );
 
     if (final_verdict.len == 0) {
-        return c.text(
-            "Não foi possível identificar automaticamente o status final da missão no Final Delivery Report. O relatório precisa declarar explicitamente: completed, needs_follow_up ou blocked.",
-            .{ .status = .bad_request },
-        );
+        return c.redirect(try std.fmt.allocPrint(c.arena, "/missions/{d}?autopilot_complete=missing_verdict", .{mission_id}));
     }
 
     const formal_mission_status =

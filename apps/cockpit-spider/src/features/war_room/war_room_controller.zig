@@ -49,7 +49,11 @@ pub fn agentsJson(c: *spider.Ctx) !spider.Response {
         return c.json(.{ .agents = &[_]model.AgentPane{} }, .{});
     };
 
-    return c.json(.{ .agents = data.agents, .events = data.events, .server_url = data.server_url }, .{});
+    return c.json(.{ 
+        .agents = data.agents, 
+        .events = data.events, 
+        .server_url = data.server_url
+    }, .{});
 }
 
 pub fn prompt(c: *spider.Ctx) !spider.Response {

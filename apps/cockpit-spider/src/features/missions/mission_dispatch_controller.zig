@@ -87,9 +87,9 @@ pub fn dispatchToPilot(c: *spider.Ctx) !spider.Response {
 
     const pilot = pilot_rows[0];
 
-    if (!std.mem.eql(u8, pilot.pane_state, "active")) {
+    if (pilot.session_external_id.len == 0) {
         return c.text(
-            "O pane Piloto precisa estar ativo para receber a missão.",
+            "O pane Piloto não possui sessão OpenCode vinculada.",
             .{ .status = .bad_request },
         );
     }
@@ -97,13 +97,6 @@ pub fn dispatchToPilot(c: *spider.Ctx) !spider.Response {
     if (!std.mem.eql(u8, pilot.context_state, "current")) {
         return c.text(
             "O contexto do pane Piloto está desatualizado. Recrie a sessão antes de enviar a missão.",
-            .{ .status = .bad_request },
-        );
-    }
-
-    if (pilot.session_external_id.len == 0) {
-        return c.text(
-            "O pane Piloto não possui sessão OpenCode vinculada.",
             .{ .status = .bad_request },
         );
     }
@@ -137,6 +130,20 @@ pub fn dispatchToPilot(c: *spider.Ctx) !spider.Response {
         );
     }
 
+    if (!std.mem.eql(u8, pilot.pane_state, "active")) {
+        if (std.mem.eql(u8, pilot.pane_state, "stale")) {
+            const validate = helpers.openCodeSessionExists(c, runtime.server_url_label, pilot.session_external_id);
+            try repo.insertRuntimeCommandLog(c, workspace_id, "opencode-validate-pane-session", "GET <opencode-server>/session/<session-id>", validate);
+            if (validate.ok) {
+                try repo.updatePaneState(c, pilot.id, workspace_id, "active");
+            } else {
+                return c.text("A sessão do pane Piloto não existe mais no OpenCode. Recrie a sessão antes de despachar.", .{ .status = .bad_request });
+            }
+        } else {
+            return c.text("O pane Piloto precisa estar ativo para receber a missão.", .{ .status = .bad_request });
+        }
+    }
+
     const mission_prompt = try std.fmt.allocPrint(
         c.arena,
         "Zivyar Cockpit — Missão ativa enviada ao Piloto\n\n" ++
@@ -151,7 +158,8 @@ pub fn dispatchToPilot(c: *spider.Ctx) !spider.Response {
             "Inicie pela leitura crítica do objetivo e produza um Briefing Operacional inicial: " ++
             "1) entendimento da missão, 2) escopo inicial, 3) dúvidas ou riscos percebidos, " ++
             "4) sugestão da próxima delegação para Planner e/ou Scout. " ++
-            "Não implemente código diretamente neste primeiro retorno.",
+             "Não implemente código diretamente neste primeiro retorno. " ++
+             "Sempre finalize sua resposta com um relatório textual completo, mesmo após usar ferramentas.",
         .{
             mission.workspace_name,
             mission.squad_name,
@@ -354,9 +362,9 @@ pub fn dispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response {
 
     const planner = planner_rows[0];
 
-    if (!std.mem.eql(u8, planner.pane_state, "active")) {
+    if (planner.session_external_id.len == 0) {
         return c.text(
-            "O pane Planner precisa estar ativo para receber o briefing.",
+            "O pane Planner não possui sessão OpenCode vinculada.",
             .{ .status = .bad_request },
         );
     }
@@ -364,13 +372,6 @@ pub fn dispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response {
     if (!std.mem.eql(u8, planner.context_state, "current")) {
         return c.text(
             "O contexto do pane Planner está desatualizado. Recrie a sessão antes de enviar o briefing.",
-            .{ .status = .bad_request },
-        );
-    }
-
-    if (planner.session_external_id.len == 0) {
-        return c.text(
-            "O pane Planner não possui sessão OpenCode vinculada.",
             .{ .status = .bad_request },
         );
     }
@@ -404,6 +405,20 @@ pub fn dispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response {
         );
     }
 
+    if (!std.mem.eql(u8, planner.pane_state, "active")) {
+        if (std.mem.eql(u8, planner.pane_state, "stale")) {
+            const validate = helpers.openCodeSessionExists(c, runtime.server_url_label, planner.session_external_id);
+            try repo.insertRuntimeCommandLog(c, workspace_id, "opencode-validate-pane-session", "GET <opencode-server>/session/<session-id>", validate);
+            if (validate.ok) {
+                try repo.updatePaneState(c, planner.id, workspace_id, "active");
+            } else {
+                return c.text("A sessão do pane Planner não existe mais no OpenCode. Recrie a sessão antes de despachar.", .{ .status = .bad_request });
+            }
+        } else {
+            return c.text("O pane Planner precisa estar ativo para receber o briefing.", .{ .status = .bad_request });
+        }
+    }
+
     const planner_prompt = try std.fmt.allocPrint(
         c.arena,
         "Zivyar Cockpit — Briefing do Piloto enviado ao Planner\n\n" ++
@@ -418,7 +433,8 @@ pub fn dispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response {
             "Transforme este briefing em um Plano Operacional da missão. " ++
             "Produza: 1) leitura consolidada do problema, 2) plano de execução em fases, " ++
             "3) tarefas recomendadas, 4) dependências e riscos, 5) indicação clara do que deve seguir para Scout e/ou Builder. " ++
-            "Não implemente código neste retorno.",
+             "Não implemente código neste retorno. " ++
+             "Sempre finalize sua resposta com um relatório textual completo, mesmo após usar ferramentas.",
         .{
             mission.workspace_name,
             mission.squad_name,
@@ -622,9 +638,9 @@ pub fn dispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
 
     const scout = scout_rows[0];
 
-    if (!std.mem.eql(u8, scout.pane_state, "active")) {
+    if (scout.session_external_id.len == 0) {
         return c.text(
-            "O pane Scout precisa estar ativo para receber o plano.",
+            "O pane Scout não possui sessão OpenCode vinculada.",
             .{ .status = .bad_request },
         );
     }
@@ -632,13 +648,6 @@ pub fn dispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
     if (!std.mem.eql(u8, scout.context_state, "current")) {
         return c.text(
             "O contexto do pane Scout está desatualizado. Recrie a sessão antes de enviar o plano.",
-            .{ .status = .bad_request },
-        );
-    }
-
-    if (scout.session_external_id.len == 0) {
-        return c.text(
-            "O pane Scout não possui sessão OpenCode vinculada.",
             .{ .status = .bad_request },
         );
     }
@@ -672,6 +681,20 @@ pub fn dispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
         );
     }
 
+    if (!std.mem.eql(u8, scout.pane_state, "active")) {
+        if (std.mem.eql(u8, scout.pane_state, "stale")) {
+            const validate = helpers.openCodeSessionExists(c, runtime.server_url_label, scout.session_external_id);
+            try repo.insertRuntimeCommandLog(c, workspace_id, "opencode-validate-pane-session", "GET <opencode-server>/session/<session-id>", validate);
+            if (validate.ok) {
+                try repo.updatePaneState(c, scout.id, workspace_id, "active");
+            } else {
+                return c.text("A sessão do pane Scout não existe mais no OpenCode. Recrie a sessão antes de despachar.", .{ .status = .bad_request });
+            }
+        } else {
+            return c.text("O pane Scout precisa estar ativo para receber o plano.", .{ .status = .bad_request });
+        }
+    }
+
     const scout_prompt = try std.fmt.allocPrint(
         c.arena,
         "Zivyar Cockpit — Plano Operacional enviado ao Scout\n\n" ++
@@ -691,7 +714,8 @@ pub fn dispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
             "3) pontos de entrada prováveis, " ++
             "4) riscos, inconsistências ou lacunas observadas, " ++
             "5) recomendações objetivas para o Builder executar com segurança. " ++
-            "Não implemente código neste retorno.",
+             "Não implemente código neste retorno. " ++
+             "Sempre finalize sua resposta com um relatório textual completo, mesmo após executar comandos ou ferramentas.",
         .{
             mission.workspace_name,
             mission.squad_name,
@@ -964,7 +988,8 @@ pub fn dispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response {
             "e os riscos apontados pelo Scout. " ++
             "Ao concluir, produza um Implementation Report com: " ++
             "1) o que foi alterado, 2) arquivos impactados, 3) decisões técnicas tomadas, " ++
-            "4) riscos remanescentes, 5) comandos ou validações recomendadas para o Executor.",
+            "4) riscos remanescentes, 5) comandos ou validações recomendadas para o Executor. " ++
+             "Sempre finalize sua resposta com um relatório textual completo, mesmo após executar comandos.",
         .{
             mission.workspace_name,
             mission.squad_name,
@@ -1241,7 +1266,8 @@ pub fn dispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Response {
             "3) inconsistências, omissões ou pontos frágeis, " ++
             "4) recomendações objetivas de correção ou validação, " ++
             "5) veredito final: approved, needs_adjustments ou blocked. " ++
-            "Não implemente código neste retorno.",
+             "Não implemente código neste retorno. " ++
+             "Sempre finalize sua resposta com um relatório textual completo, mesmo após usar ferramentas.",
         .{
             mission.workspace_name,
             mission.squad_name,
@@ -1521,7 +1547,8 @@ pub fn dispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Response {
             "3) validações concluídas, " ++
             "4) bloqueios, riscos ou ausências de material para testar, " ++
             "5) veredito final: verified, failed ou blocked. " ++
-            "Não implemente código neste retorno.",
+             "Não implemente código neste retorno. " ++
+             "Sempre finalize sua resposta com um relatório textual completo, mesmo após executar comandos.",
         .{
             mission.workspace_name,
             mission.squad_name,
@@ -1802,7 +1829,8 @@ pub fn dispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Response {
             "3) evidências e relatórios considerados, " ++
             "4) conclusão operacional com status final: completed, needs_follow_up ou blocked, " ++
             "5) próximos passos recomendados ao usuário. " ++
-            "Não implemente código neste retorno.",
+             "Não implemente código neste retorno. " ++
+             "Sempre finalize sua resposta com um relatório textual completo, mesmo após usar ferramentas.",
         .{
             mission.workspace_name,
             mission.squad_name,

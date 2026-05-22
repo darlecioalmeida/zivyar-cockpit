@@ -42,3 +42,31 @@ pub fn listRecentMissions(c: *spider.Ctx) ![]model.DashboardMissionRow {
         \\LIMIT 8
     , .{});
 }
+
+pub fn countOpenMissions(c: *spider.Ctx) !i64 {
+    const rows = try db.query(model.DashboardCountRow, c.arena,
+        "SELECT COUNT(*) AS total FROM missions WHERE status != 'closed' AND status != 'canceled'", .{});
+    if (rows.len == 0) return 0;
+    return rows[0].total;
+}
+
+pub fn countSquads(c: *spider.Ctx) !i64 {
+    const rows = try db.query(model.DashboardCountRow, c.arena,
+        "SELECT COUNT(*) AS total FROM squads", .{});
+    if (rows.len == 0) return 0;
+    return rows[0].total;
+}
+
+pub fn countProviders(c: *spider.Ctx) !i64 {
+    const rows = try db.query(model.DashboardCountRow, c.arena,
+        "SELECT COUNT(*) AS total FROM providers", .{});
+    if (rows.len == 0) return 0;
+    return rows[0].total;
+}
+
+pub fn countStacks(c: *spider.Ctx) !i64 {
+    const rows = try db.query(model.DashboardCountRow, c.arena,
+        "SELECT COUNT(*) AS total FROM stacks", .{});
+    if (rows.len == 0) return 0;
+    return rows[0].total;
+}

@@ -77,3 +77,8 @@ pub fn updateModel(c: *spider.Ctx, model_id: i32, form: model.ProviderModelForm)
 pub fn deleteModel(c: *spider.Ctx, model_id: i32) !void {
     try db.query(void, c.arena, "DELETE FROM provider_models WHERE id = $1", .{model_id});
 }
+
+pub fn countAllModels(c: *spider.Ctx) !i32 {
+    const rows = try db.query(i32, c.arena, "SELECT COUNT(*) FROM provider_models", .{});
+    return rows;
+}

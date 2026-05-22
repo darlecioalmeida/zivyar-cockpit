@@ -90,8 +90,48 @@ pub fn executeAutopilotStep(c: *spider.Ctx) !spider.Response {
     }
 
     if (std.mem.eql(u8, code, "finalize_mission")) {
-        const redirect_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/finalize", .{mission_id});
-        return c.redirect(redirect_url);
+        const closure_rows = try repo.getClosureRow(c, mission_id);
+        if (closure_rows.len > 0 and
+            closure_rows[0].pilot_delivery_report.len > 0 and
+            std.mem.eql(u8, closure_rows[0].pilot_delivery_report_status, "captured"))
+        {
+            const verdict = helpers.extractMissionFinalVerdictFromPilotDeliveryReport(closure_rows[0].pilot_delivery_report);
+            const final_verdict = if (verdict.len > 0) verdict else "needs_follow_up";
+            const formal_status = if (std.mem.eql(u8, final_verdict, "completed")) "completed" else if (std.mem.eql(u8, final_verdict, "needs_follow_up")) "needs_follow_up" else "blocked";
+            try repo.finalizeMission(c, final_verdict, formal_status, mission_id);
+            try repo.insertMissionEvent(c, mission_id, closure_rows[0].workspace_id, "mission-operationally-closed", "Missão encerrada pelo Cockpit", "Missão encerrada automaticamente pelo autopilot.");
+            try repo.releaseActiveMission(c, closure_rows[0].workspace_id, mission_id);
+            return c.redirect(try std.fmt.allocPrint(c.arena, "/missions/{d}", .{mission_id}));
+        }
+        const final_config: StepConfig = .{ .role = "Piloto", .label = "Capturar Final Delivery Report" };
+        const pane_rows = try repo.getPaneByRole(c, mission.workspace_id, final_config.role);
+        if (pane_rows.len == 0 or pane_rows[0].session_external_id.len == 0) {
+            return renderError(c, &mission, final_config.label,
+                try std.fmt.allocPrint(c.arena, "O pane {s} não possui sessão disponível.", .{final_config.role}));
+        }
+        const final_runtime_rows = try repo.loadWorkspaceRuntime(c, mission.workspace_id);
+        if (final_runtime_rows.len == 0) {
+            return renderError(c, &mission, final_config.label, "Runtime do workspace não encontrado.");
+        }
+        try repo.reconcileWorkspaceRuntimeState(c, final_runtime_rows[0]);
+        const final_refreshed_runtime = try repo.loadWorkspaceRuntime(c, mission.workspace_id);
+        if (final_refreshed_runtime.len == 0) {
+            return renderError(c, &mission, final_config.label, "Runtime indisponível após reconciliação.");
+        }
+        const final_runtime = final_refreshed_runtime[0];
+        if (!std.mem.eql(u8, final_runtime.state, "running")) {
+            return renderError(c, &mission, final_config.label, "O runtime precisa estar em execução.");
+        }
+        const final_messages_url = try std.fmt.allocPrint(c.arena, "{s}/session/{s}/message", .{ final_runtime.server_url_label, pane_rows[0].session_external_id });
+        const dt_rows = try repo.getPilotDeliveryDispatchTrace(c, mission_id);
+        if (dt_rows.len == 0 or dt_rows[0].pilot_delivery_dispatch_user_message_id.len == 0)
+            return renderError(c, &mission, final_config.label, "Nenhum rastreio de despacho encontrado para o Piloto.");
+        const captured = try captureAndSave(c, &mission, &pane_rows[0], final_messages_url, dt_rows[0].pilot_delivery_dispatch_user_message_id, final_config, repo.updateMissionAfterPilotDeliveryReportCapture);
+        if (captured != null) {
+            return c.redirect(try std.fmt.allocPrint(c.arena, "/missions/{d}/finalize", .{mission_id}));
+        }
+        const refresh_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/autopilot/step?code={s}", .{ mission_id, code });
+        return renderWaiting(c, &mission, final_config.label, refresh_url);
     }
 
     const config: StepConfig = blk: {

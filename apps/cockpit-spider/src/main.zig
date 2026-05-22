@@ -58,6 +58,12 @@ const missionFinalizeFromPilotDeliveryReport = features.missions.finalize;
 const missionRunNextStep = features.missions.runNextStep;
 const missionAutopilotStep = features.missions.autopilot.executeAutopilotStep;
 
+ const warRoomShow = features.war_room.show;
+ const warRoomAgentsJson = features.war_room.agentsJson;
+ const warRoomPrompt = features.war_room.prompt;
+ const warRoomReorder = features.war_room.reorder;
+ const warRoomPromptAgent = features.war_room.promptAgent;
+
 const missions = features.missions.index;
 const missionNew = features.missions.newForm;
 const missionCreate = features.missions.create;
@@ -151,12 +157,19 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces/:id/panes/:pane_id/session/recreate", workspacePaneRecreateSession)
         .post("/workspaces/:id/missions/:mission_id/activate", workspaceMissionActivate)
         .post("/workspaces/:id/missions/:mission_id/dispatch/pilot", workspaceMissionDispatchToPilot)
+        .get("/workspaces/:id/missions/:mission_id/dispatch/pilot", workspaceMissionDispatchToPilot)
         .post("/workspaces/:id/missions/:mission_id/dispatch/planner", workspaceMissionDispatchPilotBriefToPlanner)
+        .get("/workspaces/:id/missions/:mission_id/dispatch/planner", workspaceMissionDispatchPilotBriefToPlanner)
         .post("/workspaces/:id/missions/:mission_id/dispatch/scout", workspaceMissionDispatchPlannerPlanToScout)
+        .get("/workspaces/:id/missions/:mission_id/dispatch/scout", workspaceMissionDispatchPlannerPlanToScout)
         .post("/workspaces/:id/missions/:mission_id/dispatch/builder", workspaceMissionDispatchScoutReportToBuilder)
+        .get("/workspaces/:id/missions/:mission_id/dispatch/builder", workspaceMissionDispatchScoutReportToBuilder)
         .post("/workspaces/:id/missions/:mission_id/dispatch/reviewer", workspaceMissionDispatchBuilderReportToReviewer)
+        .get("/workspaces/:id/missions/:mission_id/dispatch/reviewer", workspaceMissionDispatchBuilderReportToReviewer)
         .post("/workspaces/:id/missions/:mission_id/dispatch/executor", workspaceMissionDispatchReviewerReportToExecutor)
+        .get("/workspaces/:id/missions/:mission_id/dispatch/executor", workspaceMissionDispatchReviewerReportToExecutor)
         .post("/workspaces/:id/missions/:mission_id/dispatch/pilot-delivery", workspaceMissionDispatchExecutorReportToPilot)
+        .get("/workspaces/:id/missions/:mission_id/dispatch/pilot-delivery", workspaceMissionDispatchExecutorReportToPilot)
         .post("/missions/:id/capture/pilot-brief", missionCapturePilotOperationalBrief)
         .post("/missions/:id/capture/planner-plan", missionCapturePlannerOperationalPlan)
         .post("/missions/:id/capture/scout-report", missionCaptureScoutReport)
@@ -165,9 +178,16 @@ pub fn main(init: std.process.Init) !void {
         .post("/missions/:id/capture/executor-report", missionCaptureExecutorVerificationReport)
         .post("/missions/:id/capture/pilot-delivery-report", missionCapturePilotDeliveryReport)
         .post("/missions/:id/finalize", missionFinalizeFromPilotDeliveryReport)
+        .get("/missions/:id/finalize", missionFinalizeFromPilotDeliveryReport)
         .post("/missions/:id/next-step", missionRunNextStep)
+        .get("/missions/:id/next-step", missionRunNextStep)
         .get("/missions/:id/autopilot/step", missionAutopilotStep)
         .get("/workspaces/:id", workspaceShow)
+        .get("/workspaces/:id/war-room", warRoomShow)
+        .get("/workspaces/:id/war-room/agents.json", warRoomAgentsJson)
+        .post("/workspaces/:id/war-room/prompt", warRoomPrompt)
+        .post("/workspaces/:id/war-room/prompt-agent", warRoomPromptAgent)
+        .post("/workspaces/:id/war-room/reorder", warRoomReorder)
         .get("/missions", missions)
         .get("/missions/new", missionNew)
         .post("/missions", missionCreate)

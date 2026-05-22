@@ -5,9 +5,15 @@ const repo = @import("./squad_repository.zig");
 
 pub fn index(c: *spider.Ctx) !spider.Response {
     const squads_list = try repo.listAll(c);
+    var active_count: i32 = 0;
+    for (squads_list) |s| {
+        if (s.is_active) active_count += 1;
+    }
     return c.view("squads/index", .{
         .title = "Squads",
-        .squad_list = squads_list,
+        .squads = squads_list,
+        .squad_count = squads_list.len,
+        .active_count = active_count,
     }, .{});
 }
 

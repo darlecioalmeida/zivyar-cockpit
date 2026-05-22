@@ -89,6 +89,8 @@ pub fn extractAssistantTextForParentMessage(allocator: std.mem.Allocator, raw: [
         const parent_value = info_value.object.get("parentID") orelse continue;
         if (parent_value != .string) continue;
         if (!std.mem.eql(u8, parent_value.string, parent_message_id)) continue;
+        const finish_value = info_value.object.get("finish");
+        const is_tool_only = if (finish_value) |fv| fv == .string and std.mem.eql(u8, fv.string, "tool-calls") else false;
         const parts_value = message_obj.get("parts") orelse continue;
         if (parts_value != .array) continue;
         var collected: std.ArrayList(u8) = .empty;
@@ -99,12 +101,19 @@ pub fn extractAssistantTextForParentMessage(allocator: std.mem.Allocator, raw: [
             const part_obj = part_value.object;
             const type_value = part_obj.get("type") orelse continue;
             if (type_value != .string) continue;
-            if (!std.mem.eql(u8, type_value.string, "text")) continue;
-            const text_value = part_obj.get("text") orelse continue;
-            if (text_value != .string) continue;
-            if (found_text) try collected.appendSlice(allocator, "\n\n");
-            try collected.appendSlice(allocator, text_value.string);
-            found_text = true;
+            if (std.mem.eql(u8, type_value.string, "text")) {
+                const text_value = part_obj.get("text") orelse continue;
+                if (text_value != .string) continue;
+                if (found_text) try collected.appendSlice(allocator, "\n\n");
+                try collected.appendSlice(allocator, text_value.string);
+                found_text = true;
+            } else if (!found_text and is_tool_only and std.mem.eql(u8, type_value.string, "reasoning")) {
+                const text_value = part_obj.get("text") orelse continue;
+                if (text_value != .string) continue;
+                if (found_text) try collected.appendSlice(allocator, "\n\n");
+                try collected.appendSlice(allocator, text_value.string);
+                found_text = true;
+            }
         }
         if (found_text) latest_text = try collected.toOwnedSlice(allocator) else collected.deinit(allocator);
     }
@@ -155,6 +164,7 @@ pub fn extractMissionFinalVerdictFromPilotDeliveryReport(report: []const u8) []c
         "**status** | `completed`", "status | `completed`",
         "**status** | completed", "status | completed",
         "## ✅ completed", "## 🟢 completed", "## completed",
+        "**status:** completed", "status: completed",
     };
     for (completed_patterns) |p| { if (containsAsciiCaseInsensitive(report, p)) return "completed"; }
     const follow_up_patterns = [_][]const u8{
@@ -164,6 +174,7 @@ pub fn extractMissionFinalVerdictFromPilotDeliveryReport(report: []const u8) []c
         "**status** | `needs_follow_up`", "status | `needs_follow_up`",
         "**status** | needs_follow_up", "status | needs_follow_up",
         "## 🟡 needs_follow_up", "## needs_follow_up",
+        "**status:** needs_follow_up", "status: needs_follow_up",
     };
     for (follow_up_patterns) |p| { if (containsAsciiCaseInsensitive(report, p)) return "needs_follow_up"; }
     const blocked_patterns = [_][]const u8{
@@ -173,8 +184,21 @@ pub fn extractMissionFinalVerdictFromPilotDeliveryReport(report: []const u8) []c
         "**status** | `blocked`", "status | `blocked`",
         "**status** | blocked", "status | blocked",
         "## 🔴 blocked", "## blocked",
+        "**status:** blocked", "status: blocked",
     };
     for (blocked_patterns) |p| { if (containsAsciiCaseInsensitive(report, p)) return "blocked"; }
+    if (containsAsciiCaseInsensitive(report, "**veredito:** completed") or
+        containsAsciiCaseInsensitive(report, "veredito: completed") or
+        containsAsciiCaseInsensitive(report, "## conclusão") and containsAsciiCaseInsensitive(report, "completed"))
+        return "completed";
+    if (containsAsciiCaseInsensitive(report, "**veredito:** needs_follow_up") or
+        containsAsciiCaseInsensitive(report, "veredito: needs_follow_up") or
+        containsAsciiCaseInsensitive(report, "## conclusão") and containsAsciiCaseInsensitive(report, "needs_follow_up"))
+        return "needs_follow_up";
+    if (containsAsciiCaseInsensitive(report, "**veredito:** blocked") or
+        containsAsciiCaseInsensitive(report, "veredito: blocked") or
+        containsAsciiCaseInsensitive(report, "## conclusão") and containsAsciiCaseInsensitive(report, "blocked"))
+        return "blocked";
     return "";
 }
 

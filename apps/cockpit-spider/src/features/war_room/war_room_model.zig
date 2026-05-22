@@ -21,10 +21,17 @@ pub const AgentPane = struct {
     context_state: []const u8,
     last_message: []const u8,
     model_id: []const u8,
+    provider_name: []const u8,
+    available_models: []ModelEntry,
 };
 
 pub const EventEntry = struct {
     label: []const u8,
     message: []const u8,
     created_at: []const u8,
+};
+
+pub const ModelEntry = struct {
+    id: []const u8,
+    name: []const u8,
 };
