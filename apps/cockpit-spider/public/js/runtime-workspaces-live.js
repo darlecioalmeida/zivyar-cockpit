@@ -83,16 +83,19 @@
     }
 
     if (actionsEl) {
-      const openCockpit = actionsEl.querySelector('a[href^="/workspaces/"]');
+      const openCockpit = actionsEl.querySelector('a[href^="/workspaces/"]:not([href$="/war-room"]):not([href$="/edit"])');
+      const warRoomLink = actionsEl.querySelector('a[href$="/war-room"]');
       const editLink = actionsEl.querySelector('a[href$="/edit"]');
       const deleteForm = actionsEl.querySelector('form[action$="/delete"]');
 
       const openHtml = openCockpit ? openCockpit.outerHTML : "";
+      const warRoomHtml = warRoomLink ? warRoomLink.outerHTML : "";
       const editHtml = editLink ? editLink.outerHTML : "";
       const deleteHtml = deleteForm ? deleteForm.outerHTML : "";
 
       actionsEl.innerHTML = `
         ${openHtml}
+        ${warRoomHtml}
         ${editHtml}
         ${buildRuntimeAction(card.dataset.workspaceId, data)}
         ${deleteHtml}
