@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>War Room — { title } — Zivyar Cockpit</title>
+<link rel="stylesheet" href="/css/app.css" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d1117; --surface: #161b22; --border: #30363d;
+  --text: #e6edf3; --text-dim: #8b949e; --accent: #58a6ff;
+  --green: #3fb950; --yellow: #d29922; --red: #f85149;
+  --sidebar-w: 260px; --topbar-h: 40px;
+  --font: 'SF Mono','Cascadia Code','JetBrains Mono','Consolas',monospace;
+}
+html, body { height: 100%; background: var(--bg); color: var(--text); font: 13px/1.5 var(--font); }
+body { display: flex; flex-direction: column; }
+
+.topbar {
+  height: var(--topbar-h); display: flex; align-items: center;
+  padding: 0 12px; background: var(--surface); border-bottom: 1px solid var(--border);
+  gap: 16px; flex-shrink: 0;
+}
+.topbar .brand { font-weight: 700; color: var(--accent); font-size: 14px; }
+.topbar .sep { color: var(--border); }
+.topbar .info { color: var(--text-dim); font-size: 11px; }
+.topbar .runtime { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 11px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.dot.off { background: var(--text-dim); }
+.dot.pulse { background: var(--yellow); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{ box-shadow:0 0 3px var(--yellow); } 50%{ box-shadow:0 0 10px var(--yellow); } }
+.thinking { color: var(--yellow); font-style: italic; font-size: 11px; }
+.ctx-badge { font-size: 9px; padding: 0 5px; border-radius: 3px; font-weight: 600; letter-spacing: .03em; }
+.ctx-badge.current { background: rgba(63,185,80,.15); color: var(--green); }
+.ctx-badge.outdated { background: rgba(210,153,34,.15); color: var(--yellow); }
+.ctx-badge.unbound { background: rgba(139,148,158,.15); color: var(--text-dim); }
+
+.body { display: flex; flex: 1; overflow: hidden; }
+
+.commander {
+  width: var(--sidebar-w); min-width: var(--sidebar-w);
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--border); background: var(--surface);
+}
+.commander-header {
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+  font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--text-dim); display: flex; align-items: center; gap: 8px;
+}
+.commander-header .badge { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: var(--accent); color: #000; }
+.commander-input { padding: 8px; border-bottom: 1px solid var(--border); }
+.commander-input textarea {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); font: 12px/1.4 var(--font); padding: 6px 8px;
+  border-radius: 4px; resize: vertical; min-height: 52px;
+}
+.commander-input textarea:focus { outline: none; border-color: var(--accent); }
+.commander-actions { display: flex; gap: 4px; padding: 6px 0 0; }
+.commander-actions button {
+  flex: 1; background: var(--accent); color: #000; border: none;
+  font: 11px var(--font); font-weight: 600; padding: 4px 8px; border-radius: 4px;
+  cursor: pointer;
+}
+.commander-actions button:hover { opacity: .85; }
+.commander-actions button.secondary { background: var(--border); color: var(--text); }
+.commander-log { flex: 1; overflow-y: auto; padding: 6px 8px; font-size: 11px; }
+.commander-log .entry {
+  padding: 4px 0; border-bottom: 1px solid rgba(48,54,61,.5); line-height: 1.4;
+}
+.commander-log .entry .time { color: var(--text-dim); }
+.commander-log .entry .label { color: var(--accent); }
+.commander-log .entry .msg { color: var(--text-dim); }
+
+.main {
+  flex: 1; display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-auto-rows: 1fr; gap: 6px; padding: 6px; overflow: auto;
+}
+@media (max-width: 900px) { .main { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .main { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; display: flex; flex-direction: column;
+  min-width: 280px; min-height: 200px; overflow: hidden; resize: both;
+}
+.card-header {
+  padding: 5px 10px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.card-header .name { font-weight: 600; font-size: 12px; }
+.card-header .handle { color: var(--text-dim); font-size: 10px; }
+.card-status { margin-left: auto; font-size: 10px; color: var(--text-dim); }
+.drag-handle { cursor: grab; color: var(--text-dim); font-size: 14px; line-height: 1; user-select: none; flex-shrink: 0; }
+.drag-handle:active { cursor: grabbing; }
+.card.dragging { opacity: .4; }
+.card.drag-over { border-color: var(--accent); box-shadow: 0 0 8px rgba(88,166,255,.3); }
+
+/* chat log inside card */
+.chat-log {
+  flex: 1; overflow-y: auto; padding: 6px 8px;
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 11px; line-height: 1.35;
+}
+.chat-row { display: flex; flex-direction: column; }
+.chat-role { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 1px; }
+.chat-role.user { color: var(--accent); }
+.chat-role.assistant { color: var(--green); }
+.chat-bubble {
+  padding: 3px 6px; border-radius: 4px;
+  word-break: break-word; white-space: pre-wrap;
+  max-width: 100%;
+}
+.chat-bubble.user { background: rgba(88,166,255,.08); border-left: 2px solid var(--accent); }
+.chat-bubble.assistant { background: rgba(63,185,80,.08); border-left: 2px solid var(--green); }
+.chat-bubble.tool { background: rgba(210,153,34,.08); border-left: 2px solid var(--yellow); color: var(--yellow); font-style: italic; }
+.chat-bubble.error { background: rgba(248,81,73,.08); border-left: 2px solid var(--red); color: var(--red); }
+
+/* card input area */
+.card-input {
+  display: flex; gap: 4px; padding: 4px 8px; border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.card-input textarea {
+  flex: 1; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); font: 11px/1.3 var(--font); padding: 4px 6px;
+  border-radius: 4px; resize: none; min-height: 24px; max-height: 60px;
+}
+.card-input textarea:focus { outline: none; border-color: var(--accent); }
+.card-input button {
+  background: var(--accent); color: #000; border: none;
+  font: 10px var(--font); font-weight: 600; padding: 4px 8px; border-radius: 4px;
+  cursor: pointer; flex-shrink: 0;
+}
+.card-input button:hover { opacity: .85; }
+.card-input button:disabled { background: var(--border); color: var(--text-dim); cursor: not-allowed; }
+
+.card-footer {
+  padding: 2px 8px; border-top: 1px solid var(--border);
+  font-size: 10px; display: flex; align-items: center; gap: 6px;
+  flex-shrink: 0; min-width: 0;
+}
+.card-footer .copy {
+  background: none; border: none; color: var(--accent); cursor: pointer;
+  font: 10px var(--font); padding: 2px 4px; border-radius: 3px; flex-shrink: 0;
+}
+.card-footer .copy:hover { background: rgba(88,166,255,.1); }
+.card-footer .sid { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card::after {
+  content: ''; position: absolute; bottom: 0; right: 0;
+  width: 12px; height: 12px;
+  background: linear-gradient(135deg, transparent 8px, var(--text-dim) 8px, var(--text-dim) 10px, transparent 10px);
+  pointer-events: none;
+}
+.card { position: relative; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="brand">⏺ War Room</span>
+  <span class="sep">|</span>
+  <span class="info">{ ws_name }</span>
+  <span class="sep">/</span>
+  <span class="info">{ squad_name }</span>
+  <span class="info" style="color:var(--text-dim)">—</span>
+  <span class="info" style="color:var(--text-dim)">{ local_path }</span>
+  <div class="runtime">
+    if (runtime_state == "running") {
+    <span class="dot on"></span>
+    } else {
+    <span class="dot off"></span>
+    }
+    { runtime_state }
+    <span style="color:var(--text-dim);font-size:10px">{ server_url }</span>
+  </div>
+</div>
+
+<div id="war-room-data" data-workspace-id="{ workspace_id }"></div>
+
+<div class="body">
+
+<aside class="commander">
+  <div class="commander-header">
+    <span class="dot on"></span> Comandante <span class="badge">Piloto</span>
+  </div>
+  <div class="commander-input">
+    <textarea id="cmd-input" placeholder="mensagem para todos os agentes..."></textarea>
+    <div class="commander-actions">
+      <button id="cmd-all">Enviar para todos</button>
+    </div>
+  </div>
+  <div class="commander-log" id="event-log">
+    for (events) |ev| {
+    <div class="entry">
+      <span class="time">{ ev.created_at }</span>
+      <span class="label">[{ ev.label }]</span>
+      <span class="msg">{ ev.message }</span>
+    </div>
+    }
+  </div>
+</aside>
+
+<main class="main" id="agent-grid">
+  for (agents) |ag| {
+  <div class="card" data-role="{ ag.role }" data-session="{ ag.session_id }" data-pane-id="{ ag.id }">
+    <div class="card-header">
+      if (ag.status == "active") {
+      <span class="dot on"></span>
+      } else {
+      <span class="dot off"></span>
+      }
+      <span class="name">{ ag.role }</span>
+      <span class="handle">@{ ag.agent_handle }</span>
+      <span class="ctx-badge { ag.context_state }">{ ag.context_state }</span>
+      <span class="card-status">{ ag.status }
+        if (ag.session_id.len == 0) { · no session }
+      </span>
+      <span class="drag-handle" draggable="true">⠿</span>
+    </div>
+    <div class="chat-log" id="chat-{ ag.role }">
+      <span class="thinking">conectando ao terminal...</span>
+    </div>
+    <div class="card-input" data-role="{ ag.role }">
+      <textarea rows="1" placeholder="msg → { ag.role }..." data-role="{ ag.role }"></textarea>
+      <button data-role="{ ag.role }">⏎</button>
+    </div>
+    <div class="card-footer">
+      <span class="sid">{ ag.session_id }</span>
+      if (ag.session_id.len > 0) {
+      <button class="copy" onclick="navigator.clipboard.writeText('opencode session { ag.session_id }')">copiar</button>
+      }
+    </div>
+  </div>
+  }
+</main>
+
+</div>
+
+<script>
+const WS_ID = document.getElementById('war-room-data').dataset.workspaceId;
+const POLL_MS = 3000;
+const REORDER_URL = '/workspaces/' + WS_ID + '/war-room/reorder';
+
+// drag-to-reorder panels
+const grid = document.getElementById('agent-grid');
+let draggedEl = null;
+function persistOrder() {
+  const order = Array.from(grid.querySelectorAll('.card'))
+    .map(function(card){ return parseInt(card.dataset.paneId, 10); })
+    .filter(function(id){ return !Number.isNaN(id); });
+  if (order.length === 0) return;
+  fetch(REORDER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ order: order }),
+  }).catch(function(){ /* ignore */ });
+}
+grid.addEventListener('dragstart', function(e) {
+  const handle = e.target.closest('.drag-handle');
+  if (!handle) return;
+  draggedEl = handle.closest('.card');
+  draggedEl.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+});
+grid.addEventListener('dragend', function() {
+  if (draggedEl) { draggedEl.classList.remove('dragging'); draggedEl = null; }
+  grid.querySelectorAll('.card.drag-over').forEach(function(c) { c.classList.remove('drag-over'); });
+});
+grid.addEventListener('dragover', function(e) {
+  const card = e.target.closest('.card');
+  if (!card || card === draggedEl) return;
+  e.preventDefault();
+  card.classList.add('drag-over');
+});
+grid.addEventListener('dragleave', function(e) {
+  const card = e.target.closest('.card');
+  if (card) card.classList.remove('drag-over');
+});
+grid.addEventListener('drop', function(e) {
+  e.preventDefault();
+  const target = e.target.closest('.card');
+  if (!target || !draggedEl || target === draggedEl) return;
+  grid.insertBefore(draggedEl, target.nextSibling);
+  grid.querySelectorAll('.card.drag-over').forEach(function(c) { c.classList.remove('drag-over'); });
+  persistOrder();
+});
+
+// ── estado global ─────────────────────────────────────────────────
+let runtimeUrl = '';
+
+// ── utilitários ───────────────────────────────────────────────────
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function formatPart(part) {
+  if (part.type === 'text') {
+    const text = (part.text || '').trim();
+    if (!text) return null;
+    return '<div class="chat-bubble ' + part.role + '">' + escapeHtml(text) + '</div>';
+  }
+  if (part.type === 'tool-invocation') {
+    const inv = part.toolInvocation || {};
+    const name = inv.toolName || inv.name || 'tool';
+    return '<div class="chat-bubble tool">⛏ ' + escapeHtml(name) + '</div>';
+  }
+  if (part.type === 'tool-result') {
+    return '<div class="chat-bubble tool">✓ resultado</div>';
+  }
+  if (part.type === 'image') {
+    return '<div class="chat-bubble assistant">[imagem]</div>';
+  }
+  return null;
+}
+
+function renderChat(messages, role) {
+  const container = document.getElementById('chat-' + role);
+  if (!container) return;
+  if (!messages.length) {
+    container.innerHTML = '<span class="thinking">sem mensagens</span>';
+    return;
+  }
+  let html = '';
+  for (const msg of messages) {
+    const info = msg.info || {};
+    const r = info.role || 'unknown';
+    const parts = msg.parts || [];
+    if (!parts.length && r === 'assistant') {
+      html += '<div class="chat-row"><span class="chat-role assistant">assistant</span>' +
+              '<div class="chat-bubble assistant thinking">(sem texto)</div></div>';
+      continue;
+    }
+    let hasContent = false;
+    for (const part of parts) {
+      const rendered = formatPart({...part, role: r});
+      if (!rendered) continue;
+      if (!hasContent) {
+        html += '<div class="chat-row"><span class="chat-role ' + r + '">' + r + '</span>';
+        hasContent = true;
+      }
+      html += rendered;
+    }
+    if (hasContent) html += '</div>';
+  }
+  container.innerHTML = html;
+  // auto-scroll para o final
+  container.scrollTop = container.scrollHeight;
+}
+
+function isThinking(messages) {
+  if (!messages.length) return false;
+  const last = messages[messages.length - 1];
+  if (last.info && last.info.role === 'assistant') {
+    for (const part of (last.parts || [])) {
+      if (part.type === 'tool-invocation') {
+        const s = (part.toolInvocation || {}).state;
+        if (s === 'call' || s === 'partial-call') return true;
+      }
+    }
+    return false;
+  }
+  if (last.info && last.info.role === 'user') {
+    const ts = last.info.time && last.info.time.created;
+    if (!ts) return false;
+    return (Date.now() - ts) < 90000;
+  }
+  return false;
+}
+
+// ── busca mensagens de uma sessão direto no OpenCode ──────────────
+async function fetchSessionMsg(serverUrl, sessionId) {
+  if (!serverUrl || !sessionId) return null;
+  try {
+    const r = await fetch(serverUrl + '/session/' + sessionId + '/message');
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (_) { return null; }
+}
+
+// ── envia mensagem para um agente via Cockpit backend ─────────────
+async function sendToAgent(sessionId, text, role) {
+  if (!sessionId || !text) return false;
+  const chat = document.getElementById('chat-' + role);
+  if (chat) {
+    const row = document.createElement('div'); row.className = 'chat-row';
+    row.innerHTML = '<span class="chat-role user">user</span>' +
+                    '<div class="chat-bubble user">' + escapeHtml(text) + '</div>';
+    const thinking = chat.querySelector('.thinking');
+    if (thinking) thinking.remove();
+    chat.appendChild(row);
+    chat.scrollTop = chat.scrollHeight;
+  }
+  try {
+    const r = await fetch('/workspaces/' + WS_ID + '/war-room/prompt-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, text: text }),
+    });
+    return r.ok;
+  } catch (_) { return false; }
+}
+
+// ── poll 1: status e contexto dos agentes (via Cockpit) ───────────
+async function pollAgents() {
+  try {
+    const r = await fetch('/workspaces/' + WS_ID + '/war-room/agents.json');
+    const data = await r.json();
+    if (data.server_url) runtimeUrl = data.server_url;
+
+    for (const ag of data.agents) {
+      const card = document.querySelector('[data-role="' + ag.role + '"]');
+      if (!card) continue;
+      const dot = card.querySelector('.card-header .dot');
+      dot.className = 'dot ' + (ag.status === 'active' ? 'on' : 'off');
+      card.querySelector('.card-status').textContent = ag.status + (ag.session_id === '' ? ' · no session' : '');
+      const badge = card.querySelector('.ctx-badge');
+      if (badge) { badge.className = 'ctx-badge ' + ag.context_state; badge.textContent = ag.context_state; }
+      card.querySelector('.sid').textContent = ag.session_id;
+      const copyBtn = card.querySelector('.copy');
+      if (copyBtn && ag.session_id) {
+        copyBtn.onclick = function(){ navigator.clipboard.writeText('opencode session ' + ag.session_id); };
+      }
+      card.dataset.session = ag.session_id;
+    }
+
+    // Atualiza event log com novos eventos
+    if (data.events && data.events.length) {
+      const log = document.getElementById('event-log');
+      const existing = new Set(Array.from(log.querySelectorAll('.entry[data-id]'))
+        .map(function(e){ return e.dataset.id; }));
+      let added = 0;
+      for (const ev of data.events) {
+        const key = ev.created_at + '|' + ev.label;
+        if (existing.has(key)) continue;
+        const entry = document.createElement('div');
+        entry.className = 'entry'; entry.dataset.id = key;
+        entry.innerHTML =
+          '<span class="time">' + ev.created_at + '</span> ' +
+          '<span class="label">[' + ev.label + ']</span> ' +
+          '<span class="msg">' + ev.message + '</span>';
+        log.insertBefore(entry, log.firstChild);
+        added++;
+      }
+      if (added > 0) log.scrollTop = 0;
+    }
+  } catch (_) {}
+}
+
+// ── poll 2: mensagens reais das sessões (direto no OpenCode) ───────
+async function pollMessages() {
+  if (!runtimeUrl) return;
+  const cards = Array.from(grid.querySelectorAll('.card[data-session]'));
+  const promises = cards.map(async function(card) {
+    const sid = card.dataset.session;
+    const role = card.dataset.role;
+    if (!sid || !role) return;
+    const msgs = await fetchSessionMsg(runtimeUrl, sid);
+    if (!msgs) return;
+    const thinking = isThinking(msgs);
+    if (thinking) {
+      const dot = card.querySelector('.card-header .dot');
+      if (dot) dot.className = 'dot pulse';
+    } else {
+      const dot = card.querySelector('.card-header .dot');
+      if (dot && dot.classList.contains('pulse')) {
+        const status = card.querySelector('.card-status');
+        const isActive = status && status.textContent.includes('active');
+        dot.className = 'dot ' + (isActive ? 'on' : 'off');
+      }
+    }
+    renderChat(msgs, role);
+  });
+  await Promise.all(promises);
+}
+
+setInterval(pollAgents, POLL_MS);
+setInterval(pollMessages, POLL_MS);
+pollAgents().then(pollMessages);
+
+// ── enviar mensagem individual por agente ─────────────────────────
+grid.querySelectorAll('.card-input textarea').forEach(function(ta) {
+  const role = ta.dataset.role;
+  const btn = grid.querySelector('.card-input button[data-role="' + role + '"]');
+  if (!btn) return;
+
+  function doSend() {
+    const text = ta.value.trim();
+    if (!text) return;
+    ta.value = '';
+    const card = document.querySelector('.card[data-role="' + role + '"]');
+    const sid = card && card.dataset.session;
+    if (sid) {
+      sendToAgent(sid, text, role);
+    }
+  }
+
+  btn.addEventListener('click', doSend);
+  ta.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
+  });
+});
+
+// ── enviar mensagem a todos os agentes (Comandante) ────────────────
+document.getElementById('cmd-all').addEventListener('click', async function(){
+  const input = document.getElementById('cmd-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  const log = document.getElementById('event-log');
+  const entry = document.createElement('div'); entry.className = 'entry';
+  entry.innerHTML = '<span class="time">agora</span> <span class="label">[Comandante]</span> <span class="msg">\u2192 ' + text + '</span>';
+  log.insertBefore(entry, log.firstChild);
+  try {
+    await fetch('/workspaces/' + WS_ID + '/war-room/prompt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text, target: 'all' }),
+    });
+    setTimeout(pollMessages, 800);
+  } catch (_) {}
+});
+
+// ── auto-scroll log ────────────────────────────────────────────────
+const eventLog = document.getElementById('event-log');
+eventLog.scrollTop = 0;
+</script>
+</body>
+</html>
