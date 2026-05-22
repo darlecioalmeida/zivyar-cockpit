@@ -96,6 +96,8 @@ pub const WorkspacePaneBootstrapRow = struct {
     stack_name: []const u8,
     runtime_tool: []const u8,
     model_name: []const u8,
+    model_id: []const u8,
+    provider_type: []const u8,
 };
 
 pub const WorkspacePaneSessionHistoryRow = struct {

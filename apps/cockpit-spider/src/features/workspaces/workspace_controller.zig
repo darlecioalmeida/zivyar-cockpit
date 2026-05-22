@@ -5,6 +5,64 @@ const core = @import("core");
 const helpers = @import("../../shared/helpers.zig");
 const model = @import("./workspace_model.zig");
 const repo = @import("./workspace_repository.zig");
+const provider_repo = @import("../providers/provider_repository.zig");
+
+fn syncProvidersToOpenCode(c: *spider.Ctx, workspace_id: i32, server_url: []const u8) !void {
+    const providers = try provider_repo.listProviders(c);
+    for (providers) |provider| {
+        if (!provider.is_active) continue;
+
+        const opencode_provider_id = if (std.mem.eql(u8, provider.provider_type, "Google"))
+            "google"
+        else if (std.mem.eql(u8, provider.provider_type, "Groq"))
+            "groq"
+        else if (std.mem.eql(u8, provider.provider_type, "OpenRouter"))
+            "openrouter"
+        else if (std.mem.eql(u8, provider.provider_type, "Ollama"))
+            "ollama"
+        else if (std.mem.eql(u8, provider.provider_type, "OpenAI Compatible"))
+            "openai"
+        else
+            continue;
+
+        const auth_url = try std.fmt.allocPrint(c.arena, "{s}/auth/{s}", .{ server_url, opencode_provider_id });
+        
+        // Build JSON body for authentication
+        var body_buf: std.ArrayList(u8) = .empty;
+        defer body_buf.deinit(c.arena);
+        try body_buf.append(c.arena, '{');
+        var first = true;
+        if (provider.api_key.len > 0) {
+            try body_buf.appendSlice(c.arena, "\"apiKey\":\"");
+            try body_buf.appendSlice(c.arena, provider.api_key);
+            try body_buf.append(c.arena, '\"');
+            first = false;
+        }
+        if (provider.base_url.len > 0) {
+            if (!first) try body_buf.append(c.arena, ',');
+            try body_buf.appendSlice(c.arena, "\"baseURL\":\"");
+            try body_buf.appendSlice(c.arena, provider.base_url);
+            try body_buf.append(c.arena, '\"');
+        }
+        try body_buf.append(c.arena, '}');
+
+        const result = core.runRuntimeCommand(c, &.{
+            "curl", "-fsS", "-X", "PUT", auth_url,
+            "-H", "Content-Type: application/json",
+            "-d", body_buf.items,
+        });
+
+        if (!result.ok) {
+            std.log.err("war_room: failed to sync provider {s} to {s}: {s}", .{ provider.name, auth_url, result.stderr });
+        } else {
+            std.log.info("war_room: synced provider {s} to OpenCode", .{ provider.name });
+        }
+    }
+    
+    // Also set the default model globally if needed, or per session. 
+    // For now, syncing providers is the main goal.
+    _ = workspace_id;
+}
 
 fn loadWorkspaceSquads(c: *spider.Ctx) ![]model.WorkspaceSquadOptionRow {
     return repo.listSquads(c);
@@ -648,6 +706,13 @@ pub fn workspaceShow(c: *spider.Ctx) !spider.Response {
 
     if (refreshed_runtime_rows.len > 0) {
         reconcileWorkspacePaneSessions(c, workspace.id, refreshed_runtime_rows[0]) catch {};
+        
+        // Sincroniza provedores se o runtime estiver rodando
+        if (std.mem.eql(u8, refreshed_runtime_rows[0].state, "running")) {
+            syncProvidersToOpenCode(c, workspace.id, refreshed_runtime_rows[0].server_url_label) catch |err| {
+                std.log.err("war_room: error syncing providers on workspaceShow: {}", .{err});
+            };
+        }
     }
 
     const runtime_events = try repo.listRuntimeEvents(c, workspace.id);
@@ -1340,6 +1405,11 @@ pub fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
         return c.redirect(redirect_url);
     }
 
+    // Sincroniza os provedores configurados no Cockpit com o servidor OpenCode recém-iniciado
+    syncProvidersToOpenCode(c, workspace_id, server_url) catch |err| {
+        std.log.err("war_room: error syncing providers after start: {}", .{err});
+    };
+
     try repo.updateRuntimeStateWithPort(
         c,
         workspace_id,
@@ -1680,6 +1750,15 @@ pub fn workspacePaneRecreateSession(c: *spider.Ctx) !spider.Response {
     return workspacePaneOpenSession(c);
 }
 
+fn mapProviderTypeToOpenCode(provider_type: []const u8) []const u8 {
+    if (std.mem.eql(u8, provider_type, "Google")) return "google";
+    if (std.mem.eql(u8, provider_type, "Groq")) return "groq";
+    if (std.mem.eql(u8, provider_type, "OpenRouter")) return "openrouter";
+    if (std.mem.eql(u8, provider_type, "Ollama")) return "ollama";
+    if (std.mem.eql(u8, provider_type, "OpenAI Compatible")) return "openai";
+    return "opencode";
+}
+
 pub fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
     const workspace_id_raw = c.params.get("id") orelse
         return c.text("Workspace não informado.", .{ .status = .bad_request });
@@ -1757,19 +1836,21 @@ pub fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
     );
 
     const bootstrap_rows_initial = try repo.getPaneBootstrapData(c, pane_id, workspace_id);
-    const model_id_initial = if (bootstrap_rows_initial.len > 0) bootstrap_rows_initial[0].model_name else "big-pickle";
-
-    const request_body = try std.json.Stringify.valueAlloc(
-        c.arena,
-        .{ 
+    
+    const request_body = if (bootstrap_rows_initial.len > 0) blk: {
+        const b = bootstrap_rows_initial[0];
+        const provider_id = mapProviderTypeToOpenCode(b.provider_type);
+        
+        break :blk try std.json.Stringify.valueAlloc(c.arena, .{ 
             .title = session_title,
             .model = .{
-                .providerID = "opencode",
-                .modelID = model_id_initial,
+                .providerID = provider_id,
+                .modelID = b.model_id,
             },
-        },
-        .{},
-    );
+        }, .{});
+    } else try std.json.Stringify.valueAlloc(c.arena, .{ 
+        .title = session_title 
+    }, .{});
 
     const session_url = try std.fmt.allocPrint(
         c.arena,

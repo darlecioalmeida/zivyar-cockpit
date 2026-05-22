@@ -354,12 +354,15 @@ pub fn getPaneBootstrapData(c: *spider.Ctx, pane_id: i32, workspace_id: i32) ![]
         \\    a.operating_rules,
         \\    s.name AS stack_name,
         \\    s.runtime_tool,
-        \\    pm.model_name
+        \\    pm.model_name,
+        \\    pm.model_id,
+        \\    p.provider_type
         \\FROM workspace_panes wp
         \\INNER JOIN workspaces w ON w.id = wp.workspace_id
         \\INNER JOIN agents a ON a.id = wp.agent_id
         \\INNER JOIN stacks s ON s.id = a.default_stack_id
         \\INNER JOIN provider_models pm ON pm.id = s.provider_model_id
+        \\INNER JOIN providers p ON p.id = pm.provider_id
         \\WHERE wp.id = $1
         \\AND wp.workspace_id = $2
         \\LIMIT 1
