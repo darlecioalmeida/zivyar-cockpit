@@ -1,6 +1,6 @@
 pub const dashboard = @import("./dashboard/dashboard_controller.zig");
 pub const workspaces = @import("./workspaces/workspace_controller.zig");
-pub const missions = @import("./missions/mission_controller.zig");
+pub const missions = @import("./missions/mod.zig");
 pub const missions_dispatch = @import("./missions/mission_dispatch_controller.zig");
 pub const missions_capture = @import("./missions/mission_capture_controller.zig");
 pub const agents = @import("./agents/agent_controller.zig");

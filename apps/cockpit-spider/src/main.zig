@@ -56,6 +56,7 @@ const missionCapturePilotDeliveryReport = features.missions_capture.capturePilot
 
 const missionFinalizeFromPilotDeliveryReport = features.missions.finalize;
 const missionRunNextStep = features.missions.runNextStep;
+const missionAutopilotStep = features.missions.autopilot.executeAutopilotStep;
 
 const missions = features.missions.index;
 const missionNew = features.missions.newForm;
@@ -165,6 +166,7 @@ pub fn main(init: std.process.Init) !void {
         .post("/missions/:id/capture/pilot-delivery-report", missionCapturePilotDeliveryReport)
         .post("/missions/:id/finalize", missionFinalizeFromPilotDeliveryReport)
         .post("/missions/:id/next-step", missionRunNextStep)
+        .get("/missions/:id/autopilot/step", missionAutopilotStep)
         .get("/workspaces/:id", workspaceShow)
         .get("/missions", missions)
         .get("/missions/new", missionNew)

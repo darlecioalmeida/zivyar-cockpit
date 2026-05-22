@@ -502,9 +502,20 @@ pub fn runNextStep(c: *spider.Ctx) !spider.Response {
     );
 
     if (std.mem.eql(u8, mission.execution_mode, "autopilot")) {
+        const is_capture_or_finalize = std.mem.startsWith(u8, next_action_code, "capture_");
+
+        if (is_capture_or_finalize) {
+            const autopilot_url = try std.fmt.allocPrint(c.arena, "/missions/{d}/autopilot/step?code={s}", .{ mission_id, next_action_code });
+            const headers = try c.arena.alloc([2][]const u8, 1);
+            headers[0] = .{ "Location", autopilot_url };
+            return c.text("", .{
+                .status = .temporary_redirect,
+                .headers = headers,
+            });
+        }
+
         const headers = try c.arena.alloc([2][]const u8, 1);
         headers[0] = .{ "Location", next_action_route };
-
         return c.text("", .{
             .status = .temporary_redirect,
             .headers = headers,
