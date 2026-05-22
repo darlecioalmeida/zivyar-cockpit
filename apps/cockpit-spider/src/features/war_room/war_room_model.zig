@@ -23,6 +23,12 @@ pub const AgentPane = struct {
     model_id: []const u8,
     provider_name: []const u8,
     available_models: []ModelEntry,
+    is_active: bool,
+    is_stale: bool,
+    has_session: bool,
+    show_terminal: bool,
+    show_stale_warning: bool,
+    show_awaiting_session: bool,
 };
 
 pub const EventEntry = struct {

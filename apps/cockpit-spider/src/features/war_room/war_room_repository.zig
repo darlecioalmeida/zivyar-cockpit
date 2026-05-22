@@ -98,6 +98,9 @@ pub fn loadWarRoomData(c: *spider.Ctx, workspace_id: i32) !model.WarRoomData {
             };
         }
 
+        const is_stale = std.mem.eql(u8, p.pane_state, "stale");
+        const has_session = p.session_external_id.len > 0;
+
         agents[idx] = .{
             .id = p.id,
             .role = p.role_name,
@@ -110,6 +113,12 @@ pub fn loadWarRoomData(c: *spider.Ctx, workspace_id: i32) !model.WarRoomData {
             .model_id = p.session_agent_handle orelse "",
             .provider_name = p.provider_name,
             .available_models = agent_models,
+            .is_active = std.mem.eql(u8, p.pane_state, "active"),
+            .is_stale = is_stale,
+            .has_session = has_session,
+            .show_terminal = has_session and !is_stale,
+            .show_stale_warning = has_session and is_stale,
+            .show_awaiting_session = !has_session,
         };
     }
 

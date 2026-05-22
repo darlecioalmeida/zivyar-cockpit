@@ -222,7 +222,7 @@ body { display: flex; flex-direction: column; }
   <div class="card" data-role="{ ag.role }" data-session="{ ag.session_id }" data-pane-id="{ ag.id }">
     <div class="card-header">
       <span class="drag-handle" draggable="true">⠿</span>
-      if (ag.status == "active") {
+      if (ag.is_active) {
       <span class="dot on"></span>
       } else {
       <span class="dot off"></span>
@@ -235,9 +235,7 @@ body { display: flex; flex-direction: column; }
         <select class="model-selector" title="Mudar Modelo" data-role="{ ag.role }" data-session="{ ag.session_id }">
           <option value="{ ag.model_id }">{ ag.model_id }</option>
           for (ag.available_models) |m| {
-            if (m.id != ag.model_id) {
               <option value="{ m.id }">{ m.name }</option>
-            }
           }
         </select>
         <button class="btn-icon reset-context" title="Limpar Contexto" data-role="{ ag.role }" data-session="{ ag.session_id }"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
@@ -246,52 +244,69 @@ body { display: flex; flex-direction: column; }
     </div>
     
     <div class="terminal-container">
-      if (ag.session_id.len > 0 && server_url.len > 0 && !std.mem.eql(u8, ag.status, "stale")) {
+      if (ag.show_terminal) {
         <iframe class="terminal-frame" src="{ server_url }/Lw/session/{ ag.session_id }"></iframe>
-      } else {
+      }
+      if (ag.show_stale_warning) {
         <div style="padding: 40px 20px; color: var(--text-dim); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">
-          if (std.mem.eql(u8, ag.status, "stale")) {
-            <span style="color: var(--yellow)">Sessão expirada ou runtime reiniciado.</span>
-          } else {
-            <span>Aguardando sessão...</span>
-          }
-          <button class="commander-actions" style="width: auto; padding: 6px 16px;" onclick="fetch('/workspaces/' + WS_ID + '/panes/{ ag.id }/session/open', { method: 'POST' }).then(() => pollAgents())">
+          <span style="color: var(--yellow)">Sessão expirada ou runtime reiniciado.</span>
+          <button class="commander-actions" style="width: auto; padding: 6px 16px;" onclick="openNewSession({ ag.id })">
+            Abrir Nova Sessão
+          </button>
+        </div>
+      }
+      if (ag.show_awaiting_session) {
+        <div style="padding: 40px 20px; color: var(--text-dim); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+          <span>Aguardando sessão...</span>
+          <button class="commander-actions" style="width: auto; padding: 6px 16px;" onclick="openNewSession({ ag.id })">
             Abrir Nova Sessão
           </button>
         </div>
       }
     </div>
-
-    <div class="card-footer">
-      <div class="prov-mod" title="Provedor e Modelo">
-        { ag.provider_name } / <span class="cur-model" id="mname-{ ag.role }">{ ag.model_id }</span>
-      </div>
-      <span class="sid" title="ID da Sessão">{ ag.session_id }</span>
-      <div class="usage-info" id="usage-{ ag.role }">
-        <span class="tokens">--- tkn</span>
-        <div class="usage-bar"><div class="usage-progress" style="width: 0%"></div></div>
-        <span class="pct">0%</span>
-      </div>
-      if (ag.session_id.len > 0) {
-      <button class="copy" onclick="navigator.clipboard.writeText('opencode session { ag.session_id }')">copiar</button>
+        } else {
+          <iframe class="terminal-frame" src="{ server_url }/Lw/session/{ ag.session_id }"></iframe>
+        }
+      } else {
+        <div style="padding: 40px 20px; color: var(--text-dim); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+          <span>Aguardando sessão...</span>
+          <button class="commander-actions" style="width: auto; padding: 6px 16px;" onclick="openNewSession({ ag.id })">
+            Abrir Nova Sessão
+          </button>
+        </div>
       }
     </div>
-  </div>
-  }
-</main>
-
-</div>
-
-<div id="toast-container"></div>
-
+...
+      if (ag.has_session) {
+        if (ag.is_stale) {
+          <div style="padding: 40px 20px; color: var(--text-dim); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+            <span style="color: var(--yellow)">Sessão expirada ou runtime reiniciado.</span>
+            <button class="commander-actions" style="width: auto; padding: 6px 16px;" onclick="openNewSession({ ag.id })">
+              Abrir Nova Sessão
+            </button>
+          </div>
+        } else {
+...
 <script>
 const WS_ID = document.getElementById('war-room-data').dataset.workspaceId;
 const POLL_MS = 3000;
 const REORDER_URL = '/workspaces/' + WS_ID + '/war-room/reorder';
 
+async function openNewSession(paneId) {
+  try {
+    const r = await fetch('/workspaces/' + WS_ID + '/panes/' + paneId + '/session/open', { method: 'POST' });
+    if (r.ok) pollAgents();
+    else showToast("Erro ao abrir sessão");
+  } catch(_) { showToast("Falha na conexão"); }
+}
+
 // ── Persistência de UI ───────────────────────────────────────────
 const UI_PREFS_KEY = 'zivyar_warroom_prefs_' + WS_ID;
-let uiPrefs = JSON.parse(localStorage.getItem(UI_PREFS_KEY) || '{}');
+let uiPrefs = new Object();
+try { 
+  const saved = localStorage.getItem(UI_PREFS_KEY);
+  if (saved) uiPrefs = JSON.parse(saved);
+} catch(_) {}
 
 function savePrefs() { localStorage.setItem(UI_PREFS_KEY, JSON.stringify(uiPrefs)); }
 
@@ -304,6 +319,82 @@ function applySavedPrefs() {
       if (uiPrefs[role].height) card.style.height = uiPrefs[role].height + 'px';
     }
   });
+}
+
+const resizeObserver = new ResizeObserver(entries => {
+  for (let entry of entries) {
+    if (entry.target.classList.contains('collapsed')) continue;
+    const role = entry.target.dataset.role;
+    if (!uiPrefs[role]) uiPrefs[role] = new Object();
+    uiPrefs[role].width = entry.contentRect.width;
+    uiPrefs[role].height = entry.contentRect.height;
+    savePrefs();
+  }
+});
+...
+function persistOrder() {
+  const order = Array.from(grid.querySelectorAll('.card'))
+    .map(function(card){ return parseInt(card.dataset.paneId, 10); })
+    .filter(function(id){ return !Number.isNaN(id); });
+  if (order.length === 0) return;
+  
+  const payload = new Object();
+  payload.order = order;
+
+  fetch(REORDER_URL, {
+    method: 'POST',
+    headers: (function(){ const h = new Object(); h['Content-Type'] = 'application/json'; return h; })(),
+    body: JSON.stringify(payload),
+  }).catch(function(){ /* ignore */ });
+}
+...
+async function changeSessionModel(role, sessionId, modelId) {
+  if (!runtimeUrl || !sessionId || !modelId) return;
+  
+  const payload = new Object();
+  payload.model = new Object();
+  payload.model.modelID = modelId;
+
+  try {
+    const r = await fetch(runtimeUrl + '/session/' + sessionId, {
+      method: 'PATCH',
+      headers: (function(){ const h = new Object(); h['Content-Type'] = 'application/json'; return h; })(),
+      body: JSON.stringify(payload)
+    });
+...
+    if (runtimeUrl) {
+      try {
+        const sResp = await fetch(runtimeUrl + '/session/status');
+        if (sResp.ok) {
+          const sessionStatus = await sResp.json();
+          for (const ag of data.agents) {
+            const status = sessionStatus[ag.session_id];
+            const usageEl = document.getElementById('usage-' + ag.role);
+            if (status && usageEl) {
+              const used = status.tokensUsed || 0;
+              const total = status.contextWindow || 1;
+              const pct = Math.round((used / total) * 100);
+              usageEl.querySelector('.tokens').textContent = (used > 1000 ? (used/1000).toFixed(1) + 'k' : used) + ' tkn';
+              usageEl.querySelector('.pct').textContent = pct + '%';
+              const bar = usageEl.querySelector('.usage-progress');
+              bar.style.width = Math.min(pct, 100) + '%';
+              bar.className = 'usage-progress' + (pct > 80 ? ' crit' : (pct > 50 ? ' warn' : ''));
+              usageEl.title = 'Uso: ' + used.toLocaleString() + ' / ' + total.toLocaleString() + ' tokens';
+            }
+          }
+        }
+      } catch(_) {}
+    }
+...
+  try {
+    const r = await fetch('/workspaces/' + WS_ID + '/war-room/prompt', {
+      method: 'POST',
+      headers: (function(){ const h = new Object(); h['Content-Type'] = 'application/json'; return h; })(),
+      body: JSON.stringify((function(){ const p = new Object(); p.text = text; p.target = 'all'; return p; })()),
+    });
+    setTimeout(pollMessages, 800);
+  } catch (_) {}
+});
 }
 
 const resizeObserver = new ResizeObserver(entries => {
