@@ -18,6 +18,12 @@ const mission_select_fields =
     \\    m.status,
     \\    m.priority,
     \\    m.execution_mode,
+    \\    m.pilot_dispatch_status,
+    \\    m.pilot_session_external_id,
+    \\    COALESCE(
+    \\        TO_CHAR(m.dispatched_to_pilot_at AT TIME ZONE 'America/Bahia', 'DD/MM/YYYY HH24:MI:SS'),
+    \\        'Ainda não enviado'
+    \\    ) AS dispatched_to_pilot_at_label,
     \\    m.pilot_operational_brief,
     \\    m.pilot_operational_brief_status,
     \\    COALESCE(

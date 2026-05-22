@@ -72,6 +72,23 @@ if (next_step_ready_notice) {
         Esta missão foi encerrada operacionalmente com veredito final
         <strong>{ mission.mission_final_verdict }</strong>.
       </p>
+    } else if (mission.pilot_dispatch_status != "sent") {
+      <h3>Enviar missão ao Piloto</h3>
+      <p>
+        A missão ainda não foi despachada ao Piloto. A primeira etapa do ciclo
+        operacional é enviar a missão para o agente Piloto.
+      </p>
+
+      <div class="mission-next-step-actions">
+        <form
+          method="post"
+          action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/dispatch/pilot"
+          class="inline-form"
+          target="_blank"
+        >
+          <button class="primary-button compact" type="submit">Enviar missão ao Piloto</button>
+        </form>
+      </div>
     } else if (mission.pilot_operational_brief_status != "captured") {
       <h3>Concluir briefing do Piloto</h3>
       <p>
@@ -818,7 +835,24 @@ if (next_step_ready_notice) {
   }
 
   <div class="mission-brief-actions mission-brief-actions-expanded">
-    if (mission.mission_operational_closure_status != "closed") {
+    if (
+      mission.mission_operational_closure_status != "closed" and
+      mission.pilot_dispatch_status != "sent"
+    ) {
+      <form
+        method="post"
+        action="/workspaces/{ mission.workspace_id }/missions/{ mission.id }/dispatch/pilot"
+        class="inline-form"
+        target="_blank"
+      >
+        <button class="primary-button compact" type="submit">Enviar missão ao Piloto</button>
+      </form>
+    }
+
+    if (
+      mission.mission_operational_closure_status != "closed" and
+      mission.pilot_dispatch_status == "sent"
+    ) {
       <form method="post" action="/missions/{ mission.id }/capture/pilot-brief" class="inline-form">
         <button class="primary-button compact" type="submit">Capturar briefing do Piloto</button>
       </form>

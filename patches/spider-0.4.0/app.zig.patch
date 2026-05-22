@@ -1,0 +1,44 @@
+From: Zivyar Cockpit <zivyar@users.noreply.github.com>
+Date: Fri, 22 May 2026
+Subject: [PATCH] fix: prevent POST request crash on macOS (SIGABRT in
+ request.respond)
+
+When handling POST bodies before calling the route handler, readAlloc
+failures leave the HTTP reader state machine in an inconsistent state.
+On macOS this manifests as SIGABRT in _pthread_cond_broadcast when
+request.respond() calls discardBody().
+
+Two changes:
+1. On readAlloc failure, discard remaining body bytes to clean up state.
+2. After reading the body, force reader state to .ready to guarantee
+   discardBody() sees a valid state.
+
+---
+ src/core/app.zig | 17 +++++++++++++++--
+ 1 file changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/src/core/app.zig b/src/core/app.zig
+index caf47da..23bbba6 100644
+--- a/src/core/app.zig
++++ b/src/core/app.zig
+@@ -211,8 +211,21 @@ fn handleConnection(ctx: ConnCtx) error{Canceled}!void {
+             var body_io_buf: [4096]u8 = undefined;
+             const body_reader = request.readerExpectNone(&body_io_buf);
+             request.head.target = target_copy;
+-            break :blk body_reader.readAlloc(arena, cl) catch null;
++            const result = body_reader.readAlloc(arena, cl) catch blk2: {
++                _ = body_reader.discardRemaining() catch {};
++                break :blk2 null;
++            };
++            break :blk result;
++        };
++        if (request.server.reader.state != .ready and
++            request.server.reader.state != .closing)
++        {
++            request.server.reader.state = .ready;
+         };
+ 
+         {
+             if ((static_mod.serve(ctx.io, arena, ctx.static_config, path) catch null)) |static_response| {
+-- 
+2.47.0
