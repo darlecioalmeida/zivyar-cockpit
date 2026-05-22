@@ -246,11 +246,18 @@ body { display: flex; flex-direction: column; }
     </div>
     
     <div class="terminal-container">
-      if (ag.session_id.len > 0 && server_url.len > 0) {
+      if (ag.session_id.len > 0 && server_url.len > 0 && !std.mem.eql(u8, ag.status, "stale")) {
         <iframe class="terminal-frame" src="{ server_url }/Lw/session/{ ag.session_id }"></iframe>
       } else {
-        <div style="padding: 20px; color: var(--text-dim); text-align: center;">
-          Aguardando sessão...
+        <div style="padding: 40px 20px; color: var(--text-dim); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+          if (std.mem.eql(u8, ag.status, "stale")) {
+            <span style="color: var(--yellow)">Sessão expirada ou runtime reiniciado.</span>
+          } else {
+            <span>Aguardando sessão...</span>
+          }
+          <button class="commander-actions" style="width: auto; padding: 6px 16px;" onclick="fetch('/workspaces/' + WS_ID + '/panes/{ ag.id }/session/open', { method: 'POST' }).then(() => pollAgents())">
+            Abrir Nova Sessão
+          </button>
         </div>
       }
     </div>
@@ -420,20 +427,27 @@ async function pollAgents() {
       }
 
       // Atualiza o Iframe se necessário
-      if (ag.session_id && runtimeUrl) {
+      if (ag.session_id && runtimeUrl && ag.status !== 'stale') {
         const container = card.querySelector('.terminal-container');
         const currentFrame = container.querySelector('iframe');
         const expectedSrc = runtimeUrl + '/Lw/session/' + ag.session_id;
         
         if (!currentFrame) {
-          // Se não tem iframe mas agora tem sessão, cria o iframe
           container.innerHTML = '<iframe class="terminal-frame" src="' + expectedSrc + '"></iframe>';
-        } else {
-          // Se o ID da sessão mudou, atualiza o src
-          const url = new URL(currentFrame.src);
-          if (!currentFrame.src.includes(ag.session_id)) {
-            currentFrame.src = expectedSrc;
-          }
+        } else if (!currentFrame.src.includes(ag.session_id)) {
+          currentFrame.src = expectedSrc;
+        }
+      } else if (ag.status === 'stale') {
+        const container = card.querySelector('.terminal-container');
+        if (container.querySelector('iframe')) {
+          container.innerHTML = `
+            <div style="padding: 40px 20px; color: var(--text-dim); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+              <span style="color: var(--yellow)">Sessão expirada ou runtime reiniciado.</span>
+              <button class="commander-actions" style="width: auto; padding: 6px 16px;" onclick="fetch('/workspaces/' + WS_ID + '/panes/${ag.id}/session/open', { method: 'POST' }).then(() => pollAgents())">
+                Abrir Nova Sessão
+              </button>
+            </div>
+          `;
         }
       }
 
