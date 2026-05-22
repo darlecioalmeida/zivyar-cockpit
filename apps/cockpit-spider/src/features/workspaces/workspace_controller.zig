@@ -1756,9 +1756,18 @@ pub fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
         .{ workspace_id, pane.role_name },
     );
 
+    const bootstrap_rows_initial = try repo.getPaneBootstrapData(c, pane_id, workspace_id);
+    const model_id_initial = if (bootstrap_rows_initial.len > 0) bootstrap_rows_initial[0].model_name else "big-pickle";
+
     const request_body = try std.json.Stringify.valueAlloc(
         c.arena,
-        .{ .title = session_title },
+        .{ 
+            .title = session_title,
+            .model = .{
+                .providerID = "opencode",
+                .modelID = model_id_initial,
+            },
+        },
         .{},
     );
 

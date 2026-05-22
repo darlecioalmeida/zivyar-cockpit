@@ -416,6 +416,24 @@ async function pollAgents() {
         updateModelSelectors(ag.role, ag.available_models, ag.model_id);
       }
 
+      // Atualiza o Iframe se necessário
+      if (ag.session_id && runtimeUrl) {
+        const container = card.querySelector('.terminal-container');
+        const currentFrame = container.querySelector('iframe');
+        const expectedSrc = runtimeUrl + '/Lw/session/' + ag.session_id;
+        
+        if (!currentFrame) {
+          // Se não tem iframe mas agora tem sessão, cria o iframe
+          container.innerHTML = '<iframe class="terminal-frame" src="' + expectedSrc + '"></iframe>';
+        } else {
+          // Se o ID da sessão mudou, atualiza o src
+          const url = new URL(currentFrame.src);
+          if (!currentFrame.src.includes(ag.session_id)) {
+            currentFrame.src = expectedSrc;
+          }
+        }
+      }
+
       const dot = card.querySelector('.card-header .dot');
       dot.className = 'dot ' + (ag.status === 'active' ? 'on' : 'off');
       
@@ -424,6 +442,14 @@ async function pollAgents() {
       
       card.querySelector('.sid').textContent = ag.session_id;
       card.dataset.session = ag.session_id;
+
+      const sel = card.querySelector('.model-selector');
+      if (sel && ag.model_id) {
+        sel.dataset.current = ag.model_id;
+        if (sel.value !== ag.model_id) {
+          sel.value = ag.model_id;
+        }
+      }
 
       const mnameEl = document.getElementById('mname-' + ag.role);
       if (mnameEl) mnameEl.textContent = ag.model_id;
