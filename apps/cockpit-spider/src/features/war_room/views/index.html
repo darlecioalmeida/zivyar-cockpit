@@ -30,7 +30,9 @@ body { display: flex; flex-direction: column; }
 .dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
 .dot.off { background: var(--text-dim); }
 .dot.pulse { background: var(--yellow); animation: pulse 1s ease-in-out infinite; }
-@keyframes pulse { 0%,100%{ box-shadow:0 0 3px var(--yellow); } 50%{ box-shadow:0 0 10px var(--yellow); } }
+.card.thinking { border-color: var(--yellow); box-shadow: 0 0 10px rgba(210,153,34,0.2); }
+.card.thinking .dot { background: var(--yellow); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{ box-shadow:0 0 3px var(--yellow); opacity: 0.6; } 50%{ box-shadow:0 0 10px var(--yellow); opacity: 1; } }
 .thinking { color: var(--yellow); font-style: italic; font-size: 11px; }
 .ctx-badge { font-size: 9px; padding: 0 5px; border-radius: 3px; font-weight: 600; letter-spacing: .03em; }
 .ctx-badge.current { background: rgba(63,185,80,.15); color: var(--green); }
@@ -483,24 +485,44 @@ async function fetchSessionMsg(serverUrl, sessionId) {
 // ── envia mensagem para um agente via Cockpit backend ─────────────
 async function sendToAgent(sessionId, text, role) {
   if (!sessionId || !text) return false;
+  const card = document.querySelector('.card[data-role="' + role + '"]');
   const chat = document.getElementById('chat-' + role);
+  
+  if (card) card.classList.add('thinking'); // Feedback visual imediato
+
   if (chat) {
     const row = document.createElement('div'); row.className = 'chat-row';
-    row.innerHTML = '<span class="chat-role user">user</span>' +
+    row.innerHTML = '<div style="display:flex;align-items:center;"><span class="chat-role user">user</span>' +
+                    '<span class="chat-time">agora</span></div>' +
                     '<div class="chat-bubble user">' + escapeHtml(text) + '</div>';
     const thinking = chat.querySelector('.thinking');
     if (thinking) thinking.remove();
     chat.appendChild(row);
     chat.scrollTop = chat.scrollHeight;
   }
+
   try {
     const r = await fetch('/workspaces/' + WS_ID + '/war-room/prompt-agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: sessionId, text: text }),
     });
-    return r.ok;
-  } catch (_) { return false; }
+    
+    if (!r.ok) {
+      const errData = await r.json().catch(() => ({}));
+      showToast("Erro ao enviar para " + role + ": " + (errData.err || "Falha na rede"));
+      card.classList.remove('thinking');
+      return false;
+    }
+
+    // Força polling imediato para buscar a resposta
+    setTimeout(pollMessages, 1000);
+    return true;
+  } catch (err) {
+    showToast("Erro de conexão com o agente " + role);
+    card.classList.remove('thinking');
+    return false;
+  }
 }
 
 // ── poll 1: status e contexto dos agentes (via Cockpit) ───────────
@@ -561,11 +583,11 @@ async function pollMessages() {
     if (!msgs) return;
     const thinking = isThinking(msgs);
     if (thinking) {
-      const dot = card.querySelector('.card-header .dot');
-      if (dot) dot.className = 'dot pulse';
+      card.classList.add('thinking');
     } else {
+      card.classList.remove('thinking');
       const dot = card.querySelector('.card-header .dot');
-      if (dot && dot.classList.contains('pulse')) {
+      if (dot) {
         const status = card.querySelector('.card-status');
         const isActive = status && status.textContent.includes('active');
         dot.className = 'dot ' + (isActive ? 'on' : 'off');
