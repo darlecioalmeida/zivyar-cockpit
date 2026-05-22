@@ -12,18 +12,7 @@ fn syncProvidersToOpenCode(c: *spider.Ctx, workspace_id: i32, server_url: []cons
     for (providers) |provider| {
         if (!provider.is_active) continue;
 
-        const opencode_provider_id = if (std.mem.eql(u8, provider.provider_type, "Google"))
-            "google"
-        else if (std.mem.eql(u8, provider.provider_type, "Groq"))
-            "groq"
-        else if (std.mem.eql(u8, provider.provider_type, "OpenRouter"))
-            "openrouter"
-        else if (std.mem.eql(u8, provider.provider_type, "Ollama"))
-            "ollama"
-        else if (std.mem.eql(u8, provider.provider_type, "OpenAI Compatible"))
-            "openai"
-        else
-            continue;
+        const opencode_provider_id = helpers.mapProviderTypeToOpenCode(provider.provider_type);
 
         const auth_url = try std.fmt.allocPrint(c.arena, "{s}/auth/{s}", .{ server_url, opencode_provider_id });
         
@@ -1750,15 +1739,6 @@ pub fn workspacePaneRecreateSession(c: *spider.Ctx) !spider.Response {
     return workspacePaneOpenSession(c);
 }
 
-fn mapProviderTypeToOpenCode(provider_type: []const u8) []const u8 {
-    if (std.mem.eql(u8, provider_type, "Google")) return "google";
-    if (std.mem.eql(u8, provider_type, "Groq")) return "groq";
-    if (std.mem.eql(u8, provider_type, "OpenRouter")) return "openrouter";
-    if (std.mem.eql(u8, provider_type, "Ollama")) return "ollama";
-    if (std.mem.eql(u8, provider_type, "OpenAI Compatible")) return "openai";
-    return "opencode";
-}
-
 pub fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
     const workspace_id_raw = c.params.get("id") orelse
         return c.text("Workspace não informado.", .{ .status = .bad_request });
@@ -1839,7 +1819,7 @@ pub fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
     
     const request_body = if (bootstrap_rows_initial.len > 0) blk: {
         const b = bootstrap_rows_initial[0];
-        const provider_id = mapProviderTypeToOpenCode(b.provider_type);
+        const provider_id = helpers.mapProviderTypeToOpenCode(b.provider_type);
         
         break :blk try std.json.Stringify.valueAlloc(c.arena, .{ 
             .title = session_title,

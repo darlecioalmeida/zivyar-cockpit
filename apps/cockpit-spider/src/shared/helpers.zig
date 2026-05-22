@@ -202,6 +202,15 @@ pub fn extractMissionFinalVerdictFromPilotDeliveryReport(report: []const u8) []c
     return "";
 }
 
+pub fn mapProviderTypeToOpenCode(provider_type: []const u8) []const u8 {
+    if (std.mem.eql(u8, provider_type, "Google")) return "google";
+    if (std.mem.eql(u8, provider_type, "Groq")) return "groq";
+    if (std.mem.eql(u8, provider_type, "OpenRouter")) return "openrouter";
+    if (std.mem.eql(u8, provider_type, "Ollama")) return "ollama";
+    if (std.mem.eql(u8, provider_type, "OpenAI Compatible")) return "openai";
+    return "opencode";
+}
+
 fn containsAsciiCaseInsensitive(haystack: []const u8, needle: []const u8) bool {
     if (needle.len == 0) return true;
     if (haystack.len < needle.len) return false;

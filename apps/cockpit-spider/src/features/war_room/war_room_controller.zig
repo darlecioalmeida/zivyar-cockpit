@@ -1,6 +1,7 @@
 const std = @import("std");
 const spider = @import("spider");
 const core = @import("core");
+const helpers = @import("../../shared/helpers.zig");
 const model = @import("./war_room_model.zig");
 const repo = @import("./war_room_repository.zig");
 
@@ -144,17 +145,7 @@ pub fn promptAgent(c: *spider.Ctx) !spider.Response {
     const model_id = parsed.model_id orelse "big-pickle";
     const provider_id = parsed.provider_id orelse "opencode";
     
-    // Mapeamento simples de provedores para o que o OpenCode server espera
-    const opencode_provider = if (std.mem.eql(u8, provider_id, "Google")) 
-        "google" 
-    else if (std.mem.eql(u8, provider_id, "OpenRouter")) 
-        "openrouter" 
-    else if (std.mem.eql(u8, provider_id, "Groq")) 
-        "groq" 
-    else if (std.mem.eql(u8, provider_id, "Ollama")) 
-        "ollama" 
-    else 
-        "opencode";
+    const opencode_provider = helpers.mapProviderTypeToOpenCode(provider_id);
 
     const prompt_url = try std.fmt.allocPrint(c.arena, "{s}/session/{s}/prompt_async", .{ runtime.server_url, parsed.session_id });
     const prompt_body = try std.fmt.allocPrint(c.arena,
