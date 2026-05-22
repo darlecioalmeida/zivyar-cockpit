@@ -181,7 +181,7 @@ pub fn executeAutopilotStep(c: *spider.Ctx) !spider.Response {
 }
 
 fn renderWaiting(c: *spider.Ctx, mission: *const model.MissionNextStepRow, step_label: []const u8, refresh_url: []const u8) !spider.Response {
-    return c.view("autopilot_step", .{
+    return c.view("missions/autopilot_step", .{
         .mission = mission.*,
         .step_description = step_label,
         .status = "waiting",
@@ -193,7 +193,7 @@ fn renderWaiting(c: *spider.Ctx, mission: *const model.MissionNextStepRow, step_
 }
 
 fn renderError(c: *spider.Ctx, mission: *const model.MissionNextStepRow, step_label: []const u8, msg: []const u8) !spider.Response {
-    return c.view("autopilot_step", .{
+    return c.view("missions/autopilot_step", .{
         .mission = mission.*,
         .step_description = step_label,
         .status = "error",
