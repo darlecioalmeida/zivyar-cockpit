@@ -12,7 +12,7 @@ fn syncProvidersToOpenCode(c: *spider.Ctx, workspace_id: i32, server_url: []cons
     for (providers) |provider| {
         if (!provider.is_active) continue;
 
-        const opencode_provider_id = helpers.mapProviderTypeToOpenCode(provider.provider_type);
+        const opencode_provider_id = helpers.mapProviderTypeToOpenCode(provider.name, provider.provider_type);
 
         const auth_url = try std.fmt.allocPrint(c.arena, "{s}/auth/{s}", .{ server_url, opencode_provider_id });
         
@@ -1227,12 +1227,63 @@ pub fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
         "Preparando imagem e iniciando OpenCode Server...",
     );
 
+    // Busca chaves de API dos provedores para passar ao Docker
+    const providers = try provider_repo.listProviders(c);
+    var env_args: std.ArrayList([]const u8) = .empty;
+    defer env_args.deinit(c.arena);
+    try env_args.appendSlice(c.arena, &.{ "docker", "run", "-d", "--name", runtime.container_name });
+    
+    // Portas e Host
+    try env_args.appendSlice(c.arena, &.{ "-p", published_port });
+    try env_args.appendSlice(c.arena, &.{ "-e", "OPENCODE_HOST=0.0.0.0" });
+    try env_args.appendSlice(c.arena, &.{ "-e", "OPENCODE_PORT=4096" });
+
+    // Injeta chaves de provedores via ENV
+    for (providers) |provider| {
+        if (!provider.is_active or provider.api_key.len == 0) continue;
+        
+        const env_var = if (std.mem.eql(u8, provider.provider_type, "Google"))
+            "GOOGLE_GENERATIVE_AI_API_KEY"
+        else if (std.mem.eql(u8, provider.provider_type, "Groq"))
+            "GROQ_API_KEY"
+        else if (std.mem.eql(u8, provider.provider_type, "OpenRouter"))
+            "OPENROUTER_API_KEY"
+        else if (std.mem.eql(u8, provider.provider_type, "Ollama"))
+            "OLLAMA_BASE_URL"
+        else if (std.mem.eql(u8, provider.name, "OpenCode Zen"))
+            "OPENCODE_API_KEY"
+        else if (std.mem.eql(u8, provider.provider_type, "OpenAI Compatible"))
+            "OPENAI_API_KEY"
+        else
+            continue;
+
+        const env_str = try std.fmt.allocPrint(c.arena, "{s}={s}", .{ env_var, provider.api_key });
+        try env_args.append(c.arena, "-e");
+        try env_args.append(c.arena, env_str);
+
+        // Se tiver base URL personalizada (ex: OpenAI Compatible), passa também
+        if (provider.base_url.len > 0) {
+            const base_env_var = if (std.mem.eql(u8, provider.provider_type, "OpenAI Compatible"))
+                "OPENAI_BASE_URL"
+            else
+                null;
+            
+            if (base_env_var) |bev| {
+                const base_env_str = try std.fmt.allocPrint(c.arena, "{s}={s}", .{ bev, provider.base_url });
+                try env_args.append(c.arena, "-e");
+                try env_args.append(c.arena, base_env_str);
+            }
+        }
+    }
+
+    try env_args.appendSlice(c.arena, &.{ "-v", volume_mount, "-w", "/workspace", image_name });
+
     try helpers.insertRuntimeEvent(
         c,
         workspace_id,
         "starting",
         "Inicialização solicitada",
-        "O Zivyar iniciou o fluxo de validação da imagem Docker e abertura do OpenCode Server.",
+        "O Zivyar iniciou o fluxo de validação da imagem Docker e abertura do OpenCode Server com injeção de provedores.",
     );
 
     const image_exists = core.commandSucceeded(c, &.{
@@ -1295,47 +1346,20 @@ pub fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
     };
 
     if (container_exists) {
-        container_result = core.runRuntimeCommand(c, &.{
-            "docker",
-            "start",
-            runtime.container_name,
-        });
-
-        try repo.insertRuntimeCommandLogEntry(
-            c,
-            workspace_id,
-            "start-container",
-            "docker start <workspace-container>",
-            container_result,
-        );
-    } else {
-        container_result = core.runRuntimeCommand(c, &.{
-            "docker",
-            "run",
-            "-d",
-            "--name",
-            runtime.container_name,
-            "-p",
-            published_port,
-            "-e",
-            "OPENCODE_HOST=0.0.0.0",
-            "-e",
-            "OPENCODE_PORT=4096",
-            "-v",
-            volume_mount,
-            "-w",
-            "/workspace",
-            image_name,
-        });
-
-        try repo.insertRuntimeCommandLogEntry(
-            c,
-            workspace_id,
-            "create-container",
-            "docker run -d --name <workspace-container> -p <host>:<container> -v <workspace>:/workspace",
-            container_result,
-        );
+        // Se o container já existe, mas mudamos os provedores, precisamos recriá-lo
+        // para injetar as novas ENVs. Vamos remover e rodar de novo.
+        _ = core.runRuntimeCommand(c, &.{ "docker", "rm", "-f", runtime.container_name });
     }
+    
+    container_result = core.runRuntimeCommand(c, env_args.items);
+
+    try repo.insertRuntimeCommandLogEntry(
+        c,
+        workspace_id,
+        "create-container",
+        "docker run -d --name <workspace-container> -p <host>:<container> -v <workspace>:/workspace [COM PROVEDORES]",
+        container_result,
+    );
 
     if (!container_result.ok) {
         try repo.updateRuntimeState(
@@ -1819,7 +1843,7 @@ pub fn workspacePaneOpenSession(c: *spider.Ctx) !spider.Response {
     
     const request_body = if (bootstrap_rows_initial.len > 0) blk: {
         const b = bootstrap_rows_initial[0];
-        const provider_id = helpers.mapProviderTypeToOpenCode(b.provider_type);
+        const provider_id = helpers.mapProviderTypeToOpenCode(b.model_name, b.provider_type);
         
         break :blk try std.json.Stringify.valueAlloc(c.arena, .{ 
             .title = session_title,

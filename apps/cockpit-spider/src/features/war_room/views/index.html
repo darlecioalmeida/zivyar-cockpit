@@ -179,6 +179,9 @@ body { display: flex; flex-direction: column; }
   <span class="info" style="color:var(--text-dim)">—</span>
   <span class="info" style="color:var(--text-dim)">{ local_path }</span>
   <div class="runtime">
+    <button id="sync-runtime" class="btn-icon" title="Sincronizar Provedores e Reiniciar Runtime" style="margin-right: 8px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--yellow)"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+    </button>
     if (runtime_state == "running") {
     <span class="dot on"></span>
     } else {
@@ -501,6 +504,23 @@ applySavedPrefs();
 document.querySelectorAll('.card').forEach(card => resizeObserver.observe(card));
 
 // ── Handlers ─────────────────────────────────────────────────────
+document.getElementById('sync-runtime').addEventListener('click', async function() {
+  if (confirm("Deseja sincronizar todos os provedores e reiniciar o runtime? Isso encerrará todas as sessões ativas no terminal.")) {
+    showToast("Reiniciando runtime e injetando provedores...");
+    try {
+      const r = await fetch('/workspaces/' + WS_ID + '/runtime/start', { method: 'POST' });
+      if (r.ok) {
+        showToast("Runtime reiniciado com sucesso!");
+        setTimeout(() => location.reload(), 2000);
+      } else {
+        showToast("Erro ao reiniciar runtime");
+      }
+    } catch (_) {
+      showToast("Falha na conexão com o servidor");
+    }
+  }
+});
+
 grid.addEventListener('click', function(e) {
   const toggleCollapse = e.target.closest('.toggle-collapse');
   const btnReset = e.target.closest('.reset-context');
