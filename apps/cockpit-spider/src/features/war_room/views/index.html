@@ -480,6 +480,77 @@ function getRelativeTime(timestamp) {
   return new Date(timestamp).toLocaleTimeString();
 }
 
+function isThinking(messages) {
+  if (!messages.length) return false;
+  const last = messages[messages.length - 1];
+  if (last.info && last.info.role === 'assistant') {
+    for (const part of (last.parts || [])) {
+      if (part.type === 'tool-invocation') {
+        const s = (part.toolInvocation || {}).state;
+        if (s === 'call' || s === 'partial-call') return true;
+      }
+    }
+    return false;
+  }
+  if (last.info && last.info.role === 'user') {
+    const ts = last.info.time && last.info.time.created;
+    if (!ts) return false;
+    return (Date.now() - ts) < 90000;
+  }
+  return false;
+}
+
+async function fetchSessionMsg(serverUrl, sessionId) {
+  if (!serverUrl || !sessionId) return null;
+  try {
+    const r = await fetch(serverUrl + '/session/' + sessionId + '/message');
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (_) { return null; }
+}
+
+async function sendToAgent(sessionId, text, role) {
+  if (!sessionId || !text) return false;
+  const card = document.querySelector('.card[data-role="' + role + '"]');
+  const chat = document.getElementById('chat-' + role);
+  
+  if (card) card.classList.add('thinking'); // Feedback visual imediato
+
+  if (chat) {
+    const row = document.createElement('div'); row.className = 'chat-row';
+    row.innerHTML = '<div style="display:flex;align-items:center;"><span class="chat-role user">user</span>' +
+                    '<span class="chat-time">agora</span></div>' +
+                    '<div class="chat-bubble user">' + escapeHtml(text) + '</div>';
+    const thinking = chat.querySelector('.thinking');
+    if (thinking) thinking.remove();
+    chat.appendChild(row);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  try {
+    const r = await fetch('/workspaces/' + WS_ID + '/war-room/prompt-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, text: text }),
+    });
+    
+    if (!r.ok) {
+      const errData = await r.json().catch(() => ({}));
+      showToast("Erro ao enviar para " + role + ": " + (errData.err || "Falha na rede"));
+      card.classList.remove('thinking');
+      return false;
+    }
+
+    // Força polling imediato para buscar a resposta
+    setTimeout(pollMessages, 1000);
+    return true;
+  } catch (err) {
+    showToast("Erro de conexão com o agente " + role);
+    card.classList.remove('thinking');
+    return false;
+  }
+}
+
 function renderChat(messages, role) {
   const container = document.getElementById('chat-' + role);
   const searchInput = document.querySelector('.search-box[data-role="' + role + '"]');
