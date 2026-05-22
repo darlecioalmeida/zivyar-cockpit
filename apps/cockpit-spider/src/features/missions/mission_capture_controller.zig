@@ -71,7 +71,7 @@ pub fn capturePilotBrief(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, pilot.session_external_id },
     );
 
-    const max_attempts: usize = 8;
+    const max_attempts: usize = if (std.mem.eql(u8, mission.execution_mode, "autopilot")) 300 else 8;
     var messages_result: core.RuntimeCommandResult = .{
         .ok = false,
         .exit_code = -1,
@@ -380,7 +380,7 @@ pub fn captureScoutReport(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, scout.session_external_id },
     );
 
-    const max_attempts: usize = 8;
+    const max_attempts: usize = if (std.mem.eql(u8, mission.execution_mode, "autopilot")) 300 else 8;
     var messages_result: core.RuntimeCommandResult = .{
         .ok = false,
         .exit_code = -1,
@@ -535,7 +535,7 @@ pub fn captureBuilderReport(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, builder.session_external_id },
     );
 
-    const max_attempts: usize = 8;
+    const max_attempts: usize = if (std.mem.eql(u8, mission.execution_mode, "autopilot")) 300 else 8;
     var messages_result: core.RuntimeCommandResult = .{
         .ok = false,
         .exit_code = -1,
@@ -691,7 +691,7 @@ pub fn captureReviewerReport(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, reviewer.session_external_id },
     );
 
-    const max_attempts: usize = 8;
+    const max_attempts: usize = if (std.mem.eql(u8, mission.execution_mode, "autopilot")) 300 else 8;
     var messages_result: core.RuntimeCommandResult = .{
         .ok = false,
         .exit_code = -1,
@@ -847,7 +847,7 @@ pub fn captureExecutorReport(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, executor.session_external_id },
     );
 
-    const max_attempts: usize = 8;
+    const max_attempts: usize = if (std.mem.eql(u8, mission.execution_mode, "autopilot")) 300 else 8;
     var messages_result: core.RuntimeCommandResult = .{
         .ok = false,
         .exit_code = -1,
@@ -1003,7 +1003,7 @@ pub fn capturePilotDeliveryReport(c: *spider.Ctx) !spider.Response {
         .{ runtime.server_url_label, pilot.session_external_id },
     );
 
-    const max_attempts: usize = 8;
+    const max_attempts: usize = if (std.mem.eql(u8, mission.execution_mode, "autopilot")) 300 else 8;
     var messages_result: core.RuntimeCommandResult = .{
         .ok = false,
         .exit_code = -1,

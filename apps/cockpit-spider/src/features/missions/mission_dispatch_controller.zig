@@ -253,6 +253,25 @@ pub fn dispatchToPilot(c: *spider.Ctx) !spider.Response {
         std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
     }
 
+    if (dispatch_user_message_id.len == 0) {
+        try repo.setPilotDispatchError(c, mission_id);
+
+        try helpers.insertRuntimeEvent(
+            c,
+            workspace_id,
+            "mission-dispatch-error",
+            "Falha ao rastrear envio da missão ao Piloto",
+            "O sistema não conseguiu confirmar a criação da mensagem de despacho na sessão do Piloto.",
+        );
+
+        try repo.insertMissionEvent(c, mission_id, workspace_id, "mission-dispatch-to-pilot-error", "Falha ao rastrear mensagem de despacho", "O sistema não conseguiu localizar a mensagem de despacho na sessão do Piloto (pilot_dispatch_user_message_id) após o envio.");
+
+        return c.text(
+            "Falha ao rastrear a mensagem de despacho na sessão do Piloto.",
+            .{ .status = .bad_request },
+        );
+    }
+
     try repo.updateMissionAfterPilotDispatch(c, pilot.session_external_id, dispatch_user_message_id, mission_id);
 
     const event_message = try std.fmt.allocPrint(
@@ -500,6 +519,25 @@ pub fn dispatchPilotBriefToPlanner(c: *spider.Ctx) !spider.Response {
         }
 
         std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
+    }
+
+    if (planner_dispatch_user_message_id.len == 0) {
+        try repo.setPlannerDispatchError(c, mission_id);
+
+        try helpers.insertRuntimeEvent(
+            c,
+            workspace_id,
+            "mission-dispatch-error",
+            "Falha ao rastrear envio do briefing ao Planner",
+            "O sistema não conseguiu confirmar a criação da mensagem de despacho na sessão do Planner.",
+        );
+
+        try repo.insertMissionEvent(c, mission_id, workspace_id, "mission-dispatch-to-planner-error", "Falha ao rastrear mensagem de despacho", "O sistema não conseguiu localizar a mensagem de despacho na sessão do Planner (planner_dispatch_user_message_id) após o envio.");
+
+        return c.text(
+            "Falha ao rastrear a mensagem de despacho na sessão do Planner.",
+            .{ .status = .bad_request },
+        );
     }
 
     try repo.updateMissionAfterPlannerDispatch(c, planner.session_external_id, planner_dispatch_user_message_id, mission_id);
@@ -757,6 +795,25 @@ pub fn dispatchPlannerPlanToScout(c: *spider.Ctx) !spider.Response {
         std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
     }
 
+    if (scout_dispatch_user_message_id.len == 0) {
+        try repo.setScoutDispatchError(c, mission_id);
+
+        try helpers.insertRuntimeEvent(
+            c,
+            workspace_id,
+            "mission-dispatch-error",
+            "Falha ao rastrear envio do plano ao Scout",
+            "O sistema não conseguiu confirmar a criação da mensagem de despacho na sessão do Scout.",
+        );
+
+        try repo.insertMissionEvent(c, mission_id, workspace_id, "mission-dispatch-to-scout-error", "Falha ao rastrear mensagem de despacho", "O sistema não conseguiu localizar a mensagem de despacho na sessão do Scout (scout_dispatch_user_message_id) após o envio.");
+
+        return c.text(
+            "Falha ao rastrear a mensagem de despacho na sessão do Scout.",
+            .{ .status = .bad_request },
+        );
+    }
+
     try repo.updateMissionAfterScoutDispatch(c, scout.session_external_id, scout_dispatch_user_message_id, mission_id);
 
     const event_message = try std.fmt.allocPrint(
@@ -1010,6 +1067,25 @@ pub fn dispatchScoutReportToBuilder(c: *spider.Ctx) !spider.Response {
         }
 
         std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
+    }
+
+    if (builder_dispatch_user_message_id.len == 0) {
+        try repo.setBuilderDispatchError(c, mission_id);
+
+        try helpers.insertRuntimeEvent(
+            c,
+            workspace_id,
+            "mission-dispatch-error",
+            "Falha ao rastrear envio do pacote ao Builder",
+            "O sistema não conseguiu confirmar a criação da mensagem de despacho na sessão do Builder.",
+        );
+
+        try repo.insertMissionEvent(c, mission_id, workspace_id, "mission-dispatch-to-builder-error", "Falha ao rastrear mensagem de despacho", "O sistema não conseguiu localizar a mensagem de despacho na sessão do Builder (builder_dispatch_user_message_id) após o envio.");
+
+        return c.text(
+            "Falha ao rastrear a mensagem de despacho na sessão do Builder.",
+            .{ .status = .bad_request },
+        );
     }
 
     try repo.updateMissionAfterBuilderDispatch(c, builder.session_external_id, builder_dispatch_user_message_id, mission_id);
@@ -1269,6 +1345,25 @@ pub fn dispatchBuilderReportToReviewer(c: *spider.Ctx) !spider.Response {
         }
 
         std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
+    }
+
+    if (reviewer_dispatch_user_message_id.len == 0) {
+        try repo.setReviewerDispatchError(c, mission_id);
+
+        try helpers.insertRuntimeEvent(
+            c,
+            workspace_id,
+            "mission-dispatch-error",
+            "Falha ao rastrear envio do Implementation Report ao Reviewer",
+            "O sistema não conseguiu confirmar a criação da mensagem de despacho na sessão do Reviewer.",
+        );
+
+        try repo.insertMissionEvent(c, mission_id, workspace_id, "mission-dispatch-to-reviewer-error", "Falha ao rastrear mensagem de despacho", "O sistema não conseguiu localizar a mensagem de despacho na sessão do Reviewer (reviewer_dispatch_user_message_id) após o envio.");
+
+        return c.text(
+            "Falha ao rastrear a mensagem de despacho na sessão do Reviewer.",
+            .{ .status = .bad_request },
+        );
     }
 
     try repo.updateMissionAfterReviewerDispatch(c, reviewer.session_external_id, reviewer_dispatch_user_message_id, mission_id);
@@ -1533,6 +1628,25 @@ pub fn dispatchReviewerReportToExecutor(c: *spider.Ctx) !spider.Response {
         std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
     }
 
+    if (executor_dispatch_user_message_id.len == 0) {
+        try repo.setExecutorDispatchError(c, mission_id);
+
+        try helpers.insertRuntimeEvent(
+            c,
+            workspace_id,
+            "mission-dispatch-error",
+            "Falha ao rastrear envio do Review Report ao Executor",
+            "O sistema não conseguiu confirmar a criação da mensagem de despacho na sessão do Executor.",
+        );
+
+        try repo.insertMissionEvent(c, mission_id, workspace_id, "mission-dispatch-to-executor-error", "Falha ao rastrear mensagem de despacho", "O sistema não conseguiu localizar a mensagem de despacho na sessão do Executor (executor_dispatch_user_message_id) após o envio.");
+
+        return c.text(
+            "Falha ao rastrear a mensagem de despacho na sessão do Executor.",
+            .{ .status = .bad_request },
+        );
+    }
+
     try repo.updateMissionAfterExecutorDispatch(c, executor.session_external_id, executor_dispatch_user_message_id, mission_id);
 
     const event_message = try std.fmt.allocPrint(
@@ -1794,6 +1908,25 @@ pub fn dispatchExecutorReportToPilot(c: *spider.Ctx) !spider.Response {
         }
 
         std.Io.sleep(c._io, std.Io.Duration.fromMilliseconds(200), .real) catch {};
+    }
+
+    if (pilot_delivery_dispatch_user_message_id.len == 0) {
+        try repo.setPilotDeliveryDispatchError(c, mission_id);
+
+        try helpers.insertRuntimeEvent(
+            c,
+            workspace_id,
+            "mission-dispatch-error",
+            "Falha ao rastrear envio do Verification Report ao Piloto",
+            "O sistema não conseguiu confirmar a criação da mensagem de despacho na sessão do Piloto.",
+        );
+
+        try repo.insertMissionEvent(c, mission_id, workspace_id, "mission-dispatch-to-pilot-delivery-error", "Falha ao rastrear mensagem de despacho", "O sistema não conseguiu localizar a mensagem de despacho na sessão do Piloto (pilot_delivery_dispatch_user_message_id) após o envio.");
+
+        return c.text(
+            "Falha ao rastrear a mensagem de despacho na sessão do Piloto.",
+            .{ .status = .bad_request },
+        );
     }
 
     try repo.updateMissionAfterPilotDeliveryDispatch(c, pilot.session_external_id, pilot_delivery_dispatch_user_message_id, mission_id);
