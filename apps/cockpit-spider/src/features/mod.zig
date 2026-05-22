@@ -1,0 +1,11 @@
+pub const dashboard = @import("./dashboard/dashboard_controller.zig");
+pub const workspaces = @import("./workspaces/workspace_controller.zig");
+pub const missions = @import("./missions/mod.zig");
+pub const missions_dispatch = @import("./missions/mission_dispatch_controller.zig");
+pub const missions_capture = @import("./missions/mission_capture_controller.zig");
+pub const agents = @import("./agents/agent_controller.zig");
+pub const squads = @import("./squads/squad_controller.zig");
+pub const providers = @import("./providers/provider_controller.zig");
+pub const stacks = @import("./stacks/stack_controller.zig");
+pub const graphify = @import("./graphify/graphify_controller.zig");
+pub const war_room = @import("./war_room/war_room_controller.zig");

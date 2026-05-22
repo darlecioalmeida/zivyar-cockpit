@@ -73,7 +73,21 @@ decision records
 snapshots de contexto
 ```
 
-A próxima continuação natural passa a ser a integração Graphify.
+A Graphify já aparece no Workspace Show como um grafo visual derivado desse mapa de contexto, com navegação interna para os painéis reais de memória, handoff, decisão e snapshot.
+
+Agora também existe uma página Graphify dedicada em `/workspaces/:id/graphify`, reutilizando o mesmo contexto persistido sem mexer no fluxo operacional do workspace.
+
+Graphify também ganhou um hub global em `/graphify`, com atalhos para cada workspace e para sua respectiva visão do mapa.
+
+O próximo refinamento de arquitetura também deve tratar as referências externas como
+camadas de apoio:
+
+```text
+Graphify + GSD + UI UX Pro Max + awesome-design-md + ECC
+```
+
+Elas entram como guias de conhecimento, método e apresentação, não como
+substitutos do Cockpit.
 
 ---
 

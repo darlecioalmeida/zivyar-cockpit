@@ -7,6 +7,15 @@ pub fn build(b: *std.Build) void {
     const spider_dep = b.dependency("spider", .{ .target = target });
     const spider_mod = spider_dep.module("spider");
 
+    const core_mod = b.createModule(.{
+        .root_source_file = b.path("src/core/mod.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "spider", .module = spider_mod },
+        },
+    });
+
     const exe = b.addExecutable(.{
         .name = "zivyar-cockpit-spider",
         .root_module = b.createModule(.{
@@ -15,6 +24,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .imports = &.{
                 .{ .name = "spider", .module = spider_mod },
+                .{ .name = "core", .module = core_mod },
             },
         }),
     });

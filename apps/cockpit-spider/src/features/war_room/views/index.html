@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>War Room — { title } — Zivyar Cockpit</title>
+<link rel="stylesheet" href="/css/app.css" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d1117; --surface: #161b22; --border: #30363d;
+  --text: #e6edf3; --text-dim: #8b949e; --accent: #58a6ff;
+  --green: #3fb950; --yellow: #d29922; --red: #f85149;
+  --sidebar-w: 260px; --topbar-h: 40px;
+  --font: 'SF Mono','Cascadia Code','JetBrains Mono','Consolas',monospace;
+}
+html, body { height: 100%; background: var(--bg); color: var(--text); font: 13px/1.5 var(--font); }
+body { display: flex; flex-direction: column; }
+
+.topbar {
+  height: var(--topbar-h); display: flex; align-items: center;
+  padding: 0 12px; background: var(--surface); border-bottom: 1px solid var(--border);
+  gap: 16px; flex-shrink: 0;
+}
+.topbar .brand { font-weight: 700; color: var(--accent); font-size: 14px; }
+.topbar .sep { color: var(--border); }
+.topbar .info { color: var(--text-dim); font-size: 11px; }
+.topbar .runtime { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 11px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.dot.off { background: var(--text-dim); }
+.dot.pulse { background: var(--yellow); animation: pulse 1s ease-in-out infinite; }
+.card.thinking { border-color: var(--yellow); box-shadow: 0 0 10px rgba(210,153,34,0.2); }
+.card.thinking .dot { background: var(--yellow); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{ box-shadow:0 0 3px var(--yellow); opacity: 0.6; } 50%{ box-shadow:0 0 10px var(--yellow); opacity: 1; } }
+.thinking { color: var(--yellow); font-style: italic; font-size: 11px; }
+.ctx-badge { font-size: 9px; padding: 0 5px; border-radius: 3px; font-weight: 600; letter-spacing: .03em; }
+.ctx-badge.current { background: rgba(63,185,80,.15); color: var(--green); }
+.ctx-badge.outdated { background: rgba(210,153,34,.15); color: var(--yellow); }
+.ctx-badge.unbound { background: rgba(139,148,158,.15); color: var(--text-dim); }
+
+.card-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.btn-icon { 
+  background: none; border: none; color: var(--text-dim); cursor: pointer; 
+  padding: 2px; border-radius: 3px; font-size: 12px; display: flex; align-items: center;
+}
+.btn-icon:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+
+.model-selector {
+  background: var(--surface); border: 1px solid var(--border); color: var(--accent);
+  font-size: 10px; padding: 2px 6px; border-radius: 4px; outline: none;
+  max-width: 120px; cursor: pointer; font-weight: 600;
+}
+.model-selector:hover { border-color: var(--accent); background: var(--bg); }
+
+.usage-info {
+  display: flex; gap: 8px; font-size: 9px; color: var(--text-dim);
+  background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px;
+  border: 1px solid var(--border); margin-left: 4px;
+}
+.usage-bar {
+  width: 40px; height: 4px; background: var(--border);
+  border-radius: 2px; overflow: hidden; align-self: center;
+}
+.usage-progress { height: 100%; background: var(--green); transition: width 0.3s; }
+.usage-progress.warn { background: var(--yellow); }
+.usage-progress.crit { background: var(--red); }
+
+.body { display: flex; flex: 1; overflow: hidden; }
+
+.commander {
+  width: var(--sidebar-w); min-width: var(--sidebar-w);
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--border); background: var(--surface);
+}
+.commander-header {
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+  font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--text-dim); display: flex; align-items: center; gap: 8px;
+}
+.commander-header .badge { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: var(--accent); color: #000; }
+.commander-input { padding: 8px; border-bottom: 1px solid var(--border); }
+.commander-input textarea {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); font: 12px/1.4 var(--font); padding: 6px 8px;
+  border-radius: 4px; resize: vertical; min-height: 52px;
+}
+.commander-input textarea:focus { outline: none; border-color: var(--accent); }
+.commander-actions { display: flex; gap: 4px; padding: 6px 0 0; }
+.commander-actions button {
+  flex: 1; background: var(--accent); color: #000; border: none;
+  font: 11px var(--font); font-weight: 600; padding: 4px 8px; border-radius: 4px;
+  cursor: pointer;
+}
+.commander-actions button:hover { opacity: .85; }
+.commander-actions button.secondary { background: var(--border); color: var(--text); }
+.commander-log { flex: 1; overflow-y: auto; padding: 6px 8px; font-size: 11px; }
+.commander-log .entry {
+  padding: 4px 0; border-bottom: 1px solid rgba(48,54,61,.5); line-height: 1.4;
+}
+.commander-log .entry .time { color: var(--text-dim); }
+.commander-log .entry .label { color: var(--accent); }
+.commander-log .entry .msg { color: var(--text-dim); }
+
+.main {
+  flex: 1; display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-auto-rows: 1fr; gap: 6px; padding: 6px; overflow: auto;
+}
+@media (max-width: 900px) { .main { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .main { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; display: flex; flex-direction: column;
+  min-width: 280px; min-height: 400px; overflow: hidden; resize: both;
+  position: relative;
+}
+.card-header {
+  padding: 5px 10px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.card-header .name { font-weight: 600; font-size: 12px; }
+.card-header .handle { color: var(--text-dim); font-size: 10px; }
+.drag-handle { cursor: grab; color: var(--text-dim); font-size: 14px; line-height: 1; user-select: none; flex-shrink: 0; }
+.drag-handle:active { cursor: grabbing; }
+.card.dragging { opacity: .4; }
+.card.drag-over { border-color: var(--accent); box-shadow: 0 0 8px rgba(88,166,255,.3); }
+
+.terminal-container {
+  flex: 1; border: none; background: var(--bg);
+  position: relative; overflow: hidden;
+}
+.terminal-frame {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  border: none; background: var(--bg);
+}
+
+.card.collapsed { height: 34px !important; min-height: 34px !important; resize: none; }
+.card.collapsed .terminal-container, .card.collapsed .card-footer { display: none; }
+
+.card-footer {
+  padding: 2px 8px; border-top: 1px solid var(--border);
+  font-size: 10px; display: flex; align-items: center; gap: 6px;
+  flex-shrink: 0; min-width: 0;
+}
+.card-footer .copy {
+  background: none; border: none; color: var(--accent); cursor: pointer;
+  font: 10px var(--font); padding: 2px 4px; border-radius: 3px; flex-shrink: 0;
+}
+.card-footer .copy:hover { background: rgba(88,166,255,0.1); }
+.card-footer .sid { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.card-footer .prov-mod {
+  font-size: 9px; color: var(--accent); font-weight: 600;
+  background: rgba(88,166,255,0.1); padding: 1px 5px; border-radius: 3px;
+  max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+#toast-container {
+  position: fixed; bottom: 20px; right: 20px; z-index: 9999;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+  background: var(--surface); border: 1px solid var(--accent); border-left: 4px solid var(--accent);
+  color: var(--text); padding: 10px 15px; border-radius: 4px; font-size: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5); animation: slideIn 0.3s ease-out;
+}
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="brand">⏺ War Room</span>
+  <span class="sep">|</span>
+  <span class="info">{ ws_name }</span>
+  <span class="sep">/</span>
+  <span class="info">{ squad_name }</span>
+  <span class="info" style="color:var(--text-dim)">—</span>
+  <span class="info" style="color:var(--text-dim)">{ local_path }</span>
+  <div class="runtime">
+    <button id="sync-runtime" class="btn-icon" title="Sincronizar Provedores e Reiniciar Runtime" style="margin-right: 8px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--yellow)"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+    </button>
+    if (runtime_state == "running") {
+    <span class="dot on"></span>
+    } else {
+    <span class="dot off"></span>
+    }
+    { runtime_state }
+    <span style="color:var(--text-dim);font-size:10px">{ server_url }</span>
+  </div>
+</div>
+
+<div id="war-room-data" data-workspace-id="{ workspace_id }"></div>
+
+<div class="body">
+
+<aside class="commander">
+  <div class="commander-header">
+    <span class="dot on"></span> Comandante <span class="badge">Piloto</span>
+  </div>
+  <div class="commander-input">
+    <textarea id="cmd-input" placeholder="mensagem para todos os agentes..."></textarea>
+    <div class="commander-actions">
+      <button id="cmd-all">Enviar para todos</button>
+    </div>
+  </div>
+  <div class="commander-log" id="event-log">
+    for (events) |ev| {
+    <div class="entry">
+      <span class="time">{ ev.created_at }</span>
+      <span class="label">[{ ev.label }]</span>
+      <span class="msg">{ ev.message }</span>
+    </div>
+    }
+  </div>
+</aside>
+
+<main class="main" id="agent-grid">
+  for (agents) |ag| {
+  <div class="card" data-role="{ ag.role }" data-session="{ ag.session_id }" data-pane-id="{ ag.id }">
+    <div class="card-header">
+      <span class="drag-handle" draggable="true">⠿</span>
+      if (ag.is_active) {
+      <span class="dot on"></span>
+      } else {
+      <span class="dot off"></span>
+      }
+      <span class="name">{ ag.role }</span>
+      <span class="handle">@{ ag.agent_handle }</span>
+      <span class="ctx-badge { ag.context_state }">{ ag.context_state }</span>
+      
+      <div class="card-actions">
+        <select class="model-selector" title="Mudar Modelo" data-role="{ ag.role }" data-session="{ ag.session_id }">
+          <option value="{ ag.model_id }">{ ag.model_id }</option>
+          for (ag.available_models) |m| {
+              <option value="{ m.id }">{ m.name }</option>
+          }
+        </select>
+        <button class="btn-icon reset-context" title="Limpar Contexto" data-role="{ ag.role }" data-session="{ ag.session_id }"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+        <button class="btn-icon toggle-collapse" title="Minimizar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></button>
+      </div>
+    </div>
+    
+    <div class="terminal-container">
+      if (ag.show_terminal) {
+        <iframe class="terminal-frame" src="{ server_url }/Lw/session/{ ag.session_id }"></iframe>
+      }
+      if (ag.show_stale_warning) {
+        <div style="padding: 40px 20px; color: var(--text-dim); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+          <span style="color: var(--yellow)">Sessão expirada ou runtime reiniciado.</span>
+          <button class="commander-actions" style="width: auto; padding: 6px 16px;" onclick="openNewSession({ ag.id })">
+            Abrir Nova Sessão
+          </button>
+        </div>
+      }
+      if (ag.show_awaiting_session) {
+        <div style="padding: 40px 20px; color: var(--text-dim); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+          <span>Aguardando sessão...</span>
+          <button class="commander-actions" style="width: auto; padding: 6px 16px;" onclick="openNewSession({ ag.id })">
+            Abrir Nova Sessão
+          </button>
+        </div>
+      }
+    </div>
+
+    <div class="card-footer">
+      <div class="prov-mod" title="Provedor e Modelo">
+        { ag.provider_name } / <span class="cur-model" id="mname-{ ag.role }">{ ag.model_id }</span>
+      </div>
+      <span class="sid" title="ID da Sessão">{ ag.session_id }</span>
+      <div class="usage-info" id="usage-{ ag.role }">
+        <span class="tokens">--- tkn</span>
+        <div class="usage-bar"><div class="usage-progress" style="width: 0%"></div></div>
+        <span class="pct">0%</span>
+      </div>
+      if (ag.session_id.len > 0) {
+      <button class="copy" onclick="navigator.clipboard.writeText('opencode session { ag.session_id }')">copiar</button>
+      }
+    </div>
+  </div>
+  }
+</main>
+
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+const WS_ID = document.getElementById('war-room-data').dataset.workspaceId;
+const POLL_MS = 3000;
+const REORDER_URL = '/workspaces/' + WS_ID + '/war-room/reorder';
+
+async function openNewSession(paneId) {
+  try {
+    const r = await fetch('/workspaces/' + WS_ID + '/panes/' + paneId + '/session/open', { method: 'POST' });
+    if (r.ok) pollAgents();
+    else showToast("Erro ao abrir sessão");
+  } catch(_) { showToast("Falha na conexão"); }
+}
+
+// ── Persistência de UI ───────────────────────────────────────────
+const UI_PREFS_KEY = 'zivyar_warroom_prefs_' + WS_ID;
+let uiPrefs = new Object();
+try { 
+  const saved = localStorage.getItem(UI_PREFS_KEY);
+  if (saved) uiPrefs = JSON.parse(saved);
+} catch(_) {}
+
+function savePrefs() { localStorage.setItem(UI_PREFS_KEY, JSON.stringify(uiPrefs)); }
+
+function applySavedPrefs() {
+  document.querySelectorAll('.card').forEach(function(card){
+    const role = card.dataset.role;
+    if (uiPrefs[role]) {
+      if (uiPrefs[role].collapsed) card.classList.add('collapsed');
+      if (uiPrefs[role].width) card.style.width = uiPrefs[role].width + 'px';
+      if (uiPrefs[role].height) card.style.height = uiPrefs[role].height + 'px';
+    }
+  });
+}
+
+const resizeObserver = new ResizeObserver(function(entries){
+  for (let entry of entries) {
+    if (entry.target.classList.contains('collapsed')) continue;
+    const role = entry.target.dataset.role;
+    if (!uiPrefs[role]) uiPrefs[role] = new Object();
+    uiPrefs[role].width = entry.contentRect.width;
+    uiPrefs[role].height = entry.contentRect.height;
+    savePrefs();
+  }
+});
+
+function showToast(msg) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(function(){ toast.remove(); }, 4000);
+}
+
+// drag-to-reorder panels
+const grid = document.getElementById('agent-grid');
+let draggedEl = null;
+function persistOrder() {
+  const order = Array.from(grid.querySelectorAll('.card'))
+    .map(function(card){ return parseInt(card.dataset.paneId, 10); })
+    .filter(function(id){ return !Number.isNaN(id); });
+  if (order.length === 0) return;
+  
+  const payload = new Object();
+  payload.order = order;
+
+  fetch(REORDER_URL, {
+    method: 'POST',
+    headers: (function(){ const h = new Object(); h['Content-Type'] = 'application/json'; return h; })(),
+    body: JSON.stringify(payload),
+  }).catch(function(){ /* ignore */ });
+}
+grid.addEventListener('dragstart', function(e) {
+  const handle = e.target.closest('.drag-handle');
+  if (!handle) return;
+  draggedEl = handle.closest('.card');
+  draggedEl.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+});
+grid.addEventListener('dragend', function() {
+  if (draggedEl) { draggedEl.classList.remove('dragging'); draggedEl = null; }
+  grid.querySelectorAll('.card.drag-over').forEach(function(c) { c.classList.remove('drag-over'); });
+});
+grid.addEventListener('dragover', function(e) {
+  const card = e.target.closest('.card');
+  if (!card || card === draggedEl) return;
+  e.preventDefault();
+  card.classList.add('drag-over');
+});
+grid.addEventListener('dragleave', function(e) {
+  const card = e.target.closest('.card');
+  if (card) card.classList.remove('drag-over');
+});
+grid.addEventListener('drop', function(e) {
+  e.preventDefault();
+  const target = e.target.closest('.card');
+  if (!target || !draggedEl || target === draggedEl) return;
+  grid.insertBefore(draggedEl, target.nextSibling);
+  grid.querySelectorAll('.card.drag-over').forEach(function(c) { c.classList.remove('drag-over'); });
+  persistOrder();
+});
+
+// ── estado global ─────────────────────────────────────────────────
+let runtimeUrl = '';
+
+function updateModelSelectors(role, models, currentId) {
+  const sel = document.querySelector('.model-selector[data-role="' + role + '"]');
+  if (!sel) return;
+  
+  const modelKeys = models.map(function(m){ return m.id; }).join(',');
+  if (sel.dataset.modelKeys === modelKeys && sel.dataset.current === currentId) return;
+  
+  const options = models.map(function(m){ 
+    return '<option value="' + m.id + '" data-provider="' + (m.provider_type || 'opencode') + '"' + (m.id === currentId ? ' selected' : '') + '>' + m.name + '</option>';
+  });
+  
+  sel.innerHTML = options.join('');
+  sel.dataset.modelKeys = modelKeys;
+  sel.dataset.current = currentId;
+}
+
+async function changeSessionModel(role, sessionId, modelId) {
+  if (!runtimeUrl || !sessionId || !modelId) return;
+  
+  const payload = new Object();
+  payload.model = new Object();
+  payload.model.modelID = modelId;
+
+  try {
+    const r = await fetch(runtimeUrl + '/session/' + sessionId, {
+      method: 'PATCH',
+      headers: (function(){ const h = new Object(); h['Content-Type'] = 'application/json'; return h; })(),
+      body: JSON.stringify(payload)
+    });
+    if (r.ok) {
+      showToast("Modelo de " + role + " alterado para " + modelId);
+      const mnameEl = document.getElementById('mname-' + role);
+      if (mnameEl) mnameEl.textContent = modelId;
+    } else {
+      showToast("Erro ao mudar modelo de " + role);
+    }
+  } catch (_) {
+    showToast("Falha na conexão ao trocar modelo");
+  }
+}
+
+// ── Polling ───────────────────────────────────────────────────────
+async function pollAgents() {
+  try {
+    const r = await fetch('/workspaces/' + WS_ID + '/war-room/agents.json');
+    const data = await r.json();
+    if (data.server_url) {
+      runtimeUrl = data.server_url;
+    }
+
+    for (const ag of data.agents) {
+      const card = document.querySelector('[data-role="' + ag.role + '"]');
+      if (!card) continue;
+      
+      if (ag.available_models) {
+        updateModelSelectors(ag.role, ag.available_models, ag.model_id);
+      }
+
+      // Atualiza o Iframe se necessário
+      if (ag.session_id && runtimeUrl && ag.status !== 'stale') {
+        const container = card.querySelector('.terminal-container');
+        const currentFrame = container.querySelector('iframe');
+        const expectedSrc = runtimeUrl + '/Lw/session/' + ag.session_id;
+        
+        if (!currentFrame) {
+          container.innerHTML = '<iframe class="terminal-frame" src="' + expectedSrc + '"></iframe>';
+        } else if (!currentFrame.src.includes(ag.session_id)) {
+          currentFrame.src = expectedSrc;
+        }
+      } else if (ag.status === 'stale') {
+        const container = card.querySelector('.terminal-container');
+        if (container.querySelector('iframe')) {
+          container.innerHTML = (function(){
+            return '<div style="padding: 40px 20px; color: var(--text-dim); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">' +
+              '<span style="color: var(--yellow)">Sessão expirada ou runtime reiniciado.</span>' +
+              '<button class="commander-actions" style="width: auto; padding: 6px 16px;" onclick="openNewSession(' + ag.id + ')">' +
+                'Abrir Nova Sessão' +
+              '</button>' +
+            '</div>';
+          })();
+        }
+      }
+
+      const dot = card.querySelector('.card-header .dot');
+      dot.className = 'dot ' + (ag.is_active ? 'on' : 'off');
+      
+      const badge = card.querySelector('.ctx-badge');
+      if (badge) { badge.className = 'ctx-badge ' + ag.context_state; badge.textContent = ag.context_state; }
+      
+      card.querySelector('.sid').textContent = ag.session_id;
+      card.dataset.session = ag.session_id;
+
+      const sel = card.querySelector('.model-selector');
+      if (sel && ag.model_id) {
+        sel.dataset.current = ag.model_id;
+        if (sel.value !== ag.model_id) {
+          sel.value = ag.model_id;
+        }
+      }
+
+      const mnameEl = document.getElementById('mname-' + ag.role);
+      if (mnameEl) mnameEl.textContent = ag.model_id;
+    }
+
+    // Token Usage Polling
+    if (runtimeUrl) {
+      try {
+        const sResp = await fetch(runtimeUrl + '/session/status');
+        if (sResp.ok) {
+          const sessionStatus = await sResp.json();
+          for (const ag of data.agents) {
+            const status = sessionStatus[ag.session_id];
+            const usageEl = document.getElementById('usage-' + ag.role);
+            if (status && usageEl) {
+              const used = status.tokensUsed || 0;
+              const total = status.contextWindow || 1;
+              const pct = Math.round((used / total) * 100);
+              usageEl.querySelector('.tokens').textContent = (used > 1000 ? (used/1000).toFixed(1) + 'k' : used) + ' tkn';
+              usageEl.querySelector('.pct').textContent = pct + '%';
+              const bar = usageEl.querySelector('.usage-progress');
+              bar.style.width = Math.min(pct, 100) + '%';
+              bar.className = 'usage-progress' + (pct > 80 ? ' crit' : (pct > 50 ? ' warn' : ''));
+              usageEl.title = 'Uso: ' + used.toLocaleString() + ' / ' + total.toLocaleString() + ' tokens';
+            }
+          }
+        }
+      } catch(_) {}
+    }
+
+    if (data.events && data.events.length) {
+      const log = document.getElementById('event-log');
+      const existing = new Set(Array.from(log.querySelectorAll('.entry[data-id]')).map(function(e){ return e.dataset.id; }));
+      for (const ev of data.events) {
+        const key = ev.created_at + '|' + ev.label;
+        if (existing.has(key)) continue;
+        const entry = document.createElement('div');
+        entry.className = 'entry'; entry.dataset.id = key;
+        entry.innerHTML = '<span class="time">' + ev.created_at + '</span> <span class="label">[' + ev.label + ']</span> <span class="msg">' + ev.message + '</span>';
+        log.insertBefore(entry, log.firstChild);
+      }
+    }
+  } catch (_) {}
+}
+
+setInterval(pollAgents, POLL_MS);
+pollAgents();
+
+// ── Inicialização de UI ──────────────────────────────────────────
+applySavedPrefs();
+document.querySelectorAll('.card').forEach(function(card){ resizeObserver.observe(card); });
+
+// ── Handlers ─────────────────────────────────────────────────────
+document.getElementById('sync-runtime').addEventListener('click', async function() {
+  if (confirm("Deseja sincronizar todos os provedores e reiniciar o runtime? Isso encerrará todas as sessões ativas no terminal.")) {
+    showToast("Reiniciando runtime e injetando provedores...");
+    try {
+      const r = await fetch('/workspaces/' + WS_ID + '/runtime/start', { method: 'POST' });
+      if (r.ok) {
+        showToast("Runtime reiniciado com sucesso!");
+        setTimeout(function(){ location.reload(); }, 2000);
+      } else {
+        showToast("Erro ao reiniciar runtime");
+      }
+    } catch (_) {
+      showToast("Falha na conexão com o servidor");
+    }
+  }
+});
+
+grid.addEventListener('click', function(e) {
+  const toggleCollapse = e.target.closest('.toggle-collapse');
+  const btnReset = e.target.closest('.reset-context');
+  
+  if (btnReset) {
+    const role = btnReset.dataset.role;
+    const sid = btnReset.dataset.session;
+    if (confirm("Deseja realmente limpar o contexto da sessão de " + role + "? Esta ação não pode ser desfeita.")) {
+      fetch(runtimeUrl + '/session/' + sid + '/reset', { method: 'POST' })
+        .then(function(r){ return r.ok ? showToast("Contexto de " + role + " reiniciado") : showToast("Erro ao reiniciar contexto"); })
+        .catch(function(){ return showToast("Falha na conexão com OpenCode"); });
+    }
+  }
+  
+  if (toggleCollapse) {
+    const card = toggleCollapse.closest('.card');
+    const role = card.dataset.role;
+    card.classList.toggle('collapsed');
+    if (!uiPrefs[role]) uiPrefs[role] = new Object();
+    uiPrefs[role].collapsed = card.classList.contains('collapsed');
+    savePrefs();
+  }
+});
+
+grid.addEventListener('change', function(e) {
+  if (e.target.classList.contains('model-selector')) {
+    const sel = e.target;
+    const role = sel.dataset.role;
+    const sid = sel.dataset.session;
+    const modelId = sel.value;
+    if (modelId) {
+      changeSessionModel(role, sid, modelId);
+    }
+  }
+});
+
+const eventLog = document.getElementById('event-log');
+eventLog.scrollTop = 0;
+</script>
+</body>
+</html>

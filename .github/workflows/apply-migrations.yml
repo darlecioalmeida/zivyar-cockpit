@@ -1,0 +1,65 @@
+name: Apply DB migrations
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  apply-migrations:
+    name: Apply migrations (no tests)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_DB: zivyar_cockpit
+          POSTGRES_USER: zivyar
+          POSTGRES_PASSWORD: zivyar_dev_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Wait for Postgres
+        env:
+          PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'zivyar_dev_password' }}
+          POSTGRES_USER: zivyar
+        run: |
+          for i in {1..30}; do
+            pg_isready -h localhost -p 5432 -U "$POSTGRES_USER" && break
+            sleep 2
+          done
+
+      - name: Apply SQL migrations
+        env:
+          POSTGRES_DB: zivyar_cockpit
+          POSTGRES_USER: zivyar
+          POSTGRES_PASSWORD: zivyar_dev_password
+        run: |
+          set -euo pipefail
+          MIGR_DIR="apps/cockpit-spider/src/db/migrations"
+          if [ ! -d "$MIGR_DIR" ]; then
+            echo "No migrations directory found at $MIGR_DIR"
+            exit 0
+          fi
+          for f in $(ls "$MIGR_DIR"/*.sql 2>/dev/null | sort); do
+            echo "Applying $f"
+            PGPASSWORD="$POSTGRES_PASSWORD" psql -h localhost -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Done
+        run: echo "Migrations applied (or none present)." 

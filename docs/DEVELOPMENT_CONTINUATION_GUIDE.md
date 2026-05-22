@@ -199,6 +199,16 @@ Próximo bloco recomendado:
 Sprint 5 - Graphify integration
 ```
 
+Estado atual do bloco:
+
+```text
+Graphify já aparece no Workspace Show como grafo visual derivado de memória, handoffs, decision records e snapshots, e os nós já levam aos painéis reais da tela.
+
+Também existe uma página dedicada em `/workspaces/:id/graphify` para abrir o mapa sem o restante do cockpit do workspace.
+
+O hub global `/graphify` passou a listar os workspaces e servir como porta de entrada para o mapa de conhecimento do Cockpit.
+```
+
 A automação ainda não é totalmente autônoma.
 
 O modo atual é:
