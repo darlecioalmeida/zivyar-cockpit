@@ -53,11 +53,24 @@ body { display: flex; flex-direction: column; }
 .search-box.active { display: block; }
 
 .model-selector {
-  background: var(--bg); border: 1px solid var(--border); color: var(--accent);
-  font-size: 9px; padding: 1px 3px; border-radius: 3px; outline: none;
-  max-width: 80px; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--border); color: var(--accent);
+  font-size: 10px; padding: 2px 6px; border-radius: 4px; outline: none;
+  max-width: 120px; cursor: pointer; font-weight: 600;
 }
-.model-selector:hover { border-color: var(--accent); }
+.model-selector:hover { border-color: var(--accent); background: var(--bg); }
+
+.usage-info {
+  display: flex; gap: 8px; font-size: 9px; color: var(--text-dim);
+  background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px;
+  border: 1px solid var(--border); margin-left: 4px;
+}
+.usage-bar {
+  width: 40px; height: 4px; background: var(--border);
+  border-radius: 2px; overflow: hidden; align-self: center;
+}
+.usage-progress { height: 100%; background: var(--green); transition: width 0.3s; }
+.usage-progress.warn { background: var(--yellow); }
+.usage-progress.crit { background: var(--red); }
 
 .card.collapsed { height: 34px !important; min-height: 34px !important; resize: none; }
 .card.collapsed .chat-log, .card.collapsed .card-input, .card.collapsed .card-footer { display: none; }
@@ -266,7 +279,12 @@ body { display: flex; flex-direction: column; }
       
       <div class="card-actions">
         <select class="model-selector" title="Mudar Modelo" data-role="{ ag.role }" data-session="{ ag.session_id }">
-          <option value="">modelo...</option>
+          <option value="{ ag.model_id }">{ ag.model_id }</option>
+          for (ag.available_models) |m| {
+            if (m.id != ag.model_id) {
+              <option value="{ m.id }">{ m.name }</option>
+            }
+          }
         </select>
         <input type="text" class="search-box" placeholder="Filtrar..." data-role="{ ag.role }">
         <button class="btn-icon toggle-search" title="Buscar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
@@ -282,7 +300,12 @@ body { display: flex; flex-direction: column; }
       <button data-role="{ ag.role }">⏎</button>
     </div>
     <div class="card-footer">
-      <span class="sid">{ ag.session_id }</span>
+      <span class="sid" title="ID da Sessão">{ ag.session_id }</span>
+      <div class="usage-info" id="usage-{ ag.role }">
+        <span class="tokens">--- tkn</span>
+        <div class="usage-bar"><div class="usage-progress" style="width: 0%"></div></div>
+        <span class="pct">0%</span>
+      </div>
       if (ag.session_id.len > 0) {
       <button class="copy" onclick="navigator.clipboard.writeText('opencode session { ag.session_id }')">copiar</button>
       <button class="export" data-role="{ ag.role }" data-session="{ ag.session_id }">exportar</button>
@@ -384,31 +407,27 @@ grid.addEventListener('drop', function(e) {
 
 // ── estado global ─────────────────────────────────────────────────
 let runtimeUrl = '';
-let availableModels = [];
 
-async function fetchAvailableModels(serverUrl) {
-  if (!serverUrl || availableModels.length > 0) return;
-  try {
-    const r = await fetch(serverUrl + '/model');
-    if (!r.ok) return;
-    const data = await r.json();
-    availableModels = data.models || [];
-    updateModelSelectors();
-  } catch (_) {}
-}
-
-function updateModelSelectors() {
-  document.querySelectorAll('.model-selector').forEach(sel => {
-    const currentVal = sel.dataset.current || "";
-    sel.innerHTML = '<option value="">modelo...</option>' + availableModels.map(m => 
-      '<option value="' + m.id + '"' + (m.id === currentVal ? ' selected' : '') + '>' + m.id + '</option>'
-    ).join('');
-  });
+function updateModelSelectors(role, models, currentId) {
+  const sel = document.querySelector('.model-selector[data-role="' + role + '"]');
+  if (!sel) return;
+  
+  const modelKeys = models.map(m => m.id).join(',');
+  if (sel.dataset.modelKeys === modelKeys && sel.dataset.current === currentId) return;
+  
+  const options = models.map(m => 
+    '<option value="' + m.id + '"' + (m.id === currentId ? ' selected' : '') + '>' + m.name + '</option>'
+  );
+  
+  sel.innerHTML = options.join('');
+  sel.dataset.modelKeys = modelKeys;
+  sel.dataset.current = currentId;
 }
 
 async function changeSessionModel(role, sessionId, modelId) {
   if (!runtimeUrl || !sessionId || !modelId) return;
   try {
+    // Nota: O endpoint exato pode variar. Se for OpenAI compatible:
     const r = await fetch(runtimeUrl + '/session/' + sessionId, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -738,13 +757,16 @@ async function pollAgents() {
     const data = await r.json();
     if (data.server_url) {
       runtimeUrl = data.server_url;
-      fetchAvailableModels(runtimeUrl);
     }
 
     for (const ag of data.agents) {
       const card = document.querySelector('[data-role="' + ag.role + '"]');
       if (!card) continue;
       
+      if (ag.available_models) {
+        updateModelSelectors(ag.role, ag.available_models, ag.model_id);
+      }
+
       const dot = card.querySelector('.card-header .dot');
       if (!card.classList.contains('thinking')) {
         dot.className = 'dot ' + (ag.status === 'active' ? 'on' : 'off');
@@ -786,10 +808,43 @@ async function pollAgents() {
 async function pollMessages() {
   if (!runtimeUrl) return;
   const cards = Array.from(grid.querySelectorAll('.card[data-session]'));
+  
+  // Buscar status das sessões para pegar uso de tokens/contexto
+  let sessionStatus = {};
+  try {
+    const sResp = await fetch(runtimeUrl + '/session/status');
+    if (sResp.ok) sessionStatus = await sResp.json();
+  } catch(_) {}
+
   const promises = cards.map(async function(card) {
     const sid = card.dataset.session;
     const role = card.dataset.role;
     if (!sid || !role) return;
+    
+    // Atualiza info de uso (tokens/contexto)
+    const status = sessionStatus[sid];
+    const usageEl = document.getElementById('usage-' + role);
+    if (status && usageEl) {
+      const used = status.tokensUsed || 0;
+      const total = status.contextWindow || 1;
+      const pct = Math.round((used / total) * 100);
+      usageEl.querySelector('.tokens').textContent = (used > 1000 ? (used/1000).toFixed(1) + 'k' : used) + ' tkn';
+      usageEl.querySelector('.pct').textContent = pct + '%';
+      const bar = usageEl.querySelector('.usage-progress');
+      bar.style.width = Math.min(pct, 100) + '%';
+      bar.className = 'usage-progress' + (pct > 80 ? ' crit' : (pct > 50 ? ' warn' : ''));
+      usageEl.title = 'Uso: ' + used.toLocaleString() + ' / ' + total.toLocaleString() + ' tokens';
+      
+      // Atualiza o modelo ativo se o status trouxer
+      if (status.modelID) {
+        const sel = card.querySelector('.model-selector');
+        if (sel && sel.value !== status.modelID) {
+          sel.value = status.modelID;
+          sel.dataset.current = status.modelID;
+        }
+      }
+    }
+
     const msgs = await fetchSessionMsg(runtimeUrl, sid);
     if (!msgs) return;
     
