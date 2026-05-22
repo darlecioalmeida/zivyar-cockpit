@@ -204,6 +204,7 @@ pub fn extractMissionFinalVerdictFromPilotDeliveryReport(report: []const u8) []c
 
 pub fn mapProviderTypeToOpenCode(name: []const u8, provider_type: []const u8) []const u8 {
     if (std.mem.indexOf(u8, name, "Zen") != null or std.mem.indexOf(u8, name, "OpenCode") != null) return "opencode";
+    if (std.mem.indexOf(u8, name, "LM Studio") != null) return "lmstudio";
     if (std.mem.eql(u8, provider_type, "Google")) return "google";
     if (std.mem.eql(u8, provider_type, "Groq")) return "groq";
     if (std.mem.eql(u8, provider_type, "OpenRouter")) return "openrouter";

@@ -264,29 +264,29 @@ body { display: flex; flex-direction: column; }
         </div>
       }
     </div>
-        } else {
-          <iframe class="terminal-frame" src="{ server_url }/Lw/session/{ ag.session_id }"></iframe>
-        }
-      } else {
-        <div style="padding: 40px 20px; color: var(--text-dim); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">
-          <span>Aguardando sessão...</span>
-          <button class="commander-actions" style="width: auto; padding: 6px 16px;" onclick="openNewSession({ ag.id })">
-            Abrir Nova Sessão
-          </button>
-        </div>
+
+    <div class="card-footer">
+      <div class="prov-mod" title="Provedor e Modelo">
+        { ag.provider_name } / <span class="cur-model" id="mname-{ ag.role }">{ ag.model_id }</span>
+      </div>
+      <span class="sid" title="ID da Sessão">{ ag.session_id }</span>
+      <div class="usage-info" id="usage-{ ag.role }">
+        <span class="tokens">--- tkn</span>
+        <div class="usage-bar"><div class="usage-progress" style="width: 0%"></div></div>
+        <span class="pct">0%</span>
+      </div>
+      if (ag.session_id.len > 0) {
+      <button class="copy" onclick="navigator.clipboard.writeText('opencode session { ag.session_id }')">copiar</button>
       }
     </div>
-...
-      if (ag.has_session) {
-        if (ag.is_stale) {
-          <div style="padding: 40px 20px; color: var(--text-dim); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">
-            <span style="color: var(--yellow)">Sessão expirada ou runtime reiniciado.</span>
-            <button class="commander-actions" style="width: auto; padding: 6px 16px;" onclick="openNewSession({ ag.id })">
-              Abrir Nova Sessão
-            </button>
-          </div>
-        } else {
-...
+  </div>
+  }
+</main>
+
+</div>
+
+<div id="toast-container"></div>
+
 <script>
 const WS_ID = document.getElementById('war-room-data').dataset.workspaceId;
 const POLL_MS = 3000;
@@ -311,7 +311,7 @@ try {
 function savePrefs() { localStorage.setItem(UI_PREFS_KEY, JSON.stringify(uiPrefs)); }
 
 function applySavedPrefs() {
-  document.querySelectorAll('.card').forEach(card => {
+  document.querySelectorAll('.card').forEach(function(card){
     const role = card.dataset.role;
     if (uiPrefs[role]) {
       if (uiPrefs[role].collapsed) card.classList.add('collapsed');
@@ -321,7 +321,7 @@ function applySavedPrefs() {
   });
 }
 
-const resizeObserver = new ResizeObserver(entries => {
+const resizeObserver = new ResizeObserver(function(entries){
   for (let entry of entries) {
     if (entry.target.classList.contains('collapsed')) continue;
     const role = entry.target.dataset.role;
@@ -331,7 +331,19 @@ const resizeObserver = new ResizeObserver(entries => {
     savePrefs();
   }
 });
-...
+
+function showToast(msg) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(function(){ toast.remove(); }, 4000);
+}
+
+// drag-to-reorder panels
+const grid = document.getElementById('agent-grid');
+let draggedEl = null;
 function persistOrder() {
   const order = Array.from(grid.querySelectorAll('.card'))
     .map(function(card){ return parseInt(card.dataset.paneId, 10); })
@@ -345,90 +357,6 @@ function persistOrder() {
     method: 'POST',
     headers: (function(){ const h = new Object(); h['Content-Type'] = 'application/json'; return h; })(),
     body: JSON.stringify(payload),
-  }).catch(function(){ /* ignore */ });
-}
-...
-async function changeSessionModel(role, sessionId, modelId) {
-  if (!runtimeUrl || !sessionId || !modelId) return;
-  
-  const payload = new Object();
-  payload.model = new Object();
-  payload.model.modelID = modelId;
-
-  try {
-    const r = await fetch(runtimeUrl + '/session/' + sessionId, {
-      method: 'PATCH',
-      headers: (function(){ const h = new Object(); h['Content-Type'] = 'application/json'; return h; })(),
-      body: JSON.stringify(payload)
-    });
-...
-    if (runtimeUrl) {
-      try {
-        const sResp = await fetch(runtimeUrl + '/session/status');
-        if (sResp.ok) {
-          const sessionStatus = await sResp.json();
-          for (const ag of data.agents) {
-            const status = sessionStatus[ag.session_id];
-            const usageEl = document.getElementById('usage-' + ag.role);
-            if (status && usageEl) {
-              const used = status.tokensUsed || 0;
-              const total = status.contextWindow || 1;
-              const pct = Math.round((used / total) * 100);
-              usageEl.querySelector('.tokens').textContent = (used > 1000 ? (used/1000).toFixed(1) + 'k' : used) + ' tkn';
-              usageEl.querySelector('.pct').textContent = pct + '%';
-              const bar = usageEl.querySelector('.usage-progress');
-              bar.style.width = Math.min(pct, 100) + '%';
-              bar.className = 'usage-progress' + (pct > 80 ? ' crit' : (pct > 50 ? ' warn' : ''));
-              usageEl.title = 'Uso: ' + used.toLocaleString() + ' / ' + total.toLocaleString() + ' tokens';
-            }
-          }
-        }
-      } catch(_) {}
-    }
-...
-  try {
-    const r = await fetch('/workspaces/' + WS_ID + '/war-room/prompt', {
-      method: 'POST',
-      headers: (function(){ const h = new Object(); h['Content-Type'] = 'application/json'; return h; })(),
-      body: JSON.stringify((function(){ const p = new Object(); p.text = text; p.target = 'all'; return p; })()),
-    });
-    setTimeout(pollMessages, 800);
-  } catch (_) {}
-});
-}
-
-const resizeObserver = new ResizeObserver(entries => {
-  for (let entry of entries) {
-    if (entry.target.classList.contains('collapsed')) continue;
-    const role = entry.target.dataset.role;
-    if (!uiPrefs[role]) uiPrefs[role] = {};
-    uiPrefs[role].width = entry.contentRect.width;
-    uiPrefs[role].height = entry.contentRect.height;
-    savePrefs();
-  }
-});
-
-function showToast(msg) {
-  const container = document.getElementById('toast-container');
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.textContent = msg;
-  container.appendChild(toast);
-  setTimeout(() => toast.remove(), 4000);
-}
-
-// drag-to-reorder panels
-const grid = document.getElementById('agent-grid');
-let draggedEl = null;
-function persistOrder() {
-  const order = Array.from(grid.querySelectorAll('.card'))
-    .map(function(card){ return parseInt(card.dataset.paneId, 10); })
-    .filter(function(id){ return !Number.isNaN(id); });
-  if (order.length === 0) return;
-  fetch(REORDER_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ order: order }),
   }).catch(function(){ /* ignore */ });
 }
 grid.addEventListener('dragstart', function(e) {
@@ -468,12 +396,12 @@ function updateModelSelectors(role, models, currentId) {
   const sel = document.querySelector('.model-selector[data-role="' + role + '"]');
   if (!sel) return;
   
-  const modelKeys = models.map(m => m.id).join(',');
+  const modelKeys = models.map(function(m){ return m.id; }).join(',');
   if (sel.dataset.modelKeys === modelKeys && sel.dataset.current === currentId) return;
   
-  const options = models.map(m => 
-    '<option value="' + m.id + '" data-provider="' + (m.provider_type || 'opencode') + '"' + (m.id === currentId ? ' selected' : '') + '>' + m.name + '</option>'
-  );
+  const options = models.map(function(m){ 
+    return '<option value="' + m.id + '" data-provider="' + (m.provider_type || 'opencode') + '"' + (m.id === currentId ? ' selected' : '') + '>' + m.name + '</option>';
+  });
   
   sel.innerHTML = options.join('');
   sel.dataset.modelKeys = modelKeys;
@@ -482,11 +410,16 @@ function updateModelSelectors(role, models, currentId) {
 
 async function changeSessionModel(role, sessionId, modelId) {
   if (!runtimeUrl || !sessionId || !modelId) return;
+  
+  const payload = new Object();
+  payload.model = new Object();
+  payload.model.modelID = modelId;
+
   try {
     const r = await fetch(runtimeUrl + '/session/' + sessionId, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: { modelID: modelId } })
+      headers: (function(){ const h = new Object(); h['Content-Type'] = 'application/json'; return h; })(),
+      body: JSON.stringify(payload)
     });
     if (r.ok) {
       showToast("Modelo de " + role + " alterado para " + modelId);
@@ -531,19 +464,19 @@ async function pollAgents() {
       } else if (ag.status === 'stale') {
         const container = card.querySelector('.terminal-container');
         if (container.querySelector('iframe')) {
-          container.innerHTML = `
-            <div style="padding: 40px 20px; color: var(--text-dim); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">
-              <span style="color: var(--yellow)">Sessão expirada ou runtime reiniciado.</span>
-              <button class="commander-actions" style="width: auto; padding: 6px 16px;" onclick="fetch('/workspaces/' + WS_ID + '/panes/${ag.id}/session/open', { method: 'POST' }).then(() => pollAgents())">
-                Abrir Nova Sessão
-              </button>
-            </div>
-          `;
+          container.innerHTML = (function(){
+            return '<div style="padding: 40px 20px; color: var(--text-dim); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">' +
+              '<span style="color: var(--yellow)">Sessão expirada ou runtime reiniciado.</span>' +
+              '<button class="commander-actions" style="width: auto; padding: 6px 16px;" onclick="openNewSession(' + ag.id + ')">' +
+                'Abrir Nova Sessão' +
+              '</button>' +
+            '</div>';
+          })();
         }
       }
 
       const dot = card.querySelector('.card-header .dot');
-      dot.className = 'dot ' + (ag.status === 'active' ? 'on' : 'off');
+      dot.className = 'dot ' + (ag.is_active ? 'on' : 'off');
       
       const badge = card.querySelector('.ctx-badge');
       if (badge) { badge.className = 'ctx-badge ' + ag.context_state; badge.textContent = ag.context_state; }
@@ -565,30 +498,32 @@ async function pollAgents() {
 
     // Token Usage Polling
     if (runtimeUrl) {
-      const sResp = await fetch(runtimeUrl + '/session/status');
-      if (sResp.ok) {
-        const sessionStatus = await sResp.json();
-        for (const ag of data.agents) {
-          const status = sessionStatus[ag.session_id];
-          const usageEl = document.getElementById('usage-' + ag.role);
-          if (status && usageEl) {
-            const used = status.tokensUsed || 0;
-            const total = status.contextWindow || 1;
-            const pct = Math.round((used / total) * 100);
-            usageEl.querySelector('.tokens').textContent = (used > 1000 ? (used/1000).toFixed(1) + 'k' : used) + ' tkn';
-            usageEl.querySelector('.pct').textContent = pct + '%';
-            const bar = usageEl.querySelector('.usage-progress');
-            bar.style.width = Math.min(pct, 100) + '%';
-            bar.className = 'usage-progress' + (pct > 80 ? ' crit' : (pct > 50 ? ' warn' : ''));
-            usageEl.title = 'Uso: ' + used.toLocaleString() + ' / ' + total.toLocaleString() + ' tokens';
+      try {
+        const sResp = await fetch(runtimeUrl + '/session/status');
+        if (sResp.ok) {
+          const sessionStatus = await sResp.json();
+          for (const ag of data.agents) {
+            const status = sessionStatus[ag.session_id];
+            const usageEl = document.getElementById('usage-' + ag.role);
+            if (status && usageEl) {
+              const used = status.tokensUsed || 0;
+              const total = status.contextWindow || 1;
+              const pct = Math.round((used / total) * 100);
+              usageEl.querySelector('.tokens').textContent = (used > 1000 ? (used/1000).toFixed(1) + 'k' : used) + ' tkn';
+              usageEl.querySelector('.pct').textContent = pct + '%';
+              const bar = usageEl.querySelector('.usage-progress');
+              bar.style.width = Math.min(pct, 100) + '%';
+              bar.className = 'usage-progress' + (pct > 80 ? ' crit' : (pct > 50 ? ' warn' : ''));
+              usageEl.title = 'Uso: ' + used.toLocaleString() + ' / ' + total.toLocaleString() + ' tokens';
+            }
           }
         }
-      }
+      } catch(_) {}
     }
 
     if (data.events && data.events.length) {
       const log = document.getElementById('event-log');
-      const existing = new Set(Array.from(log.querySelectorAll('.entry[data-id]')).map(e => e.dataset.id));
+      const existing = new Set(Array.from(log.querySelectorAll('.entry[data-id]')).map(function(e){ return e.dataset.id; }));
       for (const ev of data.events) {
         const key = ev.created_at + '|' + ev.label;
         if (existing.has(key)) continue;
@@ -606,7 +541,7 @@ pollAgents();
 
 // ── Inicialização de UI ──────────────────────────────────────────
 applySavedPrefs();
-document.querySelectorAll('.card').forEach(card => resizeObserver.observe(card));
+document.querySelectorAll('.card').forEach(function(card){ resizeObserver.observe(card); });
 
 // ── Handlers ─────────────────────────────────────────────────────
 document.getElementById('sync-runtime').addEventListener('click', async function() {
@@ -616,7 +551,7 @@ document.getElementById('sync-runtime').addEventListener('click', async function
       const r = await fetch('/workspaces/' + WS_ID + '/runtime/start', { method: 'POST' });
       if (r.ok) {
         showToast("Runtime reiniciado com sucesso!");
-        setTimeout(() => location.reload(), 2000);
+        setTimeout(function(){ location.reload(); }, 2000);
       } else {
         showToast("Erro ao reiniciar runtime");
       }
@@ -635,8 +570,8 @@ grid.addEventListener('click', function(e) {
     const sid = btnReset.dataset.session;
     if (confirm("Deseja realmente limpar o contexto da sessão de " + role + "? Esta ação não pode ser desfeita.")) {
       fetch(runtimeUrl + '/session/' + sid + '/reset', { method: 'POST' })
-        .then(r => r.ok ? showToast("Contexto de " + role + " reiniciado") : showToast("Erro ao reiniciar contexto"))
-        .catch(() => showToast("Falha na conexão com OpenCode"));
+        .then(function(r){ return r.ok ? showToast("Contexto de " + role + " reiniciado") : showToast("Erro ao reiniciar contexto"); })
+        .catch(function(){ return showToast("Falha na conexão com OpenCode"); });
     }
   }
   
@@ -644,7 +579,7 @@ grid.addEventListener('click', function(e) {
     const card = toggleCollapse.closest('.card');
     const role = card.dataset.role;
     card.classList.toggle('collapsed');
-    if (!uiPrefs[role]) uiPrefs[role] = {};
+    if (!uiPrefs[role]) uiPrefs[role] = new Object();
     uiPrefs[role].collapsed = card.classList.contains('collapsed');
     savePrefs();
   }

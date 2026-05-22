@@ -22,7 +22,12 @@ fn syncProvidersToOpenCode(c: *spider.Ctx, workspace_id: i32, server_url: []cons
             break :blk try std.fmt.allocPrint(c.arena, "{{\"baseURL\":\"{s}\"}}", .{provider.base_url});
         } else "{}";
 
-        const key = if (std.mem.eql(u8, opencode_provider_id, "ollama")) "ollama" else provider.api_key;
+        const key = if (std.mem.eql(u8, opencode_provider_id, "ollama")) 
+            "ollama" 
+        else if (std.mem.eql(u8, opencode_provider_id, "lmstudio"))
+            "lmstudio"
+        else 
+            provider.api_key;
 
         const body_buf = try std.fmt.allocPrint(c.arena, 
             "{{\"type\":\"api\",\"key\":\"{s}\",\"metadata\":{s}}}",
@@ -1237,6 +1242,8 @@ pub fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
             "OPENROUTER_API_KEY"
         else if (std.mem.eql(u8, provider.provider_type, "Ollama"))
             "OLLAMA_HOST"
+        else if (std.mem.eql(u8, provider.name, "LM Studio"))
+            "LMSTUDIO_API_KEY"
         else if (std.mem.eql(u8, provider.name, "OpenCode Zen"))
             "OPENCODE_API_KEY"
         else if (std.mem.eql(u8, provider.provider_type, "OpenAI Compatible"))
@@ -1246,6 +1253,8 @@ pub fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
 
         const val = if (std.mem.eql(u8, env_var, "OLLAMA_HOST") and provider.api_key.len == 0)
             (if (provider.base_url.len > 0) provider.base_url else "http://localhost:11434")
+        else if (std.mem.eql(u8, env_var, "LMSTUDIO_API_KEY") and provider.api_key.len == 0)
+            "lmstudio"
         else
             provider.api_key;
 
@@ -1253,10 +1262,10 @@ pub fn workspaceRuntimeStart(c: *spider.Ctx) !spider.Response {
         try env_args.append(c.arena, "-e");
         try env_args.append(c.arena, env_str);
 
-        // Se tiver base URL personalizada (ex: OpenAI Compatible), passa também
+        // Se tiver base URL personalizada (ex: OpenAI Compatible, LM Studio), passa também
         if (provider.base_url.len > 0) {
             const base_env_var = if (std.mem.eql(u8, provider.provider_type, "OpenAI Compatible"))
-                "OPENAI_BASE_URL"
+                (if (std.mem.eql(u8, provider.name, "LM Studio")) "LMSTUDIO_BASE_URL" else "OPENAI_BASE_URL")
             else
                 null;
             
