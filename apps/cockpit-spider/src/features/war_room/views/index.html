@@ -37,6 +37,36 @@ body { display: flex; flex-direction: column; }
 .ctx-badge.outdated { background: rgba(210,153,34,.15); color: var(--yellow); }
 .ctx-badge.unbound { background: rgba(139,148,158,.15); color: var(--text-dim); }
 
+/* Novos estilos para Busca e Colapso */
+.card-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.btn-icon { 
+  background: none; border: none; color: var(--text-dim); cursor: pointer; 
+  padding: 2px; border-radius: 3px; font-size: 12px; display: flex; align-items: center;
+}
+.btn-icon:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+.search-box { 
+  display: none; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 10px; padding: 2px 5px; border-radius: 3px; width: 80px;
+}
+.search-box.active { display: block; }
+
+.card.collapsed { height: 34px !important; min-height: 34px !important; resize: none; }
+.card.collapsed .chat-log, .card.collapsed .card-input, .card.collapsed .card-footer { display: none; }
+
+.chat-time { font-size: 9px; color: var(--text-dim); margin-left: auto; }
+
+/* Toast Notifications */
+#toast-container {
+  position: fixed; bottom: 20px; right: 20px; z-index: 9999;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+  background: var(--surface); border: 1px solid var(--accent); border-left: 4px solid var(--accent);
+  color: var(--text); padding: 10px 15px; border-radius: 4px; font-size: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5); animation: slideIn 0.3s ease-out;
+}
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
 .body { display: flex; flex: 1; overflow: hidden; }
 
 .commander {
@@ -206,6 +236,7 @@ body { display: flex; flex-direction: column; }
   for (agents) |ag| {
   <div class="card" data-role="{ ag.role }" data-session="{ ag.session_id }" data-pane-id="{ ag.id }">
     <div class="card-header">
+      <span class="drag-handle" draggable="true">⠿</span>
       if (ag.status == "active") {
       <span class="dot on"></span>
       } else {
@@ -214,10 +245,12 @@ body { display: flex; flex-direction: column; }
       <span class="name">{ ag.role }</span>
       <span class="handle">@{ ag.agent_handle }</span>
       <span class="ctx-badge { ag.context_state }">{ ag.context_state }</span>
-      <span class="card-status">{ ag.status }
-        if (ag.session_id.len == 0) { · no session }
-      </span>
-      <span class="drag-handle" draggable="true">⠿</span>
+      
+      <div class="card-actions">
+        <input type="text" class="search-box" placeholder="Filtrar..." data-role="{ ag.role }">
+        <button class="btn-icon toggle-search" title="Buscar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
+        <button class="btn-icon toggle-collapse" title="Minimizar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></button>
+      </div>
     </div>
     <div class="chat-log" id="chat-{ ag.role }">
       <span class="thinking">conectando ao terminal...</span>
@@ -238,10 +271,49 @@ body { display: flex; flex-direction: column; }
 
 </div>
 
+<div id="toast-container"></div>
+
 <script>
 const WS_ID = document.getElementById('war-room-data').dataset.workspaceId;
 const POLL_MS = 3000;
 const REORDER_URL = '/workspaces/' + WS_ID + '/war-room/reorder';
+
+// ── Persistência de UI ───────────────────────────────────────────
+const UI_PREFS_KEY = 'zivyar_warroom_prefs_' + WS_ID;
+let uiPrefs = JSON.parse(localStorage.getItem(UI_PREFS_KEY) || '{}');
+
+function savePrefs() { localStorage.setItem(UI_PREFS_KEY, JSON.stringify(uiPrefs)); }
+
+function applySavedPrefs() {
+  document.querySelectorAll('.card').forEach(card => {
+    const role = card.dataset.role;
+    if (uiPrefs[role]) {
+      if (uiPrefs[role].collapsed) card.classList.add('collapsed');
+      if (uiPrefs[role].width) card.style.width = uiPrefs[role].width + 'px';
+      if (uiPrefs[role].height) card.style.height = uiPrefs[role].height + 'px';
+    }
+  });
+}
+
+const resizeObserver = new ResizeObserver(entries => {
+  for (let entry of entries) {
+    if (entry.target.classList.contains('collapsed')) continue;
+    const role = entry.target.dataset.role;
+    if (!uiPrefs[role]) uiPrefs[role] = {};
+    uiPrefs[role].width = entry.contentRect.width;
+    uiPrefs[role].height = entry.contentRect.height;
+    savePrefs();
+  }
+});
+
+function showToast(msg) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
 
 // drag-to-reorder panels
 const grid = document.getElementById('agent-grid');
@@ -315,37 +387,66 @@ function formatPart(part) {
   return null;
 }
 
+function getRelativeTime(timestamp) {
+  if (!timestamp) return '';
+  const diff = Date.now() - timestamp;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'agora';
+  if (mins < 60) return 'há ' + mins + ' min';
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return 'há ' + hours + ' h';
+  return new Date(timestamp).toLocaleTimeString();
+}
+
 function renderChat(messages, role) {
   const container = document.getElementById('chat-' + role);
+  const searchInput = document.querySelector('.search-box[data-role="' + role + '"]');
+  const query = searchInput ? searchInput.value.toLowerCase() : '';
+  
   if (!container) return;
   if (!messages.length) {
     container.innerHTML = '<span class="thinking">sem mensagens</span>';
     return;
   }
+  
   let html = '';
+  let lastCount = container.dataset.msgCount || 0;
+  
   for (const msg of messages) {
     const info = msg.info || {};
     const r = info.role || 'unknown';
     const parts = msg.parts || [];
-    if (!parts.length && r === 'assistant') {
-      html += '<div class="chat-row"><span class="chat-role assistant">assistant</span>' +
-              '<div class="chat-bubble assistant thinking">(sem texto)</div></div>';
-      continue;
-    }
-    let hasContent = false;
+    const timeStr = getRelativeTime(info.time && info.time.created);
+    
+    let messageHtml = '';
+    let hasMatch = !query;
+
     for (const part of parts) {
+      if (query && part.text && part.text.toLowerCase().includes(query)) hasMatch = true;
       const rendered = formatPart({...part, role: r});
       if (!rendered) continue;
-      if (!hasContent) {
-        html += '<div class="chat-row"><span class="chat-role ' + r + '">' + r + '</span>';
-        hasContent = true;
-      }
-      html += rendered;
+      messageHtml += rendered;
     }
-    if (hasContent) html += '</div>';
+    
+    if (!hasMatch) continue;
+
+    if (messageHtml || (r === 'assistant' && !parts.length)) {
+      html += '<div class="chat-row"><div style="display:flex;align-items:center;">' + 
+              '<span class="chat-role ' + r + '">' + r + '</span>' +
+              '<span class="chat-time">' + timeStr + '</span></div>';
+      html += messageHtml || '<div class="chat-bubble assistant thinking">(sem texto)</div>';
+      html += '</div>';
+    }
   }
+  
   container.innerHTML = html;
-  // auto-scroll para o final
+  container.dataset.msgCount = messages.length;
+  
+  // Notificação para novas mensagens
+  if (messages.length > lastCount && lastCount > 0 && document.hidden) {
+    showToast("Nova mensagem de " + role);
+  }
+
   container.scrollTop = container.scrollHeight;
 }
 
@@ -478,6 +579,40 @@ async function pollMessages() {
 setInterval(pollAgents, POLL_MS);
 setInterval(pollMessages, POLL_MS);
 pollAgents().then(pollMessages);
+
+// ── Inicialização de UI ──────────────────────────────────────────
+applySavedPrefs();
+document.querySelectorAll('.card').forEach(card => resizeObserver.observe(card));
+
+// ── Handlers de Busca e Colapso ──────────────────────────────────
+grid.addEventListener('click', function(e) {
+  const toggleCollapse = e.target.closest('.toggle-collapse');
+  const toggleSearch = e.target.closest('.toggle-search');
+  
+  if (toggleCollapse) {
+    const card = toggleCollapse.closest('.card');
+    const role = card.dataset.role;
+    card.classList.toggle('collapsed');
+    if (!uiPrefs[role]) uiPrefs[role] = {};
+    uiPrefs[role].collapsed = card.classList.contains('collapsed');
+    savePrefs();
+  }
+  
+  if (toggleSearch) {
+    const card = toggleSearch.closest('.card');
+    const box = card.querySelector('.search-box');
+    box.classList.toggle('active');
+    if (box.classList.contains('active')) box.focus();
+  }
+});
+
+grid.addEventListener('input', function(e) {
+  if (e.target.classList.contains('search-box')) {
+    const role = e.target.dataset.role;
+    // Forçar re-render com o filtro
+    pollMessages(); 
+  }
+});
 
 // ── enviar mensagem individual por agente ─────────────────────────
 grid.querySelectorAll('.card-input textarea').forEach(function(ta) {
