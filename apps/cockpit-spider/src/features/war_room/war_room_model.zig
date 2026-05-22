@@ -20,6 +20,7 @@ pub const AgentPane = struct {
     session_id: []const u8,
     context_state: []const u8,
     last_message: []const u8,
+    model_id: []const u8,
 };
 
 pub const EventEntry = struct {

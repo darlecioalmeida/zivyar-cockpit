@@ -52,6 +52,13 @@ body { display: flex; flex-direction: column; }
 }
 .search-box.active { display: block; }
 
+.model-selector {
+  background: var(--bg); border: 1px solid var(--border); color: var(--accent);
+  font-size: 9px; padding: 1px 3px; border-radius: 3px; outline: none;
+  max-width: 80px; cursor: pointer;
+}
+.model-selector:hover { border-color: var(--accent); }
+
 .card.collapsed { height: 34px !important; min-height: 34px !important; resize: none; }
 .card.collapsed .chat-log, .card.collapsed .card-input, .card.collapsed .card-footer { display: none; }
 
@@ -258,6 +265,9 @@ body { display: flex; flex-direction: column; }
       <span class="ctx-badge { ag.context_state }">{ ag.context_state }</span>
       
       <div class="card-actions">
+        <select class="model-selector" title="Mudar Modelo" data-role="{ ag.role }" data-session="{ ag.session_id }">
+          <option value="">modelo...</option>
+        </select>
         <input type="text" class="search-box" placeholder="Filtrar..." data-role="{ ag.role }">
         <button class="btn-icon toggle-search" title="Buscar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
         <button class="btn-icon reset-context" title="Limpar Contexto" data-role="{ ag.role }" data-session="{ ag.session_id }"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
@@ -374,6 +384,45 @@ grid.addEventListener('drop', function(e) {
 
 // ── estado global ─────────────────────────────────────────────────
 let runtimeUrl = '';
+let availableModels = [];
+
+async function fetchAvailableModels(serverUrl) {
+  if (!serverUrl || availableModels.length > 0) return;
+  try {
+    const r = await fetch(serverUrl + '/model');
+    if (!r.ok) return;
+    const data = await r.json();
+    availableModels = data.models || [];
+    updateModelSelectors();
+  } catch (_) {}
+}
+
+function updateModelSelectors() {
+  document.querySelectorAll('.model-selector').forEach(sel => {
+    const currentVal = sel.dataset.current || "";
+    sel.innerHTML = '<option value="">modelo...</option>' + availableModels.map(m => 
+      '<option value="' + m.id + '"' + (m.id === currentVal ? ' selected' : '') + '>' + m.id + '</option>'
+    ).join('');
+  });
+}
+
+async function changeSessionModel(role, sessionId, modelId) {
+  if (!runtimeUrl || !sessionId || !modelId) return;
+  try {
+    const r = await fetch(runtimeUrl + '/session/' + sessionId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: { modelID: modelId } })
+    });
+    if (r.ok) {
+      showToast("Modelo de " + role + " alterado para " + modelId);
+    } else {
+      showToast("Erro ao mudar modelo de " + role);
+    }
+  } catch (_) {
+    showToast("Falha na conexão ao trocar modelo");
+  }
+}
 
 // ── utilitários ───────────────────────────────────────────────────
 function escapeHtml(s) {
@@ -610,6 +659,96 @@ document.getElementById('cmd-all').addEventListener('click', async function(){
 // ── auto-scroll log ────────────────────────────────────────────────
 const eventLog = document.getElementById('event-log');
 eventLog.scrollTop = 0;
+
+// ── Polling ───────────────────────────────────────────────────────
+async function pollAgents() {
+  try {
+    const r = await fetch('/workspaces/' + WS_ID + '/war-room/agents.json');
+    const data = await r.json();
+    if (data.server_url) {
+      runtimeUrl = data.server_url;
+      fetchAvailableModels(runtimeUrl);
+    }
+
+    for (const ag of data.agents) {
+      const card = document.querySelector('[data-role="' + ag.role + '"]');
+      if (!card) continue;
+      
+      const dot = card.querySelector('.card-header .dot');
+      if (!card.classList.contains('thinking')) {
+        dot.className = 'dot ' + (ag.status === 'active' ? 'on' : 'off');
+      }
+      
+      const badge = card.querySelector('.ctx-badge');
+      if (badge) { badge.className = 'ctx-badge ' + ag.context_state; badge.textContent = ag.context_state; }
+      
+      card.querySelector('.sid').textContent = ag.session_id;
+      const copyBtn = card.querySelector('.copy');
+      if (copyBtn && ag.session_id) {
+        copyBtn.onclick = function(){ navigator.clipboard.writeText('opencode session ' + ag.session_id); };
+      }
+      card.dataset.session = ag.session_id;
+
+      // Tenta capturar o modelo atual se disponível
+      const sel = card.querySelector('.model-selector');
+      if (sel && ag.model_id) {
+        sel.dataset.current = ag.model_id;
+        if (sel.value !== ag.model_id) sel.value = ag.model_id;
+      }
+    }
+
+    if (data.events && data.events.length) {
+      const log = document.getElementById('event-log');
+      const existing = new Set(Array.from(log.querySelectorAll('.entry[data-id]')).map(e => e.dataset.id));
+      for (const ev of data.events) {
+        const key = ev.created_at + '|' + ev.label;
+        if (existing.has(key)) continue;
+        const entry = document.createElement('div');
+        entry.className = 'entry'; entry.dataset.id = key;
+        entry.innerHTML = '<span class="time">' + ev.created_at + '</span> <span class="label">[' + ev.label + ']</span> <span class="msg">' + ev.message + '</span>';
+        log.insertBefore(entry, log.firstChild);
+      }
+    }
+  } catch (_) {}
+}
+
+async function pollMessages() {
+  if (!runtimeUrl) return;
+  const cards = Array.from(grid.querySelectorAll('.card[data-session]'));
+  const promises = cards.map(async function(card) {
+    const sid = card.dataset.session;
+    const role = card.dataset.role;
+    if (!sid || !role) return;
+    const msgs = await fetchSessionMsg(runtimeUrl, sid);
+    if (!msgs) return;
+    
+    const thinking = isThinking(msgs);
+    if (thinking) {
+      card.classList.add('thinking');
+    } else {
+      card.classList.remove('thinking');
+    }
+    renderChat(msgs, role);
+  });
+  await Promise.all(promises);
+}
+
+setInterval(pollAgents, POLL_MS);
+setInterval(pollMessages, POLL_MS);
+pollAgents().then(pollMessages);
+
+// ── Handlers de Modelo ───────────────────────────────────────────
+grid.addEventListener('change', function(e) {
+  if (e.target.classList.contains('model-selector')) {
+    const sel = e.target;
+    const role = sel.dataset.role;
+    const sid = sel.dataset.session;
+    const modelId = sel.value;
+    if (modelId) {
+      changeSessionModel(role, sid, modelId);
+    }
+  }
+});
 </script>
 </body>
 </html>
