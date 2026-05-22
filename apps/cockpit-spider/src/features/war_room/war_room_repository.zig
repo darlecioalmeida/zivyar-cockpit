@@ -49,19 +49,47 @@ pub fn loadWarRoomData(c: *spider.Ctx, workspace_id: i32) !model.WarRoomData {
             session_external_id: []const u8,
             context_state: []const u8,
             session_agent_handle: ?[]const u8,
+            provider_id: i32,
         },
         c.arena,
-        \\SELECT wp.id, wp.role_name, COALESCE(a.name, '') AS agent_name, COALESCE(a.handle, '') AS agent_handle, wp.pane_state, COALESCE(wp.session_external_id, '') AS session_external_id, wp.context_state, wp.session_agent_handle
+        \\SELECT 
+        \\  wp.id, 
+        \\  wp.role_name, 
+        \\  COALESCE(a.name, '') AS agent_name, 
+        \\  COALESCE(a.handle, '') AS agent_handle, 
+        \\  wp.pane_state, 
+        \\  COALESCE(wp.session_external_id, '') AS session_external_id, 
+        \\  wp.context_state, 
+        \\  wp.session_agent_handle,
+        \\  p.id as provider_id
         \\FROM workspace_panes wp
         \\LEFT JOIN agents a ON a.id = wp.agent_id
+        \\LEFT JOIN stacks s ON s.id = a.default_stack_id
+        \\LEFT JOIN provider_models pm ON pm.id = s.provider_model_id
+        \\LEFT JOIN providers p ON p.id = pm.provider_id
         \\WHERE wp.workspace_id = $1
         \\ORDER BY wp.display_order
     , .{workspace_id});
 
-// ...
-
     const agents = try c.arena.alloc(model.AgentPane, pane_rows.len);
     for (pane_rows, 0..) |p, idx| {
+        const model_rows = try db.query(
+            struct {
+                model_id: []const u8,
+                model_name: []const u8,
+            },
+            c.arena,
+            \\SELECT model_id, model_name
+            \\FROM provider_models
+            \\WHERE provider_id = $1 AND is_active = TRUE
+            \\ORDER BY model_name ASC
+        , .{p.provider_id});
+
+        const agent_models = try c.arena.alloc(model.ModelEntry, model_rows.len);
+        for (model_rows, 0..) |m_row, i| {
+            agent_models[i] = .{ .id = m_row.model_id, .name = m_row.model_name };
+        }
+
         agents[idx] = .{
             .id = p.id,
             .role = p.role_name,
@@ -72,6 +100,7 @@ pub fn loadWarRoomData(c: *spider.Ctx, workspace_id: i32) !model.WarRoomData {
             .context_state = p.context_state,
             .last_message = "",
             .model_id = p.session_agent_handle orelse "",
+            .available_models = agent_models,
         };
     }
 
