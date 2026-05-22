@@ -75,18 +75,26 @@ pub fn loadWarRoomData(c: *spider.Ctx, workspace_id: i32) !model.WarRoomData {
         };
     }
 
-    const agents = try c.arena.alloc(model.AgentPane, pane_rows.len);
-    for (pane_rows, 0..) |p, idx| {
-        agents[idx] = .{
-            .id = p.id,
-            .role = p.role_name,
-            .agent_name = p.agent_name,
-            .agent_handle = p.agent_handle,
-            .status = p.pane_state,
-            .session_id = p.session_external_id,
-            .context_state = p.context_state,
-            .last_message = "",
-        };
+    const event_rows = try db.query(
+        struct {
+            created_at_label: []const u8,
+            title: []const u8,
+            message: []const u8,
+        },
+        c.arena,
+        \\SELECT COALESCE(TO_CHAR(me.created_at, 'HH24:MI'), '') AS created_at_label, me.title, COALESCE(me.message, '') AS message
+        \\FROM mission_events me
+        \\JOIN missions m ON m.id = me.mission_id
+        \\WHERE m.workspace_id = $1 AND m.status != 'closed'
+        \\ORDER BY me.created_at DESC
+        \\LIMIT 20
+    , .{workspace_id});
+
+    const event_count = @min(event_rows.len, 20);
+    const events = try c.arena.alloc(model.EventEntry, event_count);
+    for (event_rows, 0..) |ev, i| {
+        if (i >= event_count) break;
+        events[i] = .{ .label = ev.title, .message = ev.message, .created_at = ev.created_at_label };
     }
 
     return model.WarRoomData{
