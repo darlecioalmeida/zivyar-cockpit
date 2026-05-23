@@ -3,6 +3,7 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const skip_db = b.option(bool, "skip-db", "Skip local PostgreSQL Docker bootstrap") orelse false;
 
     const spider_dep = b.dependency("spider", .{ .target = target });
     const spider_mod = spider_dep.module("spider");
@@ -36,8 +37,23 @@ spider_mod.addImport("spider_config", spider_config_mod);
 
     b.installArtifact(exe);
 
+    const ensure_postgres_cmd = b.addSystemCommand(&.{
+        "sh",
+        "../../scripts/ensure-local-postgres.sh",
+    });
+
+    const db_step = b.step("db", "Ensure the local PostgreSQL Docker container is running");
+    db_step.dependOn(&ensure_postgres_cmd.step);
+
+    if (!skip_db) {
+        b.getInstallStep().dependOn(&ensure_postgres_cmd.step);
+    }
+
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
+    if (!skip_db) {
+        run_cmd.step.dependOn(&ensure_postgres_cmd.step);
+    }
 
     const run_step = b.step("run", "Run Zivyar Cockpit Spider backend");
     run_step.dependOn(&run_cmd.step);

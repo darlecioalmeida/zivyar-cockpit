@@ -2,7 +2,7 @@
 
 ## 1. Banco local
 ```bash
-docker compose -f infra/compose/docker-compose.local.yml up -d
+scripts/ensure-local-postgres.sh
 ```
 
 ## 2. Spider
@@ -12,6 +12,8 @@ cp .env.example .env
 zig fetch --save git+https://github.com/llllOllOOll/spider#main
 zig build run
 ```
+
+Os passos `zig build` e `zig build run` também executam `scripts/ensure-local-postgres.sh` automaticamente. Se o Docker Desktop estiver instalado no macOS, o script tenta abri-lo e aguarda o daemon ficar pronto. Para compilar sem subir infra local, use `zig build -Dskip-db=true`.
 
 ## 3. Tauri
 Em outro terminal:

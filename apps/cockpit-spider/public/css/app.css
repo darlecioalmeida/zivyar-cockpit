@@ -46,6 +46,91 @@ button.ghost { background: transparent; color: var(--text); border: 1px solid va
 .placeholder { min-height: 160px; }
 @media (max-width: 980px) { .app-shell { grid-template-columns: 1fr; } .sidebar { display: none; } .hero-card, .grid.three, .grid.two { grid-template-columns: 1fr; } }
 
+.war-room-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  gap: 18px;
+}
+
+.war-room-status-panel,
+.war-room-mission-panel,
+.war-room-panes-panel,
+.war-room-events-panel {
+  min-height: 280px;
+}
+
+.war-room-panes-panel,
+.war-room-events-panel {
+  grid-column: 1 / -1;
+}
+
+.war-room-kv-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.war-room-kv-grid.compact {
+  margin-top: 12px;
+}
+
+.war-room-kv-grid div,
+.war-room-pane-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(10, 15, 22, .55);
+  padding: 14px;
+}
+
+.war-room-kv-grid span,
+.war-room-pane-card span,
+.war-room-pane-card small {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.war-room-kv-grid strong,
+.war-room-pane-card strong {
+  display: block;
+  margin-top: 6px;
+}
+
+.war-room-pane-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.war-room-pane-card {
+  display: grid;
+  gap: 14px;
+}
+
+.war-room-pane-card[data-pane-state="active"] {
+  border-color: rgba(53, 224, 155, .55);
+}
+
+.war-room-pane-card[data-pane-state="stale"],
+.war-room-pane-card[data-context-state="outdated"] {
+  border-color: rgba(247, 189, 79, .6);
+}
+
+.war-room-pane-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media (max-width: 1180px) {
+  .war-room-grid,
+  .war-room-kv-grid,
+  .war-room-pane-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 .page-head {
   display: flex;

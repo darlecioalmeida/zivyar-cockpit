@@ -12,6 +12,7 @@ extends "layout"
 
   <div class="page-actions">
     <a class="ghost-link" href="/workspaces">Voltar</a>
+    <a class="primary-button" href="/workspaces/{ workspace.id }/war-room">War Room</a>
     <a class="ghost-link" href="/workspaces/{ workspace.id }/edit">Editar</a>
 
     <form method="post" action="/workspaces/{ workspace.id }/delete" class="inline-form" onsubmit="return confirm('Remover este workspace?');">

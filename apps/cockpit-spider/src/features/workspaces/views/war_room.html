@@ -1,0 +1,180 @@
+extends "layout"
+
+<section class="page-head war-room-head">
+  <div>
+    <span class="eyebrow">War Room · Workspace #{ workspace.id }</span>
+    <h2>{ workspace.name }</h2>
+    <p>{ workspace.local_path }</p>
+  </div>
+
+  <div class="page-actions">
+    <a class="ghost-link" href="/workspaces/{ workspace.id }">Workspace</a>
+    <a class="ghost-link" href="/workspaces/{ workspace.id }/graphify">Graphify</a>
+    <a class="primary-button" href="/missions/new">Nova missão</a>
+  </div>
+</section>
+
+<section class="war-room-grid" id="war-room-panel" data-workspace-id="{ workspace.id }">
+  <article class="panel war-room-status-panel">
+    <div class="panel-title-row">
+      <div>
+        <span class="eyebrow">Runtime</span>
+        <h3>Estado operacional</h3>
+      </div>
+
+      if (runtime_count > 0) {
+        for (runtime_rows) |runtime| {
+          <span class="mini-badge" id="war-room-runtime-state">{ runtime.state }</span>
+        }
+      } else {
+        <span class="mini-badge" id="war-room-runtime-state">missing</span>
+      }
+    </div>
+
+    if (runtime_count > 0) {
+      for (runtime_rows) |runtime| {
+        <div class="war-room-kv-grid">
+          <div>
+            <span>Container</span>
+            <strong id="war-room-runtime-container">{ runtime.container_name }</strong>
+          </div>
+          <div>
+            <span>Porta OpenCode</span>
+            <strong id="war-room-runtime-port">{ runtime.opencode_port_label }</strong>
+          </div>
+          <div>
+            <span>Servidor</span>
+            <strong id="war-room-runtime-server">{ runtime.server_url_label }</strong>
+          </div>
+        </div>
+
+        <p id="war-room-runtime-message">{ runtime.status_message }</p>
+      }
+    } else {
+      <div class="empty-inline-state">
+        <strong>Runtime ainda não preparado.</strong>
+        <p>Prepare o runtime no workspace para habilitar sessões reais de agentes.</p>
+      </div>
+    }
+  </article>
+
+  <article class="panel war-room-mission-panel">
+    <div class="panel-title-row">
+      <div>
+        <span class="eyebrow">Missão ativa</span>
+        <h3>Próximo movimento</h3>
+      </div>
+      <span class="mini-badge" id="war-room-mission-count">{ active_mission_count }</span>
+    </div>
+
+    <div id="war-room-mission-body">
+      if (active_mission_count > 0) {
+        for (active_missions) |mission| {
+          <div class="war-room-active-mission">
+            <strong>{ mission.title }</strong>
+            <p>{ mission.objective }</p>
+
+            <div class="war-room-kv-grid compact">
+              <div>
+                <span>Status</span>
+                <strong>{ mission.status }</strong>
+              </div>
+              <div>
+                <span>Modo</span>
+                <strong>{ mission.execution_mode }</strong>
+              </div>
+              <div>
+                <span>Próximo passo</span>
+                <strong>{ mission.next_step_detected_code }</strong>
+              </div>
+            </div>
+
+            if (mission.next_step_detected_route) {
+              <form method="post" action="{ mission.next_step_detected_route }" class="inline-form">
+                <button class="primary-button" type="submit">Executar próximo passo</button>
+              </form>
+            }
+          </div>
+        }
+      } else {
+        <div class="empty-inline-state">
+          <strong>Nenhuma missão ativa.</strong>
+          <p>Ative uma missão para acompanhar a cadeia Piloto, Planner, Scout, Builder, Reviewer e Executor.</p>
+        </div>
+      }
+    </div>
+  </article>
+
+  <article class="panel war-room-panes-panel">
+    <div class="panel-title-row">
+      <div>
+        <span class="eyebrow">Panes</span>
+        <h3>Agentes em posição</h3>
+      </div>
+      <span class="mini-badge" id="war-room-pane-count">{ pane_count } panes</span>
+    </div>
+
+    <div class="war-room-pane-grid" id="war-room-pane-grid">
+      if (pane_count > 0) {
+        for (panes) |pane| {
+          <article class="war-room-pane-card" data-pane-state="{ pane.pane_state }" data-context-state="{ pane.context_state }">
+            <div>
+              <strong>{ pane.role_name }</strong>
+              <span>{ pane.agent_name } · { pane.agent_handle }</span>
+            </div>
+
+            <div class="war-room-pane-meta">
+              <span>{ pane.stack_name }</span>
+              <strong>{ pane.pane_state }</strong>
+            </div>
+
+            if (pane.session_external_id) {
+              <small>{ pane.session_external_id }</small>
+            } else {
+              <small>Sem sessão vinculada</small>
+            }
+          </article>
+        }
+      } else {
+        <div class="empty-inline-state">
+          <strong>Nenhum pane materializado.</strong>
+          <p>Vincule uma squad ao workspace para criar os assentos operacionais.</p>
+        </div>
+      }
+    </div>
+  </article>
+
+  <article class="panel war-room-events-panel">
+    <div class="panel-title-row">
+      <div>
+        <span class="eyebrow">Timeline</span>
+        <h3>Eventos recentes</h3>
+      </div>
+      <span class="mini-badge" id="war-room-event-count">{ mission_event_count } eventos</span>
+    </div>
+
+    <div id="war-room-event-list">
+      if (mission_event_count > 0) {
+        <div class="runtime-event-list">
+          for (mission_events) |event| {
+            <article class="runtime-event-card">
+              <span class="runtime-event-type">{ event.event_type }</span>
+              <div>
+                <strong>{ event.title }</strong>
+                <p>{ event.message }</p>
+                <small>{ event.created_at_label }</small>
+              </div>
+            </article>
+          }
+        </div>
+      } else {
+        <div class="empty-inline-state">
+          <strong>Nenhum evento de missão registrado.</strong>
+          <p>A timeline será preenchida quando a missão começar a circular entre os agentes.</p>
+        </div>
+      }
+    </div>
+  </article>
+</section>
+
+<script src="/js/war-room-live.js?v=20260523-1"></script>

@@ -1,6 +1,7 @@
 const std = @import("std");
 const spider = @import("spider");
 const db = spider.pg;
+const warroom_api = @import("routes/warroom_api.zig");
 
 pub const spider_templates = @import("embedded_templates.zig").EmbeddedTemplates;
 fn workspaceGraphifyShow(c: *spider.Ctx) !spider.Response {
@@ -152,6 +153,8 @@ pub fn main(init: std.process.Init) !void {
         .post("/workspaces/:id/runtime/start", workspaceRuntimeStart)
         .post("/workspaces/:id/runtime/stop", workspaceRuntimeStop)
         .get("/workspaces/:id/runtime/live", workspaceRuntimeLiveStatus)
+        .get("/workspaces/:id/war-room", warroom_api.show)
+        .get("/workspaces/:id/war-room/live", warroom_api.live)
         .post("/workspaces/:id/panes/:pane_id/session/open", workspacePaneOpenSession)
         .post("/workspaces/:id/panes/:pane_id/session/close", workspacePaneCloseSession)
         .post("/workspaces/:id/panes/:pane_id/session/resume", workspacePaneResumeSession)
